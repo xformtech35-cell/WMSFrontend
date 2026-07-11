@@ -1,0 +1,75 @@
+
+> frontend@0.1.0 build
+> next build
+
+⚠ Specified "rewrites" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+▲ Next.js 16.2.0 (Turbopack)
+
+  Creating an optimized production build ...
+⚠ Specified "rewrites" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+
+> Build error occurred
+Error: Turbopack build failed with 2 errors:
+./src/app/task-master/page.jsx:594:1
+Module not found: Can't resolve '@/components/ui/dropdown-menu'
+  [90m592 |[0m
+  [90m593 |[0m [90m// Import needed for dropdown menu[0m
+[31m[1m>[0m [90m594 |[0m [36mimport[0m {
+  [90m    |[0m [31m[1m^^^^^^^[0m
+[31m[1m>[0m [90m595 |[0m   [33mDropdownMenu[0m,
+  [90m    |[0m [31m[1m^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m596 |[0m   [33mDropdownMenuContent[0m,
+  [90m    |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m597 |[0m   [33mDropdownMenuItem[0m,
+  [90m    |[0m [31m[1m^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m598 |[0m   [33mDropdownMenuTrigger[0m,
+  [90m    |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m599 |[0m } [36mfrom[0m [32m'@/components/ui/dropdown-menu'[0m;
+  [90m    |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m600 |[0m
+  [90m601 |[0m [36mexport[0m [36mdefault[0m [33mTaskMaster[0m;
+
+Import map: aliased to relative './src/components/ui/dropdown-menu' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/task-master/page.jsx [Client Component Browser]
+    ./src/app/task-master/page.jsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/task-master/page.jsx [Client Component SSR]
+    ./src/app/task-master/page.jsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/task-master/page.jsx:47:1
+Module not found: Can't resolve '@/components/ui/use-toast'
+  [90m45 |[0m   [33mSelectValue[0m,
+  [90m46 |[0m } [36mfrom[0m [32m'@/components/ui/select'[0m;
+[31m[1m>[0m [90m47 |[0m [36mimport[0m { useToast } [36mfrom[0m [32m'@/components/ui/use-toast'[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m48 |[0m
+  [90m49 |[0m [90m// Types for tasks[0m
+  [90m50 |[0m [36mconst[0m [33mTASK_STATUS[0m = {
+
+Import map: aliased to relative './src/components/ui/use-toast' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/task-master/page.jsx [Client Component Browser]
+    ./src/app/task-master/page.jsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/task-master/page.jsx [Client Component SSR]
+    ./src/app/task-master/page.jsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./src/app/task-master/page.jsx:594:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/task-master/page.jsx:47:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
