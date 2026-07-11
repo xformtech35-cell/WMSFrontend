@@ -8,10 +8,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Uncomment the line for the environment you want to use:
 
 // 💻 LOCAL Setup:
-const BACKEND_RAW = "http://localhost:8081/xformwms";
+// const BACKEND_RAW = "http://localhost:8081/xformwms";
 
 // 🌍 LIVE/PRODUCTION Setup:
-// const BACKEND_RAW = "https://api-test.richgoldshine.com/xformwms";
+const BACKEND_RAW = "https://api-test.richgoldshine.com/xformwms";
 // ==========================================
 
 const BACKEND_BASE = BACKEND_RAW ? (BACKEND_RAW.endsWith('/api') ? BACKEND_RAW.replace(/\/api$/, '') : BACKEND_RAW) : null;
