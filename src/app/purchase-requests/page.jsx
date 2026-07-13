@@ -1,22 +1,26 @@
 "use client";
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
-  Trash2,
-  Send,
-  Save,
-  Calendar,
+  Eye,
+  Edit,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
   AlertCircle,
+  XCircle,
+  Building2,
   Flag,
   CheckCircle,
-  XCircle,
-  Building2 // Add this import
-} from 'lucide-react';
-import api from '@/lib/api';
+} from "lucide-react";
+import api from "@/lib/api";
+import PurchaseRequestForm from "./components/PurchaseRequestForm";
+import PurchaseRequestView from "./components/PurchaseRequestView";
 
 // API Functions
-const apiRequest = async (endpoint, method = 'GET', data = null) => {
+const apiRequest = async (endpoint, method = "GET", data = null) => {
   try {
     const response = await api.request({
       url: endpoint,
@@ -26,88 +30,57 @@ const apiRequest = async (endpoint, method = 'GET', data = null) => {
 
     const result = response.data;
     if (result && result.success === false) {
-      throw new Error(result?.message || `API request failed: ${response.status}`);
+      throw new Error(
+        result?.message || `API request failed: ${response.status}`,
+      );
     }
     return result?.data || result;
   } catch (error) {
-    console.error('API Error:', error);
+    console.error("API Error:", error);
     throw new Error(
       error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
-      'API request failed'
+        error.response?.data?.error ||
+        error.message ||
+        "API request failed",
     );
   }
 };
 
-// Get all suppliers
-const getSuppliersAPI = async () => {
-  try {
-    return await apiRequest('/suppliers');
-  } catch (error) {
-    console.warn('Failed to fetch suppliers, using fallback data');
-    return [
-      { id: 1, name: 'ABC Suppliers', code: 'SUP001', email: 'contact@abc.com', phone: '9876543210', address: '123 Main St, Mumbai', gst: 'GST123456', contactPerson: 'John Doe' },
-      { id: 2, name: 'XYZ Distributors', code: 'SUP002', email: 'info@xyz.com', phone: '9876543211', address: '456 Park Ave, Delhi', gst: 'GST789012', contactPerson: 'Jane Smith' },
-      { id: 3, name: 'Global Traders', code: 'SUP003', email: 'sales@global.com', phone: '9876543212', address: '789 Trade Center, Bangalore', gst: 'GST345678', contactPerson: 'Mike Johnson' }
-    ];
-  }
+const getPurchaseRequestsAPI = async (page = 0, size = 10) => {
+  return apiRequest(`/purchase-requests?page=${page}&size=${size}&sort=id,desc`);
 };
 
-const createPurchaseRequestAPI = async (data) => {
-  return apiRequest('/purchase-requests', 'POST', data);
-};
-
-const submitPurchaseRequestAPI = async (id) => {
-  return apiRequest(`/purchase-requests/${id}/submit`, 'POST');
+const getPurchaseRequestByIdAPI = async (id) => {
+  return apiRequest(`/purchase-requests/${id}`);
 };
 
 export default function PurchaseRequestPage() {
-  // ✅ Move router inside the component
   const router = useRouter();
-  
-  // Form State
-  const [prData, setPrData] = useState({
-    prNumber: `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
-    requestedDate: new Date().toISOString().split('T')[0],
-    requiredDate: '',
-    priority: 'normal',
-    status: 'draft',
-    notes: ''
-  });
 
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      itemCode: '',
-      itemName: '',
-      itemBarcode: '',
-      batchNo: '',
-      quantity: 1,
-      unit: 'pcs',
-      unitPrice: 0,
-      total: 0,
-      remarks: ''
-    }
-  ]);
-
-  const [suppliers, setSuppliers] = useState([]);
-  const [selectedSupplier, setSelectedSupplier] = useState('');
+  // List State
+  const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   
   // UI State
-  const [loading, setLoading] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [savedPRId, setSavedPRId] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [editingPR, setEditingPR] = useState(null);
+  const [viewingPR, setViewingPR] = useState(null);
+  const [formMode, setFormMode] = useState("create"); // "create" or "edit"
 
-  // Load suppliers on component mount
+  // Load data on component mount
   useEffect(() => {
-    loadSuppliers();
-  }, []);
+    loadPurchaseRequests();
+  }, [currentPage, pageSize]);
 
   // Auto-clear messages after 5 seconds
   useEffect(() => {
@@ -119,250 +92,131 @@ export default function PurchaseRequestPage() {
 
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(''), 5000);
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
 
-  const loadSuppliers = async () => {
+  const loadPurchaseRequests = async () => {
     try {
-      setIsLoadingSuppliers(true);
-      const supplierList = await getSuppliersAPI();
-      setSuppliers(supplierList || []);
+      setLoading(true);
+      const response = await getPurchaseRequestsAPI(currentPage, pageSize);
+      setPurchaseRequests(response.content || []);
+      setTotalPages(response.totalPages || 0);
+      setTotalElements(response.totalElements || 0);
     } catch (error) {
-      console.error('Error loading suppliers:', error);
-      setErrorMessage('Failed to load suppliers. Using default list.');
+      console.error("Error loading purchase requests:", error);
+      setErrorMessage("Failed to load purchase requests.");
     } finally {
-      setIsLoadingSuppliers(false);
+      setLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setPrData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleItemChange = (id, field, value) => {
-    const updatedItems = items.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [field]: value };
-        if (field === 'quantity' || field === 'unitPrice') {
-          const qty = parseFloat(updatedItem.quantity) || 0;
-          const price = parseFloat(updatedItem.unitPrice) || 0;
-          updatedItem.total = qty * price;
-        }
-        return updatedItem;
-      }
-      return item;
-    });
-    setItems(updatedItems);
-  };
-
-  const addItem = () => {
-    const newId = Math.max(...items.map(i => i.id), 0) + 1;
-    setItems([...items, {
-      id: newId,
-      itemCode: '',
-      itemName: '',
-      itemBarcode: '',
-      batchNo: '',
-      quantity: 1,
-      unit: 'pcs',
-      unitPrice: 0,
-      total: 0,
-      remarks: ''
-    }]);
-  };
-
-  const removeItem = (id) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
-    } else {
-      setErrorMessage('At least one item is required');
-    }
-  };
-
-  // Use useMemo for better performance
-  const totalAmount = useMemo(() => {
-    return items.reduce((sum, item) => sum + (item.total || 0), 0);
-  }, [items]);
-
-  const totalQuantity = useMemo(() => {
-    return items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  }, [items]);
-
-  const prepareRequestData = () => {
-    // Validate required fields
-    if (!prData.requiredDate) {
-      throw new Error('Please select a required date');
-    }
-    
-    if (items.length === 0) {
-      throw new Error('Please add at least one item');
-    }
-    
-    for (let item of items) {
-      if (!item.itemName || item.itemName.trim() === '') {
-        throw new Error('Please enter item name for all items');
-      }
-      if (item.quantity <= 0) {
-        throw new Error('Quantity must be greater than 0');
-      }
-    }
-    
-    return {
-      requestedDate: prData.requestedDate,
-      requiredDate: prData.requiredDate,
-      priority: prData.priority.toUpperCase(),
-      notes: prData.notes || null,
-      supplierId: selectedSupplier ? parseInt(selectedSupplier) : null,
-      items: items.map(item => ({
-        itemCode: item.itemCode || null,
-        itemName: item.itemName,
-        itemBarcode: item.itemBarcode || null,
-        batchNo: item.batchNo || null,
-        quantity: parseInt(item.quantity),
-        unit: item.unit,
-        unitPrice: parseFloat(item.unitPrice) || 0,
-        total: (parseInt(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0),
-        remarks: item.remarks || null
-      }))
-    };
-  };
-
-  const resetForm = () => {
-    setPrData({
-      prNumber: `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
-      requestedDate: new Date().toISOString().split('T')[0],
-      requiredDate: '',
-      priority: 'normal',
-      status: 'draft',
-      notes: ''
-    });
-    
-    setItems([{
-      id: 1,
-      itemCode: '',
-      itemName: '',
-      itemBarcode: '',
-      batchNo: '',
-      quantity: 1,
-      unit: 'pcs',
-      unitPrice: 0,
-      total: 0,
-      remarks: ''
-    }]);
-    
-    setSelectedSupplier('');
-    setSavedPRId(null);
-  };
-
-  const handleSaveDraft = async () => {
-    setSavingDraft(true);
-    setErrorMessage('');
-    
+  const handleViewClick = async (pr) => {
     try {
-      const requestData = prepareRequestData();
-      console.log('Saving draft:', requestData);
-      
-      const created = await createPurchaseRequestAPI(requestData);
-      console.log('Draft saved:', created);
-      
-      setSavedPRId(created.id);
-      setPrData(prev => ({ ...prev, prNumber: created.prNumber }));
-      
-      setSuccessMessage(`Draft saved successfully! PR Number: ${created.prNumber}`);
-      setShowSuccess(true);
+      setLoading(true);
+      const fullPR = await getPurchaseRequestByIdAPI(pr.id);
+      setViewingPR(fullPR);
+      setShowViewModal(true);
     } catch (error) {
-      console.error('Save draft error:', error);
-      setErrorMessage(error.message || 'Error saving draft. Please try again.');
+      console.error("Error loading PR details:", error);
+      setErrorMessage("Failed to load purchase request details.");
     } finally {
-      setSavingDraft(false);
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setErrorMessage('');
-    
+  const handleEditClick = async (pr) => {
     try {
-      let purchaseRequestId = savedPRId;
-      
-      // If not saved as draft yet, create it first
-      if (!purchaseRequestId) {
-        const requestData = prepareRequestData();
-        console.log('Creating purchase request:', requestData);
-        
-        const created = await createPurchaseRequestAPI(requestData);
-        console.log('Purchase request created:', created);
-        purchaseRequestId = created.id;
-        setSavedPRId(purchaseRequestId);
-      }
-      
-      // Submit the purchase request
-      const submitted = await submitPurchaseRequestAPI(purchaseRequestId);
-      console.log('Purchase request submitted:', submitted);
-      
-      setSuccessMessage(`Purchase Request ${submitted.prNumber} submitted successfully with ${prData.priority.toUpperCase()} priority!`);
-      setShowSuccess(true);
-      
-      // Reset form after successful submission
-      setTimeout(() => {
-        resetForm();
-      }, 2000);
-      
+      setLoading(true);
+      const fullPR = await getPurchaseRequestByIdAPI(pr.id);
+      setEditingPR(fullPR);
+      setFormMode("edit");
+      setShowFormModal(true);
     } catch (error) {
-      console.error('Submission error:', error);
-      setErrorMessage(error.message || 'Error submitting purchase request. Please try again.');
+      console.error("Error loading PR details:", error);
+      setErrorMessage("Failed to load purchase request details.");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
+  };
+
+  const handleCreateClick = () => {
+    setEditingPR(null);
+    setFormMode("create");
+    setShowFormModal(true);
+  };
+
+  const handleFormClose = () => {
+    setShowFormModal(false);
+    setEditingPR(null);
+  };
+
+  const handleViewClose = () => {
+    setShowViewModal(false);
+    setViewingPR(null);
+  };
+
+  const handleFormSuccess = (message) => {
+    setSuccessMessage(message);
+    setShowSuccess(true);
+    loadPurchaseRequests();
+    handleFormClose();
   };
 
   const getPriorityColor = (priority) => {
     const colors = {
-      'low': 'bg-gray-100 text-gray-700 border-gray-200',
-      'normal': 'bg-blue-100 text-blue-700 border-blue-200',
-      'medium': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      'high': 'bg-orange-100 text-orange-700 border-orange-200',
-      'urgent': 'bg-red-100 text-red-700 border-red-200'
+      LOW: "bg-gray-100 text-gray-700 border-gray-200",
+      NORMAL: "bg-blue-100 text-blue-700 border-blue-200",
+      MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      HIGH: "bg-orange-100 text-orange-700 border-orange-200",
+      URGENT: "bg-red-100 text-red-700 border-red-200",
     };
-    return colors[priority] || colors.normal;
+    return colors[priority] || colors.NORMAL;
   };
 
-  const getPriorityDeliveryTime = (priority) => {
-    switch(priority) {
-      case 'urgent': return 'Expected delivery within 24-48 hours';
-      case 'high': return 'Expected delivery within 3-5 days';
-      case 'medium': return 'Expected delivery within 5-7 days';
-      case 'normal': return 'Expected delivery within 7-10 days';
-      case 'low': return 'Expected delivery within 10-14 days';
-      default: return '';
+  const getStatusColor = (status) => {
+    const colors = {
+      DRAFT: "bg-gray-100 text-gray-700",
+      SUBMITTED: "bg-blue-100 text-blue-700",
+      APPROVED: "bg-green-100 text-green-700",
+      REJECTED: "bg-red-100 text-red-700",
+      PARTIALLY_RECEIVED: "bg-yellow-100 text-yellow-700",
+      COMPLETED: "bg-purple-100 text-purple-700",
+    };
+    return colors[status] || colors.DRAFT;
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
     }
   };
 
-  // Format currency in INR
-  const formatINR = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
+  const filteredRequests = purchaseRequests.filter((pr) => {
+    const matchesSearch = pr.prNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          pr.requestedBy?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "ALL" || pr.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Success Modal - Centered with transparent overlay */}
+        {/* Success Modal */}
         {showSuccess && (
           <>
-            <div 
-              className="fixed inset-0 z-40"
-              onClick={() => setShowSuccess(false)}
-            />
-            
+            <div className="fixed inset-0 z-40" onClick={() => setShowSuccess(false)} />
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform animate-scale-up pointer-events-auto border border-gray-200">
                 <div className="text-center">
@@ -382,14 +236,14 @@ export default function PurchaseRequestPage() {
             </div>
           </>
         )}
-        
+
         {/* Error Message */}
         {errorMessage && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 animate-slide-down">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <span className="text-red-800">{errorMessage}</span>
-            <button 
-              onClick={() => setErrorMessage('')}
+            <button
+              onClick={() => setErrorMessage("")}
               className="ml-auto text-red-600 hover:text-red-800"
             >
               <XCircle className="w-4 h-4" />
@@ -400,389 +254,261 @@ export default function PurchaseRequestPage() {
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Purchase Request</h1>
-                <p className="text-blue-100 text-sm mt-1">WMS Warehouse Management System</p>
+                <h1 className="text-2xl font-bold text-white">Purchase Requests</h1>
+                <p className="text-blue-100 text-sm mt-1">
+                  WMS Warehouse Management System
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => router.push('/master/suppliers')}
+                  onClick={() => router.push("/master/suppliers")}
                   className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm"
                 >
                   <Building2 className="w-4 h-4" />
                   Suppliers
                 </button>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                  <div className="text-blue-100 text-xs">Request Number</div>
-                  <div className="text-white font-semibold text-lg">{prData.prNumber}</div>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateClick}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Request
+                </button>
+                <button
+                  type="button"
+                  onClick={loadPurchaseRequests}
+                  className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Basic Information Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-800">Basic Information</h2>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Preferred Supplier
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedSupplier}
-                      onChange={(e) => setSelectedSupplier(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={isLoadingSuppliers}
-                    >
-                      <option value="">Select Supplier</option>
-                      {suppliers.map(supplier => (
-                        <option key={supplier.id} value={supplier.id}>
-                          {supplier.name} ({supplier.code})
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => router.push('/master/suppliers')}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                    >
-                      <Building2 className="w-4 h-4" />
-                      Manage
-                    </button>
-                  </div>
-                  {isLoadingSuppliers && (
-                    <p className="text-xs text-gray-500 mt-1">Loading suppliers...</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Request Date *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="requestedDate"
-                      value={prData.requestedDate}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Required Date *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="requiredDate"
-                      value={prData.requiredDate}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority Level *
-                  </label>
-                  <div className="relative">
-                    <Flag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <select
-                      name="priority"
-                      value={prData.priority}
-                      onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    >
-                      <option value="low">Low - Standard Processing</option>
-                      <option value="normal">Normal - Regular Priority</option>
-                      <option value="medium">Medium - Moderate Priority</option>
-                      <option value="high">High - Urgent Requirement</option>
-                      <option value="urgent">Urgent - Critical/Immediate</option>
-                    </select>
-                  </div>
-                  {prData.priority === 'urgent' && (
-                    <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      Urgent requests will be processed immediately
-                    </p>
-                  )}
-                  {prData.priority === 'high' && (
-                    <p className="mt-1 text-xs text-orange-600 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      High priority requests will be expedited
-                    </p>
-                  )}
-                </div>
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by PR Number or Requester..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-              
-              {prData.priority && (
-                <div className="mt-4 flex items-center gap-3 p-3 bg-gray-50 rounded-lg flex-wrap">
-                  <span className="text-sm text-gray-600">Selected Priority:</span>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getPriorityColor(prData.priority)}`}>
-                    <Flag className="w-3 h-3" />
-                    {prData.priority.toUpperCase()}
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    {getPriorityDeliveryTime(prData.priority)}
-                  </span>
-                </div>
-              )}
+            </div>
+            <div className="w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="ALL">All Status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="PARTIALLY_RECEIVED">Partially Received</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            </div>
+            <div className="text-sm text-gray-500">
+              Showing {filteredRequests.length} of {totalElements} requests
             </div>
           </div>
+        </div>
 
-          {/* Items Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center flex-wrap gap-3">
-              <h2 className="text-lg font-semibold text-gray-800">Request Items</h2>
-              <button
-                type="button"
-                onClick={addItem}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Item
-              </button>
-            </div>
-            <div className="p-6 overflow-x-auto">
-              <table className="w-full min-w-[1000px]">
-                <thead className="bg-gray-50">
+        {/* Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PR Number
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PR Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Requested By
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Warehouse
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Required Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Items
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading ? (
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch No</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price (₹)</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total (₹)</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <td colSpan="10" className="text-center py-8">
+                      <div className="flex justify-center items-center gap-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span className="text-gray-500">Loading...</span>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {items.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
+                ) : filteredRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="text-center py-8 text-gray-500">
+                      No purchase requests found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRequests.map((pr) => (
+                    <tr key={pr.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={item.itemCode}
-                          onChange={(e) => handleItemChange(item.id, 'itemCode', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Code"
-                        />
+                        <span className="font-medium text-blue-600">{pr.prNumber}</span>
                       </td>
+                      <td className="px-4 py-3 text-sm">{formatDate(pr.prDate)}</td>
+                      <td className="px-4 py-3 text-sm">{pr.requestedBy}</td>
+                      <td className="px-4 py-3 text-sm">{pr.department}</td>
+                      <td className="px-4 py-3 text-sm">{pr.warehouse}</td>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={item.itemName}
-                          onChange={(e) => handleItemChange(item.id, 'itemName', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Item name"
-                          required
-                        />
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(pr.priority)}`}>
+                          <Flag className="w-3 h-3" />
+                          {pr.priority}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={item.itemBarcode}
-                          onChange={(e) => handleItemChange(item.id, 'itemBarcode', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Barcode"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={item.batchNo}
-                          onChange={(e) => handleItemChange(item.id, 'batchNo', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Batch No"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          min="1"
-                          required
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={item.unit}
-                          onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        >
-                          <option value="pcs">Pcs</option>
-                          <option value="kg">Kg</option>
-                          <option value="liters">Liters</option>
-                          <option value="boxes">Boxes</option>
-                          <option value="packs">Packs</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          className="w-28 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-gray-900">
-                          {formatINR(item.total)}
+                      <td className="px-4 py-3 text-sm">{formatDate(pr.requiredDate)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                          {pr.items?.length || 0} items
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={item.remarks}
-                          onChange={(e) => handleItemChange(item.id, 'remarks', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Remarks"
-                        />
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pr.status)}`}>
+                          {pr.status}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item.id)}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          title="Remove item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewClick(pr)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {pr.status === "DRAFT" && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditClick(pr)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
 
-          {/* Summary Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-800">Summary & Additional Info</h2>
+          {/* Pagination */}
+          {totalPages > 0 && (
+            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
+              <div className="text-sm text-gray-500">
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements} requests
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm">
+                  {currentPage + 1}
+                </span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages - 1}
+                  className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Additional Notes
-                  </label>
-                  <textarea
-                    name="notes"
-                    value={prData.notes}
-                    onChange={handleInputChange}
-                    rows="4"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Any additional information or special requirements..."
-                  />
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-800 mb-3">Request Summary</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Priority:</span>
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getPriorityColor(prData.priority)}`}>
-                        <Flag className="w-3 h-3" />
-                        {prData.priority.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Items:</span>
-                      <span className="font-medium">{items.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Quantity:</span>
-                      <span className="font-medium">{totalQuantity}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-gray-200">
-                      <span className="text-gray-800 font-semibold">Total Amount:</span>
-                      <span className="text-xl font-bold text-blue-600">{formatINR(totalAmount)}</span>
-                    </div>
-                  </div>
-                </div>
+          )}
+        </div>
+
+        {/* Create/Edit Modal */}
+        {showFormModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div className="fixed inset-0 bg-black/50" onClick={handleFormClose} />
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <PurchaseRequestForm 
+                  mode={formMode}
+                  initialData={editingPR}
+                  onClose={handleFormClose}
+                  onSuccess={handleFormSuccess}
+                />
               </div>
             </div>
           </div>
+        )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={savingDraft}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="w-4 h-4" />
-              {savingDraft ? 'Saving...' : 'Save as Draft'}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                prData.priority === 'urgent' 
-                  ? 'bg-red-600 hover:bg-red-700' 
-                  : prData.priority === 'high'
-                  ? 'bg-orange-600 hover:bg-orange-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              } text-white`}
-            >
-              <Send className="w-4 h-4" />
-              {submitting ? 'Submitting...' : `Submit Request ${prData.priority !== 'normal' ? `(${prData.priority.toUpperCase()} Priority)` : ''}`}
-            </button>
+        {/* View Modal */}
+        {showViewModal && viewingPR && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div className="fixed inset-0 bg-black/50" onClick={handleViewClose} />
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <PurchaseRequestView 
+                  data={viewingPR}
+                  onClose={handleViewClose}
+                />
+              </div>
+            </div>
           </div>
-        </form>
+        )}
       </div>
 
       <style jsx>{`
         @keyframes slide-down {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes scale-up {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
-        .animate-slide-down {
-          animation: slide-down 0.3s ease-out;
-        }
-        .animate-scale-up {
-          animation: scale-up 0.3s ease-out;
-        }
+        .animate-slide-down { animation: slide-down 0.3s ease-out; }
+        .animate-scale-up { animation: scale-up 0.3s ease-out; }
       `}</style>
     </div>
   );
