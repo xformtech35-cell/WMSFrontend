@@ -15,8 +15,11 @@ import {
   Building,
   Warehouse,
   FileText,
+  Search,
 } from "lucide-react";
 import api from "@/lib/api";
+import ItemSelectorModal from "./ItemSelectorModal.jsItemSelectorModal";
+// import ItemSelectorModal from "./ItemSelectorModal";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -122,6 +125,7 @@ export default function PurchaseRequestForm({
   const [items, setItems] = useState([
     {
       id: 1,
+      itemId: null,
       itemCode: "",
       itemName: "",
       description: "",
@@ -129,6 +133,13 @@ export default function PurchaseRequestForm({
       requestedQty: 1,
       currentStock: 0,
       reason: "",
+      unitPrice: 0,
+      category: "",
+      brand: "",
+      supplierId: null,
+      gstRate: 0,
+      gstHsnCode: "",
+      isGstApplicable: false,
     },
   ]);
 
@@ -140,6 +151,7 @@ export default function PurchaseRequestForm({
   const [savedPRId, setSavedPRId] = useState(null);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showItemSelector, setShowItemSelector] = useState(false);
 
   // Load suppliers on mount
   useEffect(() => {
@@ -199,6 +211,7 @@ export default function PurchaseRequestForm({
       if (initialData.items && initialData.items.length > 0) {
         const formattedItems = initialData.items.map((item, index) => ({
           id: index + 1,
+          itemId: item.itemId || null,
           itemCode: item.itemCode || "",
           itemName: item.itemName || "",
           description: item.description || "",
@@ -206,6 +219,13 @@ export default function PurchaseRequestForm({
           requestedQty: item.requestedQty || 1,
           currentStock: item.currentStock || 0,
           reason: item.reason || "",
+          unitPrice: item.unitPrice || 0,
+          category: item.category || "",
+          brand: item.brand || "",
+          supplierId: item.supplierId || null,
+          gstRate: item.gstRate || 0,
+          gstHsnCode: item.gstHsnCode || "",
+          isGstApplicable: item.isGstApplicable || false,
         }));
         setItems(formattedItems);
       }
@@ -232,21 +252,31 @@ export default function PurchaseRequestForm({
     setItems(updatedItems);
   };
 
-  const addItem = () => {
+  const handleSelectItemFromModal = (selectedItem) => {
     const newId = Math.max(...items.map((i) => i.id), 0) + 1;
-    setItems([
-      ...items,
-      {
-        id: newId,
-        itemCode: "",
-        itemName: "",
-        description: "",
-        uom: "Nos",
-        requestedQty: 1,
-        currentStock: 0,
-        reason: "",
-      },
-    ]);
+    const newItem = {
+      id: newId,
+      itemId: selectedItem.itemId,
+      itemCode: selectedItem.itemCode,
+      itemName: selectedItem.itemName,
+      description: selectedItem.description || "",
+      uom: selectedItem.uom || "Nos",
+      requestedQty: 1,
+      currentStock: selectedItem.currentStock || 0,
+      reason: "",
+      unitPrice: selectedItem.unitPrice || 0,
+      category: selectedItem.category || "",
+      brand: selectedItem.brand || "",
+      supplierId: selectedItem.supplierId || null,
+      gstRate: selectedItem.gstRate || 0,
+      gstHsnCode: selectedItem.gstHsnCode || "",
+      isGstApplicable: selectedItem.isGstApplicable || false,
+    };
+    setItems([...items, newItem]);
+  };
+
+  const addItem = () => {
+    setShowItemSelector(true);
   };
 
   const removeItem = (id) => {
@@ -300,6 +330,7 @@ export default function PurchaseRequestForm({
       remarks: prData.remarks || null,
       supplierId: selectedSupplier ? parseInt(selectedSupplier) : null,
       items: items.map((item) => ({
+        itemId: item.itemId || null,
         itemCode: item.itemCode || null,
         itemName: item.itemName,
         description: item.description || null,
@@ -307,6 +338,13 @@ export default function PurchaseRequestForm({
         requestedQty: parseInt(item.requestedQty),
         currentStock: parseInt(item.currentStock) || 0,
         reason: item.reason || null,
+        unitPrice: item.unitPrice || 0,
+        category: item.category || null,
+        brand: item.brand || null,
+        supplierId: item.supplierId || null,
+        gstRate: item.gstRate || 0,
+        gstHsnCode: item.gstHsnCode || null,
+        isGstApplicable: item.isGstApplicable || false,
       })),
     };
   };
@@ -320,7 +358,6 @@ export default function PurchaseRequestForm({
       let result;
 
       if (mode === "edit" && savedPRId) {
-        // Update existing PR
         result = await updatePurchaseRequestAPI(savedPRId, requestData);
         if (onSuccess) {
           onSuccess(
@@ -328,7 +365,6 @@ export default function PurchaseRequestForm({
           );
         }
       } else {
-        // Create new PR
         result = await createPurchaseRequestAPI(requestData);
         setSavedPRId(result.id);
         setPrData((prev) => ({ ...prev, prNumber: result.prNumber }));
@@ -355,14 +391,10 @@ export default function PurchaseRequestForm({
       let purchaseRequestId = savedPRId;
       let requestData;
 
-      // If editing and we have an ID, update first if needed
       if (mode === "edit" && purchaseRequestId) {
-        // PR already exists, just submit it
         requestData = prepareRequestData();
-
-        await updatePurchaseRequestAPI(purchaseRequestId,requestData);
-
-        // const submitted = await submitPurchaseRequestAPI(purchaseRequestId);
+        await updatePurchaseRequestAPI(purchaseRequestId, requestData);
+        
         if (onSuccess) {
           onSuccess(
             `Purchase Request updated successfully with ${prData.priority} priority!`,
@@ -372,16 +404,12 @@ export default function PurchaseRequestForm({
         return;
       }
 
-      // For new PR or if no ID (shouldn't happen in edit mode)
       if (!purchaseRequestId) {
         requestData = prepareRequestData();
         const created = await createPurchaseRequestAPI(requestData);
         purchaseRequestId = created.id;
         setSavedPRId(purchaseRequestId);
       }
-
-      // Submit the purchase request
-      //   const submitted = await submitPurchaseRequestAPI(purchaseRequestId);
 
       if (onSuccess) {
         onSuccess(
@@ -409,23 +437,6 @@ export default function PurchaseRequestForm({
       URGENT: "bg-red-100 text-red-700 border-red-200",
     };
     return colors[priority] || colors.NORMAL;
-  };
-
-  const getPriorityDeliveryTime = (priority) => {
-    switch (priority) {
-      case "URGENT":
-        return "24-48 hours";
-      case "HIGH":
-        return "3-5 days";
-      case "MEDIUM":
-        return "5-7 days";
-      case "NORMAL":
-        return "7-10 days";
-      case "LOW":
-        return "10-14 days";
-      default:
-        return "";
-    }
   };
 
   if (isLoading) {
@@ -471,7 +482,7 @@ export default function PurchaseRequestForm({
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Basic Information Section */}
+          {/* Basic Information Section - Same as before */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
             <div className="border-b border-gray-200 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -480,7 +491,6 @@ export default function PurchaseRequestForm({
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* PR Number - Display only in edit mode */}
                 {mode === "edit" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -494,7 +504,6 @@ export default function PurchaseRequestForm({
                   </div>
                 )}
 
-                {/* PR Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     PR Date *
@@ -512,7 +521,6 @@ export default function PurchaseRequestForm({
                   </div>
                 </div>
 
-                {/* Requested By */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Requested By *
@@ -531,7 +539,6 @@ export default function PurchaseRequestForm({
                   </div>
                 </div>
 
-                {/* Department */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Department *
@@ -556,7 +563,6 @@ export default function PurchaseRequestForm({
                   </div>
                 </div>
 
-                {/* Warehouse */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Warehouse *
@@ -580,15 +586,13 @@ export default function PurchaseRequestForm({
                   </div>
                 </div>
 
-                {/* Priority */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Priority Level *
                   </label>
                   <div className="relative">
                     <Flag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <select
-                      name="priority"
+                    <select                      name="priority"
                       value={prData.priority}
                       onChange={handleInputChange}
                       className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -598,14 +602,11 @@ export default function PurchaseRequestForm({
                       <option value="NORMAL">Normal - Regular Priority</option>
                       <option value="MEDIUM">Medium - Moderate Priority</option>
                       <option value="HIGH">High - Urgent Requirement</option>
-                      <option value="URGENT">
-                        Urgent - Critical/Immediate
-                      </option>
+                      <option value="URGENT">Urgent - Critical/Immediate</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Required Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Required Date *
@@ -622,36 +623,6 @@ export default function PurchaseRequestForm({
                     />
                   </div>
                 </div>
-
-                {/* Preferred Supplier */}
-                <div className="md:col-span-2 lg:col-span-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Preferred Supplier
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedSupplier}
-                      onChange={(e) => setSelectedSupplier(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={isLoadingSuppliers}
-                    >
-                      <option value="">Select Supplier</option>
-                      {suppliers.map((supplier) => (
-                        <option key={supplier.id} value={supplier.id}>
-                          {supplier.name} ({supplier.code})
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => router.push("/master/suppliers")}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                    >
-                      <Building2 className="w-4 h-4" />
-                      Manage
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {prData.priority && (
@@ -665,10 +636,6 @@ export default function PurchaseRequestForm({
                     <Flag className="w-3 h-3" />
                     {prData.priority}
                   </span>
-                  <span className="text-sm text-gray-600">
-                    Expected delivery:{" "}
-                    {getPriorityDeliveryTime(prData.priority)}
-                  </span>
                 </div>
               )}
             </div>
@@ -680,14 +647,24 @@ export default function PurchaseRequestForm({
               <h2 className="text-lg font-semibold text-gray-800">
                 Request Items
               </h2>
-              <button
-                type="button"
-                onClick={addItem}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Item
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowItemSelector(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                >
+                  <Search className="w-4 h-4" />
+                  Browse Items
+                </button>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Manual
+                </button>
+              </div>
             </div>
             <div className="p-6 overflow-x-auto">
               <table className="w-full min-w-[1200px]">
@@ -710,6 +687,9 @@ export default function PurchaseRequestForm({
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Current Stock
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Unit Price
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Reason
@@ -818,6 +798,23 @@ export default function PurchaseRequestForm({
                         />
                       </td>
                       <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={(e) =>
+                            handleItemChange(
+                              item.id,
+                              "unitPrice",
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          min="0"
+                          placeholder="0.00"
+                          step="0.01"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
                         <select
                           value={item.reason}
                           onChange={(e) =>
@@ -826,19 +823,11 @@ export default function PurchaseRequestForm({
                           className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         >
                           <option value="">Select Reason</option>
-                          <option value="New requirement">
-                            New requirement
-                          </option>
-                          <option value="Stock running low">
-                            Stock running low
-                          </option>
+                          <option value="New requirement">New requirement</option>
+                          <option value="Stock running low">Stock running low</option>
                           <option value="Replacement">Replacement</option>
-                          <option value="Seasonal demand">
-                            Seasonal demand
-                          </option>
-                          <option value="Project requirement">
-                            Project requirement
-                          </option>
+                          <option value="Seasonal demand">Seasonal demand</option>
+                          <option value="Project requirement">Project requirement</option>
                           <option value="Others">Others</option>
                         </select>
                       </td>
@@ -859,7 +848,7 @@ export default function PurchaseRequestForm({
             </div>
           </div>
 
-          {/* Summary Section */}
+          {/* Summary Section - Same as before */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
             <div className="border-b border-gray-200 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -976,6 +965,14 @@ export default function PurchaseRequestForm({
           </div>
         </form>
       </div>
+
+      {/* Item Selector Modal */}
+      <ItemSelectorModal
+        isOpen={showItemSelector}
+        onClose={() => setShowItemSelector(false)}
+        onSelectItem={handleSelectItemFromModal}
+        selectedItems={items}
+      />
     </div>
   );
 }

@@ -30,17 +30,6 @@ export default function PurchaseRequestView({ data, onClose }) {
     return colors[priority] || colors.NORMAL;
   };
 
-  const getPriorityColorPrint = (priority) => {
-    const colors = {
-      LOW: "gray",
-      NORMAL: "blue",
-      MEDIUM: "#D4A017",
-      HIGH: "orange",
-      URGENT: "red",
-    };
-    return colors[priority] || "blue";
-  };
-
   const getStatusColor = (status) => {
     const colors = {
       DRAFT: "bg-gray-100 text-gray-700",
@@ -51,18 +40,6 @@ export default function PurchaseRequestView({ data, onClose }) {
       COMPLETED: "bg-purple-100 text-purple-700",
     };
     return colors[status] || colors.DRAFT;
-  };
-
-  const getStatusColorPrint = (status) => {
-    const colors = {
-      DRAFT: "#6B7280",
-      SUBMITTED: "#2563EB",
-      APPROVED: "#16A34A",
-      REJECTED: "#DC2626",
-      PARTIALLY_RECEIVED: "#D4A017",
-      COMPLETED: "#9333EA",
-    };
-    return colors[status] || "#6B7280";
   };
 
   const getStatusIcon = (status) => {
@@ -121,8 +98,440 @@ export default function PurchaseRequestView({ data, onClose }) {
     return colors[status] || colors.PENDING;
   };
 
+  // Generate complete HTML for print/PDF
+  const generatePrintHTML = () => {
+    // Generate item rows
+    let itemRows = '';
+    if (data?.items && data.items.length > 0) {
+      data.items.forEach((item, index) => {
+        itemRows += `
+          <tr>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px;">${item.itemCode || "-"}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500;">${item.itemName}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px;">${item.description || "-"}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px; text-align: center;">${item.uom}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px; text-align: right;">${item.requestedQty}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px; text-align: right;">${item.currentStock || 0}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px;">${item.reason || "-"}</td>
+            <td style="padding: 8px 12px; border: 1px solid #d1d5db; font-size: 13px; text-align: center;">
+              <span style="background: ${item.itemStatus === 'RECEIVED' ? '#D1FAE5' : item.itemStatus === 'PARTIAL' ? '#DBEAFE' : item.itemStatus === 'REJECTED' ? '#FEE2E2' : '#FEF3C7'}; 
+                           color: ${item.itemStatus === 'RECEIVED' ? '#065F46' : item.itemStatus === 'PARTIAL' ? '#1E40AF' : item.itemStatus === 'REJECTED' ? '#991B1B' : '#92400E'}; 
+                           padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500;">
+                ${item.itemStatus || "PENDING"}
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+    } else {
+      itemRows = `
+        <tr>
+          <td colspan="8" style="padding: 20px; text-align: center; color: #6B7280;">No items found</td>
+        </tr>
+      `;
+    }
+
+    // Generate status info
+    let statusInfo = data.status;
+    if (data.submittedAt) statusInfo += ` | Submitted: ${formatDateTime(data.submittedAt)}`;
+    if (data.approvedAt) statusInfo += ` | Approved: ${formatDateTime(data.approvedAt)}`;
+    if (data.rejectionReason) statusInfo += ` | Reason: ${data.rejectionReason}`;
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Purchase Request - ${data.prNumber}</title>
+          <meta charset="utf-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              background: white;
+              padding: 30px;
+              color: #1F2937;
+            }
+            
+            .print-container {
+              max-width: 1100px;
+              margin: 0 auto;
+            }
+            
+            /* Header */
+            .header {
+              text-align: center;
+              border-bottom: 3px double #1F2937;
+              padding-bottom: 20px;
+              margin-bottom: 25px;
+            }
+            
+            .header h1 {
+              font-size: 28px;
+              font-weight: 700;
+              letter-spacing: 2px;
+              color: #1F2937;
+            }
+            
+            .header .subtitle {
+              color: #6B7280;
+              font-size: 14px;
+              margin-top: 4px;
+            }
+            
+            .header .pr-info {
+              display: flex;
+              justify-content: center;
+              gap: 30px;
+              margin-top: 10px;
+              font-size: 14px;
+            }
+            
+            .header .pr-info strong {
+              font-weight: 600;
+            }
+            
+            /* Status Banner */
+            .status-banner {
+              background: #F3F4F6;
+              padding: 12px 16px;
+              border-radius: 6px;
+              margin-bottom: 25px;
+              border-left: 4px solid ${data.status === 'APPROVED' ? '#16A34A' : data.status === 'REJECTED' ? '#DC2626' : data.status === 'SUBMITTED' ? '#2563EB' : '#6B7280'};
+              font-size: 14px;
+            }
+            
+            .status-banner .status-label {
+              font-weight: 600;
+            }
+            
+            /* Section */
+            .section {
+              margin-bottom: 25px;
+              border: 1px solid #E5E7EB;
+              border-radius: 8px;
+              overflow: hidden;
+            }
+            
+            .section-header {
+              background: #F9FAFB;
+              padding: 12px 20px;
+              border-bottom: 1px solid #E5E7EB;
+              font-size: 16px;
+              font-weight: 600;
+              color: #1F2937;
+            }
+            
+            .section-body {
+              padding: 20px;
+            }
+            
+            /* Info Grid */
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 16px;
+            }
+            
+            .info-item {
+              display: flex;
+              flex-direction: column;
+            }
+            
+            .info-item .label {
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #6B7280;
+              margin-bottom: 4px;
+            }
+            
+            .info-item .value {
+              font-size: 14px;
+              font-weight: 500;
+            }
+            
+            .info-item .value.blue {
+              color: #2563EB;
+            }
+            
+            .priority-badge {
+              display: inline-block;
+              padding: 2px 12px;
+              border-radius: 9999px;
+              font-size: 12px;
+              font-weight: 500;
+              background: ${data.priority === 'URGENT' ? '#FEE2E2' : data.priority === 'HIGH' ? '#FFEDD5' : data.priority === 'MEDIUM' ? '#FEF3C7' : data.priority === 'NORMAL' ? '#DBEAFE' : '#F3F4F6'};
+              color: ${data.priority === 'URGENT' ? '#991B1B' : data.priority === 'HIGH' ? '#9A3412' : data.priority === 'MEDIUM' ? '#92400E' : data.priority === 'NORMAL' ? '#1E40AF' : '#374151'};
+            }
+            
+            /* Table */
+            .table-container {
+              overflow-x: auto;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 13px;
+            }
+            
+            thead {
+              background: #F9FAFB;
+            }
+            
+            th {
+              padding: 10px 12px;
+              text-align: left;
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #6B7280;
+              border-bottom: 2px solid #E5E7EB;
+            }
+            
+            th.text-right {
+              text-align: right;
+            }
+            
+            th.text-center {
+              text-align: center;
+            }
+            
+            td {
+              padding: 8px 12px;
+              border-bottom: 1px solid #E5E7EB;
+            }
+            
+            tr:last-child td {
+              border-bottom: none;
+            }
+            
+            /* Footer */
+            .footer {
+              text-align: center;
+              font-size: 12px;
+              color: #6B7280;
+              border-top: 1px solid #E5E7EB;
+              padding-top: 20px;
+              margin-top: 20px;
+            }
+            
+            .footer .timestamp {
+              margin-top: 4px;
+            }
+            
+            /* Print styles */
+            @media print {
+              body {
+                padding: 15px;
+              }
+              
+              .no-print {
+                display: none !important;
+              }
+              
+              .section {
+                page-break-inside: avoid;
+              }
+              
+              table {
+                page-break-inside: auto;
+              }
+              
+              tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+              }
+              
+              thead {
+                display: table-header-group;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            <!-- Header -->
+            <div class="header">
+              <h1>PURCHASE REQUEST</h1>
+              <div class="subtitle">Warehouse Management System</div>
+              <div class="pr-info">
+                <span><strong>PR Number:</strong> ${data.prNumber}</span>
+                <span><strong>Date:</strong> ${formatDate(data.prDate)}</span>
+                <span><strong>Status:</strong> ${data.status}</span>
+              </div>
+            </div>
+
+            <!-- Status Banner -->
+            <div class="status-banner">
+              <span class="status-label">Status:</span> ${statusInfo}
+            </div>
+
+            <!-- Basic Information -->
+            <div class="section">
+              <div class="section-header">Basic Information</div>
+              <div class="section-body">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="label">PR Number</span>
+                    <span class="value blue">${data.prNumber}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">PR Date</span>
+                    <span class="value">${formatDate(data.prDate)}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Requested By</span>
+                    <span class="value">${data.requestedBy}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Department</span>
+                    <span class="value">${data.department}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Warehouse</span>
+                    <span class="value">${data.warehouse}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Priority</span>
+                    <span class="priority-badge">${data.priority}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Required Date</span>
+                    <span class="value">${formatDate(data.requiredDate)}</span>
+                  </div>
+                  ${data.supplierId ? `
+                    <div class="info-item">
+                      <span class="label">Supplier</span>
+                      <span class="value">${data.supplierName || "N/A"}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Items Section -->
+            <div class="section">
+              <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Request Items</span>
+                <span style="font-size: 13px; font-weight: 400; color: #6B7280;">
+                  Total Items: ${data.items?.length || 0} | Total Quantity: ${getTotalQuantity()}
+                </span>
+              </div>
+              <div class="section-body" style="padding: 0;">
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Item Code</th>
+                        <th>Item Name</th>
+                        <th>Description</th>
+                        <th style="text-align: center;">UOM</th>
+                        <th style="text-align: right;">Requested Qty</th>
+                        <th style="text-align: right;">Current Stock</th>
+                        <th>Reason</th>
+                        <th style="text-align: center;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${itemRows}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Information -->
+            ${(data.remarks || data.createdAt || data.updatedAt) ? `
+              <div class="section">
+                <div class="section-header">Additional Information</div>
+                <div class="section-body">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    ${data.remarks ? `
+                      <div style="grid-column: 1 / -1;">
+                        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; margin-bottom: 4px;">Remarks</div>
+                        <div style="font-size: 14px;">${data.remarks}</div>
+                      </div>
+                    ` : ''}
+                    ${data.createdAt ? `
+                      <div>
+                        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; margin-bottom: 4px;">Created At</div>
+                        <div style="font-size: 14px;">${formatDateTime(data.createdAt)}</div>
+                      </div>
+                    ` : ''}
+                    ${data.updatedAt ? `
+                      <div>
+                        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; margin-bottom: 4px;">Last Updated</div>
+                        <div style="font-size: 14px;">${formatDateTime(data.updatedAt)}</div>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Footer -->
+            <div class="footer">
+              <div>This is a system-generated document. For any queries, please contact the warehouse department.</div>
+              <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  // Print function
   const handlePrint = () => {
-    window.print();
+    const printHTML = generatePrintHTML();
+    
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    
+    if (!printWindow) {
+      alert('Please allow popups to print this document');
+      return;
+    }
+
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      setTimeout(() => {
+        printWindow.close();
+      }, 1000);
+    }, 500);
+  };
+
+  // PDF Download function
+  const handleDownloadPDF = () => {
+    const printHTML = generatePrintHTML();
+    
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    
+    if (!printWindow) {
+      alert('Please allow popups to download PDF');
+      return;
+    }
+
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      setTimeout(() => {
+        printWindow.close();
+      }, 1000);
+    }, 500);
   };
 
   if (!data) {
@@ -137,44 +546,44 @@ export default function PurchaseRequestView({ data, onClose }) {
     <>
       {/* Print Styles */}
       <style jsx global>{`
-    @media print {
-  @page {
-    size: A4;
-    margin: 10mm;
-  }
+        @media print {
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
 
-  body {
-    background: white;
-  }
+          body {
+            background: white;
+          }
 
-  .no-print {
-    display: none !important;
-  }
+          .no-print {
+            display: none !important;
+          }
 
-  .print-only {
-    display: block !important;
-  }
+          .print-only {
+            display: block !important;
+          }
 
-  #print-area {
-    width: 100%;
-    background: white;
-  }
+          #print-area {
+            width: 100%;
+            background: white;
+          }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
 
-  th,
-  td {
-    border: 1px solid #ccc;
-    padding: 8px;
-  }
+          th,
+          td {
+            border: 1px solid #ccc;
+            padding: 8px;
+          }
 
-  tr {
-    page-break-inside: avoid;
-  }
-}
+          tr {
+            page-break-inside: avoid;
+          }
+        }
       `}</style>
 
       {/* Main Content */}
@@ -188,7 +597,7 @@ export default function PurchaseRequestView({ data, onClose }) {
             <span className="text-sm text-gray-500">#{data.prNumber}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            {/* <button
               type="button"
               onClick={handlePrint}
               className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
@@ -198,8 +607,16 @@ export default function PurchaseRequestView({ data, onClose }) {
             </button>
             <button
               type="button"
+              onClick={handleDownloadPDF}
+              className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </button> */}
+            <button
+              type="button"
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
             >
               <XCircle className="w-6 h-6" />
             </button>
@@ -220,7 +637,7 @@ export default function PurchaseRequestView({ data, onClose }) {
           </div>
 
           <div className="p-6">
-            {/* Status Banner */}
+            {/* Status Banner - Screen */}
             <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${getStatusColor(data.status)} no-print`}>
               {getStatusIcon(data.status)}
               <div>
@@ -232,28 +649,6 @@ export default function PurchaseRequestView({ data, onClose }) {
                 )}
                 {data.approvedAt && (
                   <span className="text-sm ml-3 opacity-75">
-                    Approved on: {formatDateTime(data.approvedAt)}
-                  </span>
-                )}
-                {data.rejectionReason && (
-                  <span className="text-sm ml-3 text-red-600">
-                    Reason: {data.rejectionReason}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Print Status Banner */}
-            <div className="print-only mb-6 p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <span className="font-medium">Status: {data.status}</span>
-                {data.submittedAt && (
-                  <span className="text-sm ml-3">
-                    Submitted on: {formatDateTime(data.submittedAt)}
-                  </span>
-                )}
-                {data.approvedAt && (
-                  <span className="text-sm ml-3">
                     Approved on: {formatDateTime(data.approvedAt)}
                   </span>
                 )}
@@ -503,6 +898,14 @@ export default function PurchaseRequestView({ data, onClose }) {
                 <Printer className="w-4 h-4" />
                 Print
               </button>
+              {/* <button
+                type="button"
+                onClick={handleDownloadPDF}
+                className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button> */}
             </div>
           </div>
         </div>

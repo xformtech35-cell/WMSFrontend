@@ -14,10 +14,11 @@ import {
   Building2,
   Flag,
   CheckCircle,
+  Save,
+  X,
 } from "lucide-react";
 import api from "@/lib/api";
-import PurchaseRequestForm from "./components/PurchaseRequestForm";
-import PurchaseRequestView from "./components/PurchaseRequestView";
+import PurchaseRequestView from "../purchase-requests/components/PurchaseRequestView";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -48,10 +49,9 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
 
 // Updated API function to use filter endpoint
 const getPurchaseRequestsAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
-  // Convert status filter to match backend expectations
   let statusParam = status;
   if (status === "ALL") {
-    statusParam = ""; // Or you can send null/undefined, adjust based on your backend
+    statusParam = "";
   }
   
   const requestBody = {
@@ -66,6 +66,15 @@ const getPurchaseRequestsAPI = async (page = 0, size = 10, searchTerm = "", stat
 
 const getPurchaseRequestByIdAPI = async (id) => {
   return apiRequest(`/purchase-requests/${id}`);
+};
+
+// Update status API
+const updatePurchaseRequestStatusAPI = async (id, status, remarks) => {
+  const requestBody = {
+    status: status,
+    remarks: remarks || ""
+  };
+  return apiRequest(`/purchase-requests/${id}/status`, "POST", requestBody);
 };
 
 export default function PurchaseRequestPage() {
@@ -85,11 +94,15 @@ export default function PurchaseRequestPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [editingPR, setEditingPR] = useState(null);
   const [viewingPR, setViewingPR] = useState(null);
-  const [formMode, setFormMode] = useState("create"); // "create" or "edit"
+  
+  // Status Update Modal State
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedPR, setSelectedPR] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -129,18 +142,15 @@ export default function PurchaseRequestPage() {
         statusFilter
       );
       
-      // Handle different response structures
       if (response && response.content) {
         setPurchaseRequests(response.content || []);
         setTotalPages(response.totalPages || 0);
         setTotalElements(response.totalElements || 0);
       } else if (Array.isArray(response)) {
-        // If response is directly an array
         setPurchaseRequests(response);
         setTotalPages(Math.ceil(response.length / pageSize) || 0);
         setTotalElements(response.length || 0);
       } else {
-        // Fallback
         setPurchaseRequests([]);
         setTotalPages(0);
         setTotalElements(0);
@@ -167,42 +177,60 @@ export default function PurchaseRequestPage() {
     }
   };
 
-  const handleEditClick = async (pr) => {
-    try {
-      setLoading(true);
-      const fullPR = await getPurchaseRequestByIdAPI(pr.id);
-      setEditingPR(fullPR);
-      setFormMode("edit");
-      setShowFormModal(true);
-    } catch (error) {
-      console.error("Error loading PR details:", error);
-      setErrorMessage("Failed to load purchase request details.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateClick = () => {
-    setEditingPR(null);
-    setFormMode("create");
-    setShowFormModal(true);
-  };
-
-  const handleFormClose = () => {
-    setShowFormModal(false);
-    setEditingPR(null);
-  };
-
   const handleViewClose = () => {
     setShowViewModal(false);
     setViewingPR(null);
   };
 
-  const handleFormSuccess = (message) => {
-    setSuccessMessage(message);
-    setShowSuccess(true);
-    loadPurchaseRequests();
-    handleFormClose();
+  // Status Update Functions
+  const handleStatusUpdateClick = (pr) => {
+    setSelectedPR(pr);
+    setSelectedStatus(pr.status || "");
+    setRemarks("");
+    setShowStatusModal(true);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!selectedStatus) {
+      setErrorMessage("Please select a status.");
+      return;
+    }
+
+    // If rejecting, remarks are required
+    if (selectedStatus === "REJECTED" && !remarks.trim()) {
+      setErrorMessage("Remarks are required when rejecting a request.");
+      return;
+    }
+
+    try {
+      setUpdatingStatus(true);
+      await updatePurchaseRequestStatusAPI(selectedPR.id, selectedStatus, remarks);
+      
+      setSuccessMessage(`Purchase request status updated to ${selectedStatus} successfully!`);
+      setShowSuccess(true);
+      setShowStatusModal(false);
+      
+      // Reset states
+      setSelectedPR(null);
+      setSelectedStatus("");
+      setRemarks("");
+      
+      // Reload the list
+      loadPurchaseRequests();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      setErrorMessage(`Failed to update status: ${error.message}`);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleStatusModalClose = () => {
+    setShowStatusModal(false);
+    setSelectedPR(null);
+    setSelectedStatus("");
+    setRemarks("");
+    setErrorMessage("");
   };
 
   const getPriorityColor = (priority) => {
@@ -222,9 +250,10 @@ export default function PurchaseRequestPage() {
       SUBMITTED: "bg-blue-100 text-blue-700",
       APPROVED: "bg-green-100 text-green-700",
       REJECTED: "bg-red-100 text-red-700",
-      PARTIALLY_RECEIVED: "bg-yellow-100 text-yellow-700",
+      PARTIAL: "bg-yellow-100 text-yellow-700",
       COMPLETED: "bg-purple-100 text-purple-700",
       PENDING: "bg-orange-100 text-orange-700",
+      IN_PROGRESS: "bg-indigo-100 text-indigo-700",
     };
     return colors[status] || colors.DRAFT;
   };
@@ -243,6 +272,26 @@ export default function PurchaseRequestPage() {
       month: "2-digit",
       year: "numeric",
     });
+  };
+
+  // Get available status options based on current status
+  const getAvailableStatuses = (currentStatus) => {
+    const allStatuses = [
+      "DRAFT",
+      "SUBMITTED",
+      "PENDING",
+      "APPROVED",
+      "REJECTED",
+      "PARTIAL",
+      "COMPLETED",
+      "IN_PROGRESS"
+    ];
+
+    // You can customize which statuses are available based on current status
+    // For example, if current is DRAFT, only allow SUBMITTED
+    // If current is SUBMITTED, allow PENDING, APPROVED, REJECTED
+    // etc.
+    return allStatuses;
   };
 
   return (
@@ -291,7 +340,7 @@ export default function PurchaseRequestPage() {
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Purchase Requests</h1>
+                <h1 className="text-2xl font-bold text-white">Purchase Approval</h1>
                 <p className="text-blue-100 text-sm mt-1">
                   WMS Warehouse Management System
                 </p>
@@ -304,14 +353,6 @@ export default function PurchaseRequestPage() {
                 >
                   <Building2 className="w-4 h-4" />
                   Suppliers
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateClick}
-                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Request
                 </button>
                 <button
                   type="button"
@@ -349,11 +390,12 @@ export default function PurchaseRequestPage() {
                 <option value="ALL">All Status</option>
                 <option value="DRAFT">Draft</option>
                 <option value="SUBMITTED">Submitted</option>
+                <option value="PENDING">Pending</option>
                 <option value="APPROVED">Approved</option>
                 <option value="REJECTED">Rejected</option>
-                <option value="PARTIALLY_RECEIVED">Partially Received</option>
+                <option value="PARTIAL">Partial</option>
                 <option value="COMPLETED">Completed</option>
-                <option value="PENDING">Pending</option>
+                <option value="IN_PROGRESS">In Progress</option>
               </select>
             </div>
             <div className="text-sm text-gray-500">
@@ -455,16 +497,14 @@ export default function PurchaseRequestPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {pr.status === "DRAFT" && (
-                            <button
-                              type="button"
-                              onClick={() => handleEditClick(pr)}
-                              className="text-green-600 hover:text-green-800 transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusUpdateClick(pr)}
+                            className="text-purple-600 hover:text-purple-800 transition-colors"
+                            title="Update Status"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -503,18 +543,118 @@ export default function PurchaseRequestPage() {
           )}
         </div>
 
-        {/* Create/Edit Modal */}
-        {showFormModal && (
+        {/* Status Update Modal */}
+        {showStatusModal && selectedPR && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={handleFormClose} />
-              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <PurchaseRequestForm 
-                  mode={formMode}
-                  initialData={editingPR}
-                  onClose={handleFormClose}
-                  onSuccess={handleFormSuccess}
-                />
+              <div className="fixed inset-0 bg-black/50" onClick={handleStatusModalClose} />
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Update Status</h2>
+                    <p className="text-sm text-gray-500">
+                      {selectedPR.prNumber} - {selectedPR.requestedBy}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleStatusModalClose}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    disabled={updatingStatus}
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Current Status
+                      </label>
+                      <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPR.status)}`}>
+                          {selectedPR.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        New Status *
+                      </label>
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        disabled={updatingStatus}
+                      >
+                        <option value="">Select Status</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="PARTIAL">Partial</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Remarks {selectedStatus === "REJECTED" && <span className="text-red-500">*</span>}
+                      </label>
+                      <textarea
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        rows="3"
+                        placeholder={selectedStatus === "REJECTED" ? "Please provide reason for rejection..." : "Optional remarks..."}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        disabled={updatingStatus}
+                      />
+                      {selectedStatus === "REJECTED" && (
+                        <p className="text-xs text-red-500 mt-1">Remarks are required when rejecting</p>
+                      )}
+                    </div>
+
+                    {/* Show current PR details */}
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      <p><span className="font-medium">Requested By:</span> {selectedPR.requestedBy}</p>
+                      <p><span className="font-medium">Department:</span> {selectedPR.department}</p>
+                      <p><span className="font-medium">Total Items:</span> {selectedPR.items?.length || 0}</p>
+                      <p><span className="font-medium">Total Amount:</span> ₹{selectedPR.totalAmount?.toFixed(2) || "0.00"}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex gap-3 pt-4 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={handleStatusUpdate}
+                      disabled={updatingStatus || !selectedStatus}
+                      className="flex-1 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatingStatus ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Update Status
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStatusModalClose}
+                      disabled={updatingStatus}
+                      className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -522,18 +662,18 @@ export default function PurchaseRequestPage() {
 
         {/* View Modal */}
         {showViewModal && viewingPR && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={handleViewClose} />
-              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <PurchaseRequestView 
-                  data={viewingPR}
-                  onClose={handleViewClose}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+                  <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex items-center justify-center min-h-screen p-4">
+                      <div className="fixed inset-0 bg-black/50" onClick={handleViewClose} />
+                      <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                        <PurchaseRequestView 
+                          data={viewingPR}
+                          onClose={handleViewClose}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
       </div>
 
       <style jsx>{`
