@@ -85,6 +85,13 @@ const ALL_MENU_ITEMS = [
     permission: P.PURCHASE_VIEW,
   },
   {
+    href: "/purchase-orders",
+    label: "Purchase Orders",
+    icon: ClipboardList,
+    group: "Purchase",
+    permission: P.PURCHASE_VIEW,
+  },
+  {
     href: "/inbound",
     label: "Inbound",
     icon: Package,

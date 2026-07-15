@@ -16,6 +16,9 @@ import {
   Package,
   DollarSign,
   Hash,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -46,8 +49,69 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getSuppliersAPI = async () => {
-  return apiRequest("/suppliers", "GET");
+const getSuppliersAPI = async (page = 0, size = 10, search = "", isActive = null) => {
+  try {
+    const params = new URLSearchParams();
+    if (page !== undefined) params.append("page", page);
+    if (size) params.append("size", size);
+    if (search) params.append("searchTerm", search);
+    if (isActive !== null) params.append("isActive", isActive);
+
+    const url = `/suppliers${params.toString() ? `?${params.toString()}` : ""}`;
+    const response = await api.get(url);
+    console.log("GET suppliers response:", response);
+
+    // Handle Spring Boot pagination response
+    if (response.data && response.data.data) {
+      const paginatedData = response.data.data;
+
+      // Check if it's Spring Boot pagination format
+      if (paginatedData.content && Array.isArray(paginatedData.content)) {
+        return {
+          data: paginatedData.content,
+          total: paginatedData.totalElements || paginatedData.content.length,
+          page: paginatedData.number || page,
+          size: paginatedData.size || size,
+          totalPages:
+            paginatedData.totalPages ||
+            Math.ceil(
+              (paginatedData.totalElements || paginatedData.content.length) /
+                size,
+            ),
+          first: paginatedData.first,
+          last: paginatedData.last,
+          numberOfElements: paginatedData.numberOfElements,
+        };
+      }
+
+      // Handle custom pagination format
+      return {
+        data: paginatedData.data || paginatedData.content || [],
+        total: paginatedData.total || paginatedData.totalElements || 0,
+        page: paginatedData.page || paginatedData.number || page,
+        size: paginatedData.size || paginatedData.pageSize || size,
+        totalPages: paginatedData.totalPages || 0,
+      };
+    } else if (response.data && Array.isArray(response.data)) {
+      return {
+        data: response.data,
+        total: response.data.length,
+        page: page,
+        size: size,
+        totalPages: Math.ceil(response.data.length / size),
+      };
+    }
+    return {
+      data: response.data || [],
+      total: 0,
+      page: page,
+      size: size,
+      totalPages: 0,
+    };
+  } catch (error) {
+    console.error("Error fetching suppliers:", error);
+    throw error;
+  }
 };
 
 const createRFQFromPRAPI = async (data) => {
@@ -80,11 +144,17 @@ export default function RFQForm({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [showItems, setShowItems] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [pageSize] = useState(10);
 
   // Load suppliers when modal opens
   useEffect(() => {
     if (isOpen) {
-      loadSuppliers();
+      loadSuppliers(0, "");
       if (purchaseRequest) {
         setFormData(prev => ({
           ...prev,
@@ -96,16 +166,35 @@ export default function RFQForm({
     }
   }, [isOpen, purchaseRequest]);
 
-  const loadSuppliers = async () => {
+  // Debounce search
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        loadSuppliers(0, searchTerm);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm]);
+
+  const loadSuppliers = async (page = 0, search = "") => {
     try {
       setLoadingSuppliers(true);
-      const data = await getSuppliersAPI();
-      setSuppliers(Array.isArray(data) ? data : []);
+      const response = await getSuppliersAPI(page, pageSize, search, true);
+      setSuppliers(response.data || []);
+      setTotalPages(response.totalPages || 0);
+      setTotalElements(response.total || 0);
+      setCurrentPage(response.page || 0);
     } catch (error) {
       console.error("Error loading suppliers:", error);
       setErrorMessage("Failed to load suppliers.");
     } finally {
       setLoadingSuppliers(false);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      loadSuppliers(newPage, searchTerm);
     }
   };
 
@@ -176,15 +265,6 @@ export default function RFQForm({
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const getFilteredSuppliers = () => {
-    if (!searchTerm) return suppliers;
-    return suppliers.filter(supplier =>
-      supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
   };
 
   const formatDate = (dateString) => {
@@ -386,6 +466,7 @@ export default function RFQForm({
                       RFQ Date *
                     </label>
                     <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                       <input
                         type="date"
                         name="rfqDate"
@@ -402,6 +483,7 @@ export default function RFQForm({
                       Closing Date *
                     </label>
                     <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                       <input
                         type="date"
                         name="closingDate"
@@ -419,6 +501,7 @@ export default function RFQForm({
                       Reference Number
                     </label>
                     <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                       <input
                         type="text"
                         name="referenceNumber"
@@ -435,12 +518,13 @@ export default function RFQForm({
                       Remarks
                     </label>
                     <div className="relative">
+                      <FileText className="absolute left-3 top-3 text-gray-400 w-4 h-4 pointer-events-none" />
                       <textarea
                         name="remarks"
                         value={formData.remarks}
                         onChange={handleInputChange}
                         rows="1"
-                        className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                         placeholder="Additional remarks"
                       />
                     </div>
@@ -515,12 +599,13 @@ export default function RFQForm({
                   </p>
                 </div>
                 <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Search suppliers..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="pl-10 w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
@@ -549,78 +634,110 @@ export default function RFQForm({
                 </div>
               )}
 
-              <div className="p-6 max-h-60 overflow-y-auto">
+              <div className="p-6">
                 {loadingSuppliers ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-2 text-sm text-gray-500">Loading suppliers...</p>
                   </div>
-                ) : getFilteredSuppliers().length === 0 ? (
+                ) : suppliers.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     {searchTerm ? "No suppliers found matching your search" : "No suppliers available"}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {getFilteredSuppliers().map((supplier) => {
-                      const isSelected = selectedSuppliers.some(s => s.id === supplier.id);
-                      return (
-                        <div
-                          key={supplier.id}
-                          onClick={() => toggleSupplierSelection(supplier)}
-                          className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-blue-500 bg-blue-50 shadow-sm"
-                              : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}}
-                              className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                <span className="font-medium text-gray-900 truncate">
-                                  {supplier.name}
-                                </span>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                      {suppliers.map((supplier) => {
+                        const isSelected = selectedSuppliers.some(s => s.id === supplier.id);
+                        return (
+                          <div
+                            key={supplier.id}
+                            onClick={() => toggleSupplierSelection(supplier)}
+                            className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50 shadow-sm"
+                                : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="font-medium text-gray-900 truncate">
+                                    {supplier.name}
+                                  </span>
+                                </div>
+                                <div className="mt-1 space-y-1 text-sm text-gray-500">
+                                  {supplier.contactPerson && (
+                                    <div className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      <span>{supplier.contactPerson}</span>
+                                    </div>
+                                  )}
+                                  {supplier.email && (
+                                    <div className="flex items-center gap-1">
+                                      <Mail className="w-3 h-3" />
+                                      <span className="truncate">{supplier.email}</span>
+                                    </div>
+                                  )}
+                                  {supplier.phone && (
+                                    <div className="flex items-center gap-1">
+                                      <Phone className="w-3 h-3" />
+                                      <span>{supplier.phone}</span>
+                                    </div>
+                                  )}
+                                  {supplier.gstNumber && (
+                                    <div className="text-xs text-gray-400">
+                                      GST: {supplier.gstNumber}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="mt-1 space-y-1 text-sm text-gray-500">
-                                {supplier.contactPerson && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    <span>{supplier.contactPerson}</span>
-                                  </div>
-                                )}
-                                {supplier.email && (
-                                  <div className="flex items-center gap-1">
-                                    <Mail className="w-3 h-3" />
-                                    <span className="truncate">{supplier.email}</span>
-                                  </div>
-                                )}
-                                {supplier.phone && (
-                                  <div className="flex items-center gap-1">
-                                    <Phone className="w-3 h-3" />
-                                    <span>{supplier.phone}</span>
-                                  </div>
-                                )}
-                                {supplier.gstNumber && (
-                                  <div className="text-xs text-gray-400">
-                                    GST: {supplier.gstNumber}
-                                  </div>
-                                )}
-                              </div>
+                              {isSelected && (
+                                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                              )}
                             </div>
-                            {isSelected && (
-                              <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                            )}
                           </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 0 && (
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+                        <div className="text-sm text-gray-500">
+                          Showing {suppliers.length} of {totalElements} suppliers
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 0}
+                            className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <span className="text-sm text-gray-600">
+                            {currentPage + 1} / {totalPages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages - 1}
+                            className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

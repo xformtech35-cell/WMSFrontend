@@ -257,7 +257,6 @@ export default function RFQPage() {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search by RFQ Number, PR Number, or Reference..."
@@ -369,9 +368,10 @@ export default function RFQPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
+                        {/* // In the RFQPage component, update the view button: */}
                         <button
                           type="button"
-                          onClick={() => handleViewClick(rfq)}
+                          onClick={() => router.push(`/rfqs/${rfq.id}`)}
                           className="text-blue-600 hover:text-blue-800 transition-colors"
                           title="View Details"
                         >
@@ -458,7 +458,13 @@ export default function RFQPage() {
 }
 
 // RFQ View Modal Component
-function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadgeColor }) {
+function RFQViewModal({
+  rfq,
+  onClose,
+  formatDate,
+  formatDateTime,
+  getStatusBadgeColor,
+}) {
   const [activeTab, setActiveTab] = useState("overview");
 
   if (!rfq) return null;
@@ -473,7 +479,10 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen p-4">
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
         {/* Modal */}
         <div className="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
@@ -573,27 +582,39 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
                     <div className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-gray-600 mb-1">
                         <Truck className="w-4 h-4" />
-                        <span className="text-sm font-medium">Delivery Terms</span>
+                        <span className="text-sm font-medium">
+                          Delivery Terms
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-900">{rfq.deliveryTerms}</p>
+                      <p className="text-sm text-gray-900">
+                        {rfq.deliveryTerms}
+                      </p>
                     </div>
                   )}
                   {rfq.paymentTerms && (
                     <div className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-gray-600 mb-1">
                         <CreditCard className="w-4 h-4" />
-                        <span className="text-sm font-medium">Payment Terms</span>
+                        <span className="text-sm font-medium">
+                          Payment Terms
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-900">{rfq.paymentTerms}</p>
+                      <p className="text-sm text-gray-900">
+                        {rfq.paymentTerms}
+                      </p>
                     </div>
                   )}
                   {rfq.termsAndConditions && (
                     <div className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-2 text-gray-600 mb-1">
                         <FileText className="w-4 h-4" />
-                        <span className="text-sm font-medium">Terms & Conditions</span>
+                        <span className="text-sm font-medium">
+                          Terms & Conditions
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-900">{rfq.termsAndConditions}</p>
+                      <p className="text-sm text-gray-900">
+                        {rfq.termsAndConditions}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -601,7 +622,9 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
                 {/* Remarks */}
                 {rfq.remarks && (
                   <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">Remarks</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">
+                      Remarks
+                    </h4>
                     <p className="text-sm text-gray-600">{rfq.remarks}</p>
                   </div>
                 )}
@@ -683,7 +706,10 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan="7" className="px-4 py-3 text-right font-medium text-gray-700">
+                        <td
+                          colSpan="7"
+                          className="px-4 py-3 text-right font-medium text-gray-700"
+                        >
                           Total Items:
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-gray-900">
@@ -750,25 +776,33 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
                         <div className="p-4">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                             <div>
-                              <span className="text-xs text-gray-500">Quotation Date</span>
+                              <span className="text-xs text-gray-500">
+                                Quotation Date
+                              </span>
                               <p className="text-sm font-medium text-gray-900">
                                 {formatDate(quotation.quotationDate)}
                               </p>
                             </div>
                             <div>
-                              <span className="text-xs text-gray-500">Delivery Date</span>
+                              <span className="text-xs text-gray-500">
+                                Delivery Date
+                              </span>
                               <p className="text-sm font-medium text-gray-900">
                                 {formatDate(quotation.deliveryDate)}
                               </p>
                             </div>
                             <div>
-                              <span className="text-xs text-gray-500">Valid Till</span>
+                              <span className="text-xs text-gray-500">
+                                Valid Till
+                              </span>
                               <p className="text-sm font-medium text-gray-900">
                                 {formatDate(quotation.validTill)}
                               </p>
                             </div>
                             <div>
-                              <span className="text-xs text-gray-500">Grand Total</span>
+                              <span className="text-xs text-gray-500">
+                                Grand Total
+                              </span>
                               <p className="text-sm font-bold text-green-600">
                                 ₹{quotation.grandTotal?.toFixed(2) || "0.00"}
                               </p>
@@ -813,7 +847,8 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
                                         ₹{item.unitPrice?.toFixed(2) || "0.00"}
                                       </td>
                                       <td className="px-3 py-2 font-medium text-gray-900 text-right">
-                                        ₹{item.totalAmount?.toFixed(2) || "0.00"}
+                                        ₹
+                                        {item.totalAmount?.toFixed(2) || "0.00"}
                                       </td>
                                     </tr>
                                   ))}
@@ -824,7 +859,8 @@ function RFQViewModal({ rfq, onClose, formatDate, formatDateTime, getStatusBadge
 
                           {quotation.remarks && (
                             <div className="mt-3 text-xs text-gray-500">
-                              <span className="font-medium">Remarks:</span> {quotation.remarks}
+                              <span className="font-medium">Remarks:</span>{" "}
+                              {quotation.remarks}
                             </div>
                           )}
                         </div>

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Edit,
@@ -16,37 +16,88 @@ import {
   User,
   ChevronLeft,
   Download,
-  RefreshCw
-} from 'lucide-react';
-import Link from 'next/link';
-import api from '@/lib/api';
-import { usePermissions } from '@/lib/hooks/usePermissions';
+  RefreshCw,
+  ChevronRight,
+  ChevronFirst,
+  ChevronLast,
+} from "lucide-react";
+import Link from "next/link";
+import api from "@/lib/api";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 // API Functions
-const getSuppliersAPI = async () => {
+const getSuppliersAPI = async (page = 0, size = 10, search = "", isActive = null) => {
   try {
-    const response = await api.get('/suppliers');
-    console.log('GET suppliers response:', response);
-    
+    const params = new URLSearchParams();
+    if (page !== undefined) params.append("page", page);
+    if (size) params.append("size", size);
+    if (search) params.append("searchTerm", search);
+    if (isActive !== null) params.append("isActive", isActive);
+
+    const url = `/suppliers${params.toString() ? `?${params.toString()}` : ""}`;
+    const response = await api.get(url);
+    console.log("GET suppliers response:", response);
+
+    // Handle Spring Boot pagination response
     if (response.data && response.data.data) {
-      return response.data.data;
+      const paginatedData = response.data.data;
+
+      // Check if it's Spring Boot pagination format
+      if (paginatedData.content && Array.isArray(paginatedData.content)) {
+        return {
+          data: paginatedData.content,
+          total: paginatedData.totalElements || paginatedData.content.length,
+          page: paginatedData.number || page,
+          size: paginatedData.size || size,
+          totalPages:
+            paginatedData.totalPages ||
+            Math.ceil(
+              (paginatedData.totalElements || paginatedData.content.length) /
+                size,
+            ),
+          first: paginatedData.first,
+          last: paginatedData.last,
+          numberOfElements: paginatedData.numberOfElements,
+        };
+      }
+
+      // Handle custom pagination format
+      return {
+        data: paginatedData.data || paginatedData.content || [],
+        total: paginatedData.total || paginatedData.totalElements || 0,
+        page: paginatedData.page || paginatedData.number || page,
+        size: paginatedData.size || paginatedData.pageSize || size,
+        totalPages: paginatedData.totalPages || 0,
+      };
     } else if (response.data && Array.isArray(response.data)) {
-      return response.data;
+      return {
+        data: response.data,
+        total: response.data.length,
+        page: page,
+        size: size,
+        totalPages: Math.ceil(response.data.length / size),
+      };
     }
-    return response.data || [];
+    return {
+      data: response.data || [],
+      total: 0,
+      page: page,
+      size: size,
+      totalPages: 0,
+    };
   } catch (error) {
-    console.error('Error fetching suppliers:', error);
+    console.error("Error fetching suppliers:", error);
     throw error;
   }
 };
 
 const createSupplierAPI = async (data) => {
   try {
-    const response = await api.post('/suppliers', data);
-    console.log('Create supplier response:', response);
+    const response = await api.post("/suppliers", data);
+    console.log("Create supplier response:", response);
     return response.data.data || response.data;
   } catch (error) {
-    console.error('Create supplier error:', error);
+    console.error("Create supplier error:", error);
     throw error;
   }
 };
@@ -54,10 +105,10 @@ const createSupplierAPI = async (data) => {
 const updateSupplierAPI = async (id, data) => {
   try {
     const response = await api.put(`/suppliers/${id}`, data);
-    console.log('Update supplier response:', response);
+    console.log("Update supplier response:", response);
     return response.data.data || response.data;
   } catch (error) {
-    console.error('Update supplier error:', error);
+    console.error("Update supplier error:", error);
     throw error;
   }
 };
@@ -65,10 +116,10 @@ const updateSupplierAPI = async (id, data) => {
 const deleteSupplierAPI = async (id) => {
   try {
     const response = await api.delete(`/suppliers/${id}`);
-    console.log('Delete supplier response:', response);
+    console.log("Delete supplier response:", response);
     return response.data;
   } catch (error) {
-    console.error('Delete supplier error:', error);
+    console.error("Delete supplier error:", error);
     throw error;
   }
 };
@@ -77,41 +128,49 @@ export default function SuppliersPage() {
   const { can } = usePermissions();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    email: '',
-    phone: '',
-    address: '',
-    gstNumber: '',
-    contactPerson: '',
-    isActive: true
+    name: "",
+    code: "",
+    email: "",
+    phone: "",
+    address: "",
+    gstNumber: "",
+    contactPerson: "",
+    isActive: true,
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [filterActive, setFilterActive] = useState('all');
+  const [filterActive, setFilterActive] = useState("all");
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+
+  // Pagination state - 0-based
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(2);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isFirstPage, setIsFirstPage] = useState(true);
+  const [isLastPage, setIsLastPage] = useState(true);
 
   // Load suppliers on mount
   useEffect(() => {
     loadSuppliers();
-  }, []);
+  }, [currentPage, pageSize, searchTerm, filterActive]);
 
   // Auto-clear messages
   useEffect(() => {
     if (success) {
-      const timer = setTimeout(() => setSuccess(''), 5000);
+      const timer = setTimeout(() => setSuccess(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [success]);
 
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(''), 5000);
+      const timer = setTimeout(() => setError(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [error]);
@@ -119,120 +178,179 @@ export default function SuppliersPage() {
   const loadSuppliers = async () => {
     try {
       setLoading(true);
-      setError('');
-      const data = await getSuppliersAPI();
-      console.log('Loaded suppliers:', data);
-      
+      setError("");
+
+      // Determine isActive filter value
+      let isActiveFilter = null;
+      if (filterActive === "active") {
+        isActiveFilter = true;
+      } else if (filterActive === "inactive") {
+        isActiveFilter = false;
+      }
+
+      const result = await getSuppliersAPI(
+        currentPage,
+        pageSize,
+        searchTerm,
+        isActiveFilter
+      );
+      console.log("Loaded suppliers:", result);
+
       // Map backend data to frontend format
-      const mappedSuppliers = (data || []).map(s => ({
+      const mappedSuppliers = (result.data || []).map((s) => ({
         id: s.id,
         name: s.name,
         code: s.code,
         email: s.email,
         phone: s.phone,
-        address: s.address || '',
-        gst: s.gstNumber || '',
-        contactPerson: s.contactPerson || '',
-        isActive: s.isActive !== undefined ? s.isActive : true
+        address: s.address || "",
+        gst: s.gstNumber || "",
+        contactPerson: s.contactPerson || "",
+        isActive: s.isActive !== undefined ? s.isActive : true,
       }));
-      
+
       setSuppliers(mappedSuppliers);
-      
-      // Clean up selected suppliers - remove any that no longer exist
-      setSelectedSuppliers(prev => 
-        prev.filter(id => mappedSuppliers.some(s => s.id === id))
+      setTotalItems(result.total || mappedSuppliers.length);
+      setTotalPages(
+        result.totalPages ||
+          Math.ceil((result.total || mappedSuppliers.length) / pageSize),
       );
-      
+      setIsFirstPage(
+        result.first !== undefined ? result.first : currentPage === 0,
+      );
+      setIsLastPage(
+        result.last !== undefined
+          ? result.last
+          : currentPage === (result.totalPages || 0) - 1,
+      );
+
+      // Clean up selected suppliers - remove any that no longer exist
+      setSelectedSuppliers((prev) =>
+        prev.filter((id) => mappedSuppliers.some((s) => s.id === id)),
+      );
     } catch (error) {
-      console.error('Load suppliers error:', error);
-      setError('Failed to load suppliers: ' + (error.message || 'Unknown error'));
+      console.error("Load suppliers error:", error);
+      setError(
+        "Failed to load suppliers: " + (error.message || "Unknown error"),
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter suppliers based on search and active status
-  const filteredSuppliers = suppliers.filter(supplier => {
-    const search = searchTerm.toLowerCase();
-    const matchesSearch = (
-      supplier.name?.toLowerCase().includes(search) ||
-      supplier.code?.toLowerCase().includes(search) ||
-      supplier.email?.toLowerCase().includes(search) ||
-      supplier.phone?.includes(search) ||
-      supplier.contactPerson?.toLowerCase().includes(search)
-    );
-    
-    const matchesFilter = filterActive === 'all' || 
-      (filterActive === 'active' && supplier.isActive === true) ||
-      (filterActive === 'inactive' && supplier.isActive === false);
-    
-    return matchesSearch && matchesFilter;
-  });
+  // Debounced search - resets to page 0
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (currentPage !== 0) {
+        setCurrentPage(0);
+      } else {
+        loadSuppliers();
+      }
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  // Reload when filter changes
+  useEffect(() => {
+    if (currentPage !== 0) {
+      setCurrentPage(0);
+    } else {
+      loadSuppliers();
+    }
+  }, [filterActive]);
+
+  const handlePageChange = (newPage) => {
+    // newPage is 0-based
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePageSizeChange = (e) => {
+    const newSize = parseInt(e.target.value);
+    setPageSize(newSize);
+    setCurrentPage(0); // Reset to first page (0) when changing page size
+  };
+
+  const getPaginationRange = () => {
+    const range = [];
+    const maxVisible = 5;
+    // Convert to 1-based for display
+    const currentPageDisplay = currentPage + 1;
+    const totalPagesDisplay = totalPages;
+
+    let start = Math.max(1, currentPageDisplay - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPagesDisplay, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+    return range;
+  };
+
+  // Filter suppliers locally (fallback if API filtering doesn't work)
+  const filteredSuppliers = suppliers;
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      code: '',
-      email: '',
-      phone: '',
-      address: '',
-      gstNumber: '',
-      contactPerson: '',
-      isActive: true
+      name: "",
+      code: "",
+      email: "",
+      phone: "",
+      address: "",
+      gstNumber: "",
+      contactPerson: "",
+      isActive: true,
     });
     setEditingSupplier(null);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const handleEdit = (supplier) => {
-    console.log('Editing supplier:', supplier);
+    console.log("Editing supplier:", supplier);
     setEditingSupplier(supplier);
     setFormData({
-      name: supplier.name || '',
-      code: supplier.code || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
-      gstNumber: supplier.gst || '',
-      contactPerson: supplier.contactPerson || '',
-      isActive: supplier.isActive !== undefined ? supplier.isActive : true
+      name: supplier.name || "",
+      code: supplier.code || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      gstNumber: supplier.gst || "",
+      contactPerson: supplier.contactPerson || "",
+      isActive: supplier.isActive !== undefined ? supplier.isActive : true,
     });
     setShowForm(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this supplier?')) {
+    if (!window.confirm("Are you sure you want to delete this supplier?")) {
       return;
     }
 
     try {
       setLoading(true);
       await deleteSupplierAPI(id);
-      setSuccess('Supplier deleted successfully');
-      
-      // ✅ IMMEDIATE UPDATE - Remove the supplier from state
-      setSuppliers(prevSuppliers => {
-        const updatedSuppliers = prevSuppliers.filter(s => s.id !== id);
-        console.log('Suppliers after deletion:', updatedSuppliers);
-        return updatedSuppliers;
-      });
-      
-      // ✅ Also remove from selected suppliers
-      setSelectedSuppliers(prev => prev.filter(sid => sid !== id));
-      
+      setSuccess("Supplier deleted successfully");
+
+      // Reload current page to get fresh data
+      await loadSuppliers();
     } catch (error) {
-      console.error('Delete error:', error);
-      setError(error.message || 'Failed to delete supplier');
-      // ✅ Reload to ensure consistency if there was an error
+      console.error("Delete error:", error);
+      setError(error.message || "Failed to delete supplier");
       await loadSuppliers();
     } finally {
       setLoading(false);
@@ -241,26 +359,27 @@ export default function SuppliersPage() {
 
   const handleBulkDelete = async () => {
     if (selectedSuppliers.length === 0) return;
-    
-    if (!window.confirm(`Are you sure you want to delete ${selectedSuppliers.length} suppliers?`)) {
+
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${selectedSuppliers.length} suppliers?`,
+      )
+    ) {
       return;
     }
 
     try {
       setLoading(true);
-      await Promise.all(selectedSuppliers.map(id => deleteSupplierAPI(id)));
+      await Promise.all(selectedSuppliers.map((id) => deleteSupplierAPI(id)));
       setSuccess(`${selectedSuppliers.length} suppliers deleted successfully`);
-      
-      // ✅ Remove all selected suppliers from state
-      setSuppliers(prevSuppliers => 
-        prevSuppliers.filter(s => !selectedSuppliers.includes(s.id))
-      );
+
       setSelectedSuppliers([]);
-      
+
+      // Reload current page
+      await loadSuppliers();
     } catch (error) {
-      console.error('Bulk delete error:', error);
-      setError('Failed to delete selected suppliers');
-      // ✅ Reload to ensure consistency
+      console.error("Bulk delete error:", error);
+      setError("Failed to delete selected suppliers");
       await loadSuppliers();
     } finally {
       setLoading(false);
@@ -270,21 +389,21 @@ export default function SuppliersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       if (!formData.name.trim()) {
-        throw new Error('Supplier name is required');
+        throw new Error("Supplier name is required");
       }
       if (!formData.code.trim()) {
-        throw new Error('Supplier code is required');
+        throw new Error("Supplier code is required");
       }
       if (!formData.email.trim()) {
-        throw new Error('Email is required');
+        throw new Error("Email is required");
       }
       if (!formData.phone.trim()) {
-        throw new Error('Phone number is required');
+        throw new Error("Phone number is required");
       }
 
       const submitData = {
@@ -292,60 +411,49 @@ export default function SuppliersPage() {
         code: formData.code.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
-        address: formData.address?.trim() || '',
-        gstNumber: formData.gstNumber?.trim() || '',
-        contactPerson: formData.contactPerson?.trim() || '',
-        isActive: formData.isActive
+        address: formData.address?.trim() || "",
+        gstNumber: formData.gstNumber?.trim() || "",
+        contactPerson: formData.contactPerson?.trim() || "",
+        isActive: formData.isActive,
       };
 
-      console.log('Submitting data:', submitData);
+      console.log("Submitting data:", submitData);
 
       let result;
       if (editingSupplier) {
         result = await updateSupplierAPI(editingSupplier.id, submitData);
-        setSuccess('Supplier updated successfully');
-        
-        // ✅ Update the supplier in the list
-        setSuppliers(prevSuppliers => 
-          prevSuppliers.map(s => 
-            s.id === editingSupplier.id 
-              ? { 
-                  ...s, 
+        setSuccess("Supplier updated successfully");
+
+        // Update the supplier in the list
+        setSuppliers((prevSuppliers) =>
+          prevSuppliers.map((s) =>
+            s.id === editingSupplier.id
+              ? {
+                  ...s,
                   ...submitData,
                   gst: submitData.gstNumber,
-                  id: s.id // Keep the original ID
+                  id: s.id,
                 }
-              : s
-          )
+              : s,
+          ),
         );
-        
       } else {
         result = await createSupplierAPI(submitData);
-        setSuccess('Supplier created successfully');
-        
-        // ✅ Add the new supplier to the list
-        const newSupplier = {
-          id: result.id || Date.now(), // Use the ID from response or generate one
-          name: submitData.name,
-          code: submitData.code,
-          email: submitData.email,
-          phone: submitData.phone,
-          address: submitData.address,
-          gst: submitData.gstNumber,
-          contactPerson: submitData.contactPerson,
-          isActive: submitData.isActive
-        };
-        
-        setSuppliers(prevSuppliers => [...prevSuppliers, newSupplier]);
+        setSuccess("Supplier created successfully");
+
+        // Reload to get updated list with proper pagination
+        await loadSuppliers();
       }
 
       resetForm();
       setShowForm(false);
-      
     } catch (error) {
-      console.error('Submit error:', error);
-      setError(error.response?.data?.message || error.message || 'Failed to save supplier');
-      // ✅ Reload to ensure consistency
+      console.error("Submit error:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to save supplier",
+      );
       await loadSuppliers();
     } finally {
       setIsSubmitting(false);
@@ -354,64 +462,77 @@ export default function SuppliersPage() {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedSuppliers(filteredSuppliers.map(s => s.id));
+      setSelectedSuppliers(filteredSuppliers.map((s) => s.id));
     } else {
       setSelectedSuppliers([]);
     }
   };
 
   const handleSelectSupplier = (id) => {
-    setSelectedSuppliers(prev =>
-      prev.includes(id)
-        ? prev.filter(sid => sid !== id)
-        : [...prev, id]
+    setSelectedSuppliers((prev) =>
+      prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id],
     );
   };
 
   const getStatusBadge = (isActive) => {
-    return isActive === true
-      ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
-          Active
-        </span>
-      : <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5"></span>
-          Inactive
-        </span>
+    return isActive === true ? (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
+        Active
+      </span>
+    ) : (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5"></span>
+        Inactive
+      </span>
+    );
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Code', 'Email', 'Phone', 'Address', 'GST', 'Contact Person', 'Status'];
-    const data = filteredSuppliers.map(s => [
+    // Export all suppliers, not just current page
+    const allSuppliers = suppliers;
+    const headers = [
+      "Name",
+      "Code",
+      "Email",
+      "Phone",
+      "Address",
+      "GST",
+      "Contact Person",
+      "Status",
+    ];
+    const data = allSuppliers.map((s) => [
       s.name,
       s.code,
       s.email,
       s.phone,
-      s.address || '',
-      s.gst || '',
-      s.contactPerson || '',
-      s.isActive ? 'Active' : 'Inactive'
+      s.address || "",
+      s.gst || "",
+      s.contactPerson || "",
+      s.isActive ? "Active" : "Inactive",
     ]);
 
     const csvContent = [
-      headers.join(','),
-      ...data.map(row => row.join(','))
-    ].join('\n');
+      headers.join(","),
+      ...data.map((row) => row.join(",")),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `suppliers_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `suppliers_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
   };
 
-  if (!can('MASTER_VIEW')) {
+  if (!can("MASTER_VIEW")) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-700">Access Denied</h2>
-          <p className="text-gray-500 mt-2">You don't have permission to view this page.</p>
+          <p className="text-gray-500 mt-2">
+            You don't have permission to view this page.
+          </p>
         </div>
       </div>
     );
@@ -423,15 +544,19 @@ export default function SuppliersPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-4">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
             >
               <ChevronLeft className="w-5 h-5 text-gray-600" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Supplier Management</h1>
-              <p className="text-sm text-gray-500 mt-1">Manage your suppliers and vendor information</p>
+              <h1 className="text-2xl font-bold text-gray-800">
+                Supplier Management
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Manage your suppliers and vendor information
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -441,7 +566,9 @@ export default function SuppliersPage() {
               title="Refresh"
               disabled={loading}
             >
-              <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-5 h-5 text-gray-600 ${loading ? "animate-spin" : ""}`}
+              />
             </button>
             <button
               onClick={exportToCSV}
@@ -468,8 +595,8 @@ export default function SuppliersPage() {
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 shadow-sm">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
             <span className="text-green-800">{success}</span>
-            <button 
-              onClick={() => setSuccess('')}
+            <button
+              onClick={() => setSuccess("")}
               className="ml-auto text-green-600 hover:text-green-800"
             >
               <X className="w-4 h-4" />
@@ -480,8 +607,8 @@ export default function SuppliersPage() {
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 shadow-sm">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
             <span className="text-red-800">{error}</span>
-            <button 
-              onClick={() => setError('')}
+            <button
+              onClick={() => setError("")}
               className="ml-auto text-red-600 hover:text-red-800"
             >
               <X className="w-4 h-4" />
@@ -504,31 +631,31 @@ export default function SuppliersPage() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setFilterActive('all')}
+                onClick={() => setFilterActive("all")}
                 className={`px-4 py-2 rounded-lg transition-colors ${
-                  filterActive === 'all' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filterActive === "all"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 All
               </button>
               <button
-                onClick={() => setFilterActive('active')}
+                onClick={() => setFilterActive("active")}
                 className={`px-4 py-2 rounded-lg transition-colors ${
-                  filterActive === 'active' 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filterActive === "active"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 Active
               </button>
               <button
-                onClick={() => setFilterActive('inactive')}
+                onClick={() => setFilterActive("inactive")}
                 className={`px-4 py-2 rounded-lg transition-colors ${
-                  filterActive === 'inactive' 
-                    ? 'bg-gray-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filterActive === "inactive"
+                    ? "bg-gray-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 Inactive
@@ -537,7 +664,8 @@ export default function SuppliersPage() {
           </div>
           <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm text-gray-500">
-              Showing {filteredSuppliers.length} of {suppliers.length} suppliers
+              Showing {suppliers.length} of {totalItems} suppliers
+              {loading && " (loading...)"}
             </span>
             {selectedSuppliers.length > 0 && (
               <button
@@ -565,7 +693,7 @@ export default function SuppliersPage() {
               <p className="text-gray-500">No suppliers found</p>
               {searchTerm && (
                 <button
-                  onClick={() => setSearchTerm('')}
+                  onClick={() => setSearchTerm("")}
                   className="text-blue-600 hover:text-blue-700 text-sm mt-2"
                 >
                   Clear search
@@ -580,23 +708,44 @@ export default function SuppliersPage() {
                     <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedSuppliers.length === filteredSuppliers.length && filteredSuppliers.length > 0}
+                        checked={
+                          selectedSuppliers.length ===
+                            filteredSuppliers.length &&
+                          filteredSuppliers.length > 0
+                        }
                         onChange={handleSelectAll}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Code
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      GST
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredSuppliers.map((supplier) => (
-                    <tr key={supplier.id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={supplier.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
@@ -607,7 +756,9 @@ export default function SuppliersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <div className="font-medium text-gray-900">{supplier.name}</div>
+                          <div className="font-medium text-gray-900">
+                            {supplier.name}
+                          </div>
                           {supplier.contactPerson && (
                             <div className="text-xs text-gray-500 mt-0.5">
                               <User className="w-3 h-3 inline mr-1" />
@@ -617,13 +768,17 @@ export default function SuppliersPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-mono text-gray-600">{supplier.code}</span>
+                        <span className="text-sm font-mono text-gray-600">
+                          {supplier.code}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm">
                           <div className="flex items-center gap-1 text-gray-600">
                             <Mail className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate max-w-[150px]">{supplier.email}</span>
+                            <span className="truncate max-w-[150px]">
+                              {supplier.email}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -634,7 +789,9 @@ export default function SuppliersPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-mono text-gray-600">{supplier.gst || '-'}</span>
+                        <span className="text-sm font-mono text-gray-600">
+                          {supplier.gst || "-"}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {getStatusBadge(supplier.isActive)}
@@ -666,6 +823,85 @@ export default function SuppliersPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 0 && (
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={handlePageSizeChange}
+                className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(0)}
+                disabled={isFirstPage || loading}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronFirst className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={isFirstPage || loading}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {getPaginationRange().map((pageDisplay) => {
+                  // Convert 1-based display to 0-based for API
+                  const pageZeroBased = pageDisplay - 1;
+                  return (
+                    <button
+                      key={pageDisplay}
+                      onClick={() => handlePageChange(pageZeroBased)}
+                      className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                        currentPage === pageZeroBased
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                      disabled={loading}
+                    >
+                      {pageDisplay}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={isLastPage || loading}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages - 1)}
+                disabled={isLastPage || loading}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLast className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-sm text-gray-600">
+              Page {currentPage + 1} of {totalPages}
+              {totalItems > 0 && ` (${totalItems} total items)`}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Supplier Modal */}
@@ -674,7 +910,7 @@ export default function SuppliersPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 bg-white rounded-t-xl z-10">
               <h3 className="text-lg font-semibold text-gray-800">
-                {editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}
+                {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
               </h3>
               <button
                 onClick={() => {
@@ -795,7 +1031,9 @@ export default function SuppliersPage() {
                       onChange={handleFormChange}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Active Supplier</span>
+                    <span className="text-sm text-gray-700">
+                      Active Supplier
+                    </span>
                   </label>
                 </div>
               </div>
@@ -817,7 +1055,11 @@ export default function SuppliersPage() {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="w-4 h-4" />
-                  {isSubmitting ? 'Saving...' : editingSupplier ? 'Update Supplier' : 'Add Supplier'}
+                  {isSubmitting
+                    ? "Saving..."
+                    : editingSupplier
+                      ? "Update Supplier"
+                      : "Add Supplier"}
                 </button>
               </div>
             </form>
