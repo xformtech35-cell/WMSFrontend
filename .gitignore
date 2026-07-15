@@ -20,7 +20,11 @@
 # production
 /build
 /dist
-
+dist.zip
+dist1.zip
+dist2.zip
+dist3.zip
+dist4.zip
 # misc
 .DS_Store
 *.pem

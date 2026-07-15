@@ -652,11 +652,11 @@ export default function PurchaseRequestView({ data, onClose }) {
                     Approved on: {formatDateTime(data.approvedAt)}
                   </span>
                 )}
-                {data.rejectionReason && (
-                  <span className="text-sm ml-3 text-red-600">
-                    Reason: {data.rejectionReason}
+                {/* {data.rejectionReason && ( */}
+                  <span className="text-sm ml-3">
+                    Reason: {data.aprovalRemarks}
                   </span>
-                )}
+                {/* )} */}
               </div>
             </div>
 

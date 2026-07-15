@@ -18,8 +18,7 @@ import {
   Search,
 } from "lucide-react";
 import api from "@/lib/api";
-import ItemSelectorModal from "./ItemSelectorModal.jsItemSelectorModal";
-// import ItemSelectorModal from "./ItemSelectorModal";
+import ItemSelectorModal from "./ItemSelectorModal";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -328,6 +327,7 @@ export default function PurchaseRequestForm({
       priority: prData.priority,
       requiredDate: prData.requiredDate,
       remarks: prData.remarks || null,
+      
       supplierId: selectedSupplier ? parseInt(selectedSupplier) : null,
       items: items.map((item) => ({
         itemId: item.itemId || null,
@@ -393,7 +393,7 @@ export default function PurchaseRequestForm({
 
       if (mode === "edit" && purchaseRequestId) {
         requestData = prepareRequestData();
-        await updatePurchaseRequestAPI(purchaseRequestId, requestData);
+        await updatePurchaseRequestAPI(purchaseRequestId, {...requestData, status:'PENDING'});
         
         if (onSuccess) {
           onSuccess(
@@ -470,7 +470,7 @@ export default function PurchaseRequestForm({
         {/* Error Message */}
         {errorMessage && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600" />
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
             <span className="text-sm text-red-800">{errorMessage}</span>
             <button
               onClick={() => setErrorMessage("")}
@@ -482,7 +482,7 @@ export default function PurchaseRequestForm({
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Basic Information Section - Same as before */}
+          {/* Basic Information Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
             <div className="border-b border-gray-200 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -509,13 +509,12 @@ export default function PurchaseRequestForm({
                     PR Date *
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="date"
                       name="prDate"
                       value={prData.prDate}
                       onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -526,13 +525,12 @@ export default function PurchaseRequestForm({
                     Requested By *
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="text"
                       name="requestedBy"
                       value={prData.requestedBy}
                       onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter requester name"
                       required
                     />
@@ -544,12 +542,11 @@ export default function PurchaseRequestForm({
                     Department *
                   </label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <select
                       name="department"
                       value={prData.department}
                       onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                       required
                     >
                       <option value="">Select Department</option>
@@ -568,12 +565,11 @@ export default function PurchaseRequestForm({
                     Warehouse *
                   </label>
                   <div className="relative">
-                    <Warehouse className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <select
                       name="warehouse"
                       value={prData.warehouse}
                       onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full  pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                       required
                     >
                       <option value="">Select Warehouse</option>
@@ -591,11 +587,11 @@ export default function PurchaseRequestForm({
                     Priority Level *
                   </label>
                   <div className="relative">
-                    <Flag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <select                      name="priority"
+                    <select
+                      name="priority"
                       value={prData.priority}
                       onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full   pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                       required
                     >
                       <option value="LOW">Low - Standard Processing</option>
@@ -612,13 +608,12 @@ export default function PurchaseRequestForm({
                     Required Date *
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="date"
                       name="requiredDate"
                       value={prData.requiredDate}
                       onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -650,19 +645,11 @@ export default function PurchaseRequestForm({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowItemSelector(true)}
+                  onClick={addItem}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
                 >
-                  <Search className="w-4 h-4" />
-                  Browse Items
-                </button>
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                >
                   <Plus className="w-4 h-4" />
-                  Add Manual
+                  Add Item
                 </button>
               </div>
             </div>
@@ -688,9 +675,7 @@ export default function PurchaseRequestForm({
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Current Stock
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Unit Price
-                    </th>
+                    
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Reason
                     </th>
@@ -797,39 +782,20 @@ export default function PurchaseRequestForm({
                           placeholder="0"
                         />
                       </td>
+                   
                       <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.id,
-                              "unitPrice",
-                              parseFloat(e.target.value) || 0,
-                            )
-                          }
-                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          min="0"
-                          placeholder="0.00"
-                          step="0.01"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
+                         <input
+                          type="text"
                           value={item.reason}
                           onChange={(e) =>
-                            handleItemChange(item.id, "reason", e.target.value)
+                                                        handleItemChange(item.id, "reason", e.target.value)
+
                           }
                           className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        >
-                          <option value="">Select Reason</option>
-                          <option value="New requirement">New requirement</option>
-                          <option value="Stock running low">Stock running low</option>
-                          <option value="Replacement">Replacement</option>
-                          <option value="Seasonal demand">Seasonal demand</option>
-                          <option value="Project requirement">Project requirement</option>
-                          <option value="Others">Others</option>
-                        </select>
+                          placeholder="Reason"
+                          required
+                        />
+                       
                       </td>
                       <td className="px-4 py-3">
                         <button
@@ -848,7 +814,7 @@ export default function PurchaseRequestForm({
             </div>
           </div>
 
-          {/* Summary Section - Same as before */}
+          {/* Summary Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
             <div className="border-b border-gray-200 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -862,13 +828,13 @@ export default function PurchaseRequestForm({
                     Remarks
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+                    <FileText className="absolute left-3 top-3 text-gray-400 w-4 h-4 pointer-events-none" />
                     <textarea
                       name="remarks"
                       value={prData.remarks}
                       onChange={handleInputChange}
                       rows="4"
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Any additional information or special requirements..."
                     />
                   </div>

@@ -47,20 +47,24 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
 };
 
 // Updated API function to use filter endpoint
-const getPurchaseRequestsAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getPurchaseRequestsAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   // Convert status filter to match backend expectations
   let statusParam = status;
   if (status === "ALL") {
     statusParam = ""; // Or you can send null/undefined, adjust based on your backend
   }
-  
+
   const requestBody = {
-    status: statusParam,
+    filters: { status: statusParam, searchTerm: searchTerm || "" },
     page: page,
     size: size,
-    searchTerm: searchTerm || ""
   };
-  
+
   return apiRequest("/purchase-requests/filter", "POST", requestBody);
 };
 
@@ -78,7 +82,7 @@ export default function PurchaseRequestPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  
+
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -123,12 +127,12 @@ export default function PurchaseRequestPage() {
     try {
       setLoading(true);
       const response = await getPurchaseRequestsAPI(
-        currentPage, 
-        pageSize, 
-        searchTerm, 
-        statusFilter
+        currentPage,
+        pageSize,
+        searchTerm,
+        statusFilter,
       );
-      
+
       // Handle different response structures
       if (response && response.content) {
         setPurchaseRequests(response.content || []);
@@ -251,14 +255,19 @@ export default function PurchaseRequestPage() {
         {/* Success Modal */}
         {showSuccess && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowSuccess(false)} />
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowSuccess(false)}
+            />
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform animate-scale-up pointer-events-auto border border-gray-200">
                 <div className="text-center">
                   <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Success!</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Success!
+                  </h3>
                   <p className="text-sm text-gray-600 mb-6">{successMessage}</p>
                   <button
                     onClick={() => setShowSuccess(false)}
@@ -291,7 +300,9 @@ export default function PurchaseRequestPage() {
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Purchase Requests</h1>
+                <h1 className="text-2xl font-bold text-white">
+                  Purchase Requests
+                </h1>
                 <p className="text-blue-100 text-sm mt-1">
                   WMS Warehouse Management System
                 </p>
@@ -330,7 +341,6 @@ export default function PurchaseRequestPage() {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by PR Number or Requester..."
@@ -418,30 +428,44 @@ export default function PurchaseRequestPage() {
                   </tr>
                 ) : (
                   purchaseRequests.map((pr) => (
-                    <tr key={pr.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 cursor-pointer" 
-                            onClick={() => handleViewClick(pr)}
+                    <tr
+                      key={pr.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => handleViewClick(pr)}
                       >
-                        <span className="font-medium text-blue-600 hover:text-blue-800">{pr.prNumber}</span>
+                        <span className="font-medium text-blue-600 hover:text-blue-800">
+                          {pr.prNumber}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">{formatDate(pr.prDate)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {formatDate(pr.prDate)}
+                      </td>
                       <td className="px-4 py-3 text-sm">{pr.requestedBy}</td>
                       <td className="px-4 py-3 text-sm">{pr.department}</td>
                       <td className="px-4 py-3 text-sm">{pr.warehouse}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(pr.priority)}`}>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(pr.priority)}`}
+                        >
                           <Flag className="w-3 h-3" />
                           {pr.priority}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">{formatDate(pr.requiredDate)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {formatDate(pr.requiredDate)}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="bg-gray-100 px-2 py-1 rounded text-xs">
                           {pr.items?.length || 0} items
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pr.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pr.status)}`}
+                        >
                           {pr.status}
                         </span>
                       </td>
@@ -478,7 +502,8 @@ export default function PurchaseRequestPage() {
           {totalPages > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
-                Page {currentPage + 1} of {totalPages} | Total: {totalElements} requests
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                requests
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -488,9 +513,7 @@ export default function PurchaseRequestPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-sm">
-                  {currentPage + 1}
-                </span>
+                <span className="text-sm">{currentPage + 1}</span>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages - 1}
@@ -507,9 +530,12 @@ export default function PurchaseRequestPage() {
         {showFormModal && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={handleFormClose} />
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleFormClose}
+              />
               <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <PurchaseRequestForm 
+                <PurchaseRequestForm
                   mode={formMode}
                   initialData={editingPR}
                   onClose={handleFormClose}
@@ -524,9 +550,12 @@ export default function PurchaseRequestPage() {
         {showViewModal && viewingPR && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={handleViewClose} />
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleViewClose}
+              />
               <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <PurchaseRequestView 
+                <PurchaseRequestView
                   data={viewingPR}
                   onClose={handleViewClose}
                 />
@@ -538,15 +567,31 @@ export default function PurchaseRequestPage() {
 
       <style jsx>{`
         @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes scale-up {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
-        .animate-slide-down { animation: slide-down 0.3s ease-out; }
-        .animate-scale-up { animation: scale-up 0.3s ease-out; }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
+        }
+        .animate-scale-up {
+          animation: scale-up 0.3s ease-out;
+        }
       `}</style>
     </div>
   );

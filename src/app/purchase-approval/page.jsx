@@ -16,9 +16,12 @@ import {
   CheckCircle,
   Save,
   X,
+  Send, // Add Send icon for RFQ
 } from "lucide-react";
 import api from "@/lib/api";
 import PurchaseRequestView from "../purchase-requests/components/PurchaseRequestView";
+import RFQForm from "./components/RFQForm";
+// import RFQForm from "@/components/RFQForm"; // Import RFQ Form
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -48,19 +51,24 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
 };
 
 // Updated API function to use filter endpoint
-const getPurchaseRequestsAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getPurchaseRequestsAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   let statusParam = status;
   if (status === "ALL") {
     statusParam = "";
   }
-  
+
   const requestBody = {
     status: statusParam,
     page: page,
     size: size,
-    searchTerm: searchTerm || ""
+    searchTerm: searchTerm || "",
   };
-  
+
   return apiRequest("/purchase-requests/filter", "POST", requestBody);
 };
 
@@ -72,7 +80,7 @@ const getPurchaseRequestByIdAPI = async (id) => {
 const updatePurchaseRequestStatusAPI = async (id, status, remarks) => {
   const requestBody = {
     status: status,
-    remarks: remarks || ""
+    remarks: remarks || "",
   };
   return apiRequest(`/purchase-requests/${id}/status`, "POST", requestBody);
 };
@@ -87,7 +95,7 @@ export default function PurchaseRequestPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  
+
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -96,13 +104,17 @@ export default function PurchaseRequestPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingPR, setViewingPR] = useState(null);
-  
+
   // Status Update Modal State
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedPR, setSelectedPR] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [remarks, setRemarks] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // RFQ Form State
+  const [showRFQForm, setShowRFQForm] = useState(false);
+  const [selectedPRForRFQ, setSelectedPRForRFQ] = useState(null);
 
   // Debounce search term
   useEffect(() => {
@@ -136,12 +148,12 @@ export default function PurchaseRequestPage() {
     try {
       setLoading(true);
       const response = await getPurchaseRequestsAPI(
-        currentPage, 
-        pageSize, 
-        searchTerm, 
-        statusFilter
+        currentPage,
+        pageSize,
+        searchTerm,
+        statusFilter,
       );
-      
+
       if (response && response.content) {
         setPurchaseRequests(response.content || []);
         setTotalPages(response.totalPages || 0);
@@ -204,17 +216,23 @@ export default function PurchaseRequestPage() {
 
     try {
       setUpdatingStatus(true);
-      await updatePurchaseRequestStatusAPI(selectedPR.id, selectedStatus, remarks);
-      
-      setSuccessMessage(`Purchase request status updated to ${selectedStatus} successfully!`);
+      await updatePurchaseRequestStatusAPI(
+        selectedPR.id,
+        selectedStatus,
+        remarks,
+      );
+
+      setSuccessMessage(
+        `Purchase request status updated to ${selectedStatus} successfully!`,
+      );
       setShowSuccess(true);
       setShowStatusModal(false);
-      
+
       // Reset states
       setSelectedPR(null);
       setSelectedStatus("");
       setRemarks("");
-      
+
       // Reload the list
       loadPurchaseRequests();
     } catch (error) {
@@ -231,6 +249,26 @@ export default function PurchaseRequestPage() {
     setSelectedStatus("");
     setRemarks("");
     setErrorMessage("");
+  };
+
+  // RFQ Functions
+  const handleCreateRFQ = (pr) => {
+    setSelectedPRForRFQ(pr);
+    setShowRFQForm(true);
+  };
+
+  const handleRFQSuccess = (result) => {
+    setSuccessMessage(`RFQ created successfully! Reference: ${result.referenceNumber || 'N/A'}`);
+    setShowSuccess(true);
+    setShowRFQForm(false);
+    setSelectedPRForRFQ(null);
+    // Reload the list to update status
+    loadPurchaseRequests();
+  };
+
+  const handleRFQClose = () => {
+    setShowRFQForm(false);
+    setSelectedPRForRFQ(null);
   };
 
   const getPriorityColor = (priority) => {
@@ -274,40 +312,25 @@ export default function PurchaseRequestPage() {
     });
   };
 
-  // Get available status options based on current status
-  const getAvailableStatuses = (currentStatus) => {
-    const allStatuses = [
-      "DRAFT",
-      "SUBMITTED",
-      "PENDING",
-      "APPROVED",
-      "REJECTED",
-      "PARTIAL",
-      "COMPLETED",
-      "IN_PROGRESS"
-    ];
-
-    // You can customize which statuses are available based on current status
-    // For example, if current is DRAFT, only allow SUBMITTED
-    // If current is SUBMITTED, allow PENDING, APPROVED, REJECTED
-    // etc.
-    return allStatuses;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Success Modal */}
         {showSuccess && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowSuccess(false)} />
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowSuccess(false)}
+            />
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform animate-scale-up pointer-events-auto border border-gray-200">
                 <div className="text-center">
                   <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Success!</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Success!
+                  </h3>
                   <p className="text-sm text-gray-600 mb-6">{successMessage}</p>
                   <button
                     onClick={() => setShowSuccess(false)}
@@ -340,7 +363,9 @@ export default function PurchaseRequestPage() {
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Purchase Approval</h1>
+                <h1 className="text-2xl font-bold text-white">
+                  Purchase Approval
+                </h1>
                 <p className="text-blue-100 text-sm mt-1">
                   WMS Warehouse Management System
                 </p>
@@ -371,7 +396,6 @@ export default function PurchaseRequestPage() {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by PR Number or Requester..."
@@ -381,23 +405,7 @@ export default function PurchaseRequestPage() {
                 />
               </div>
             </div>
-            <div className="w-48">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="ALL">All Status</option>
-                <option value="DRAFT">Draft</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="PENDING">Pending</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="PARTIAL">Partial</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="IN_PROGRESS">In Progress</option>
-              </select>
-            </div>
+
             <div className="text-sm text-gray-500">
               Showing {purchaseRequests.length} of {totalElements} requests
             </div>
@@ -421,9 +429,6 @@ export default function PurchaseRequestPage() {
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Department
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Warehouse
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Priority
@@ -459,56 +464,84 @@ export default function PurchaseRequestPage() {
                     </td>
                   </tr>
                 ) : (
-                  purchaseRequests.map((pr) => (
-                    <tr key={pr.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 cursor-pointer" 
-                            onClick={() => handleViewClick(pr)}
+                  purchaseRequests
+                    .filter((pr) => pr.status !== "DRAFT")
+                    .map((pr) => (
+                      <tr
+                        key={pr.id}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <span className="font-medium text-blue-600 hover:text-blue-800">{pr.prNumber}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{formatDate(pr.prDate)}</td>
-                      <td className="px-4 py-3 text-sm">{pr.requestedBy}</td>
-                      <td className="px-4 py-3 text-sm">{pr.department}</td>
-                      <td className="px-4 py-3 text-sm">{pr.warehouse}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(pr.priority)}`}>
-                          <Flag className="w-3 h-3" />
-                          {pr.priority}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{formatDate(pr.requiredDate)}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                          {pr.items?.length || 0} items
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pr.status)}`}>
-                          {pr.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleViewClick(pr)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                            title="View Details"
+                        <td
+                          className="px-4 py-3 cursor-pointer"
+                          onClick={() => handleViewClick(pr)}
+                        >
+                          <span className="font-medium text-blue-600 hover:text-blue-800">
+                            {pr.prNumber}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {formatDate(pr.prDate)}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{pr.requestedBy}</td>
+                        <td className="px-4 py-3 text-sm">{pr.department}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(pr.priority)}`}
                           >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdateClick(pr)}
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Update Status"
+                            <Flag className="w-3 h-3" />
+                            {pr.priority}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {formatDate(pr.requiredDate)}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                            {pr.items?.length || 0} items
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pr.status)}`}
                           >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {pr.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleViewClick(pr)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStatusUpdateClick(pr)}
+                              className="text-purple-600 hover:text-purple-800 transition-colors"
+                              title="Update Status"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            {/* RFQ Button - Show for SUBMITTED, APPROVED, or PENDING statuses */}
+                            {(pr.status === "SUBMITTED" || 
+                              pr.status === "APPROVED" || 
+                              pr.status === "PENDING") && (
+                              <button
+                                type="button"
+                                onClick={() => handleCreateRFQ(pr)}
+                                className="text-green-600 hover:text-green-800 transition-colors"
+                                title="Create RFQ"
+                              >
+                                <Send className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
                 )}
               </tbody>
             </table>
@@ -518,7 +551,8 @@ export default function PurchaseRequestPage() {
           {totalPages > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
-                Page {currentPage + 1} of {totalPages} | Total: {totalElements} requests
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                requests
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -528,9 +562,7 @@ export default function PurchaseRequestPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-sm">
-                  {currentPage + 1}
-                </span>
+                <span className="text-sm">{currentPage + 1}</span>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages - 1}
@@ -547,11 +579,16 @@ export default function PurchaseRequestPage() {
         {showStatusModal && selectedPR && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={handleStatusModalClose} />
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleStatusModalClose}
+              />
               <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Update Status</h2>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Update Status
+                    </h2>
                     <p className="text-sm text-gray-500">
                       {selectedPR.prNumber} - {selectedPR.requestedBy}
                     </p>
@@ -572,7 +609,9 @@ export default function PurchaseRequestPage() {
                         Current Status
                       </label>
                       <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPR.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPR.status)}`}
+                        >
                           {selectedPR.status}
                         </span>
                       </div>
@@ -602,27 +641,48 @@ export default function PurchaseRequestPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Remarks {selectedStatus === "REJECTED" && <span className="text-red-500">*</span>}
+                        Remarks{" "}
+                        {selectedStatus === "REJECTED" && (
+                          <span className="text-red-500">*</span>
+                        )}
                       </label>
                       <textarea
                         value={remarks}
                         onChange={(e) => setRemarks(e.target.value)}
                         rows="3"
-                        placeholder={selectedStatus === "REJECTED" ? "Please provide reason for rejection..." : "Optional remarks..."}
+                        placeholder={
+                          selectedStatus === "REJECTED"
+                            ? "Please provide reason for rejection..."
+                            : "Optional remarks..."
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         disabled={updatingStatus}
                       />
                       {selectedStatus === "REJECTED" && (
-                        <p className="text-xs text-red-500 mt-1">Remarks are required when rejecting</p>
+                        <p className="text-xs text-red-500 mt-1">
+                          Remarks are required when rejecting
+                        </p>
                       )}
                     </div>
 
                     {/* Show current PR details */}
                     <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                      <p><span className="font-medium">Requested By:</span> {selectedPR.requestedBy}</p>
-                      <p><span className="font-medium">Department:</span> {selectedPR.department}</p>
-                      <p><span className="font-medium">Total Items:</span> {selectedPR.items?.length || 0}</p>
-                      <p><span className="font-medium">Total Amount:</span> ₹{selectedPR.totalAmount?.toFixed(2) || "0.00"}</p>
+                      <p>
+                        <span className="font-medium">Requested By:</span>{" "}
+                        {selectedPR.requestedBy}
+                      </p>
+                      <p>
+                        <span className="font-medium">Department:</span>{" "}
+                        {selectedPR.department}
+                      </p>
+                      <p>
+                        <span className="font-medium">Total Items:</span>{" "}
+                        {selectedPR.items?.length || 0}
+                      </p>
+                      <p>
+                        <span className="font-medium">Total Amount:</span> ₹
+                        {selectedPR.totalAmount?.toFixed(2) || "0.00"}
+                      </p>
                     </div>
                   </div>
 
@@ -662,31 +722,60 @@ export default function PurchaseRequestPage() {
 
         {/* View Modal */}
         {showViewModal && viewingPR && (
-                  <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="flex items-center justify-center min-h-screen p-4">
-                      <div className="fixed inset-0 bg-black/50" onClick={handleViewClose} />
-                      <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                        <PurchaseRequestView 
-                          data={viewingPR}
-                          onClose={handleViewClose}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleViewClose}
+              />
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <PurchaseRequestView
+                  data={viewingPR}
+                  onClose={handleViewClose}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RFQ Form Modal */}
+        {showRFQForm && selectedPRForRFQ && (
+          <RFQForm
+            isOpen={showRFQForm}
+            onClose={handleRFQClose}
+            purchaseRequest={selectedPRForRFQ}
+            onSuccess={handleRFQSuccess}
+          />
+        )}
       </div>
 
       <style jsx>{`
         @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes scale-up {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
-        .animate-slide-down { animation: slide-down 0.3s ease-out; }
-        .animate-scale-up { animation: scale-up 0.3s ease-out; }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
+        }
+        .animate-scale-up {
+          animation: scale-up 0.3s ease-out;
+        }
       `}</style>
     </div>
   );
