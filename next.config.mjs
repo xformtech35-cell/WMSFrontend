@@ -21,9 +21,7 @@ const parsedBackendUrl = BACKEND_BASE ? new URL(BACKEND_BASE) : null;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // output: 'export',
   env: {
-    // This injects BACKEND_RAW as process.env.NEXT_PUBLIC_API_URL in browser files
     NEXT_PUBLIC_API_URL: BACKEND_RAW,
   },
   turbopack: {
@@ -55,6 +53,36 @@ const nextConfig = {
           },
         ]
       : [],
+  },
+  webpack: (config, { isServer }) => {
+    // Handle problematic packages
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'jspdf': 'jspdf/dist/jspdf.umd.min.js',
+        'html2canvas': 'html2canvas/dist/html2canvas.min.js',
+      };
+
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+        stream: false,
+        http: false,
+        https: false,
+        zlib: false,
+        url: false,
+        util: false,
+        assert: false,
+        buffer: false,
+        process: false,
+        child_process: false,
+        worker_threads: false,
+        fflate: false,
+      };
+    }
+    return config;
   },
 };
 

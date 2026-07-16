@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import api from "@/lib/api";
+import ComparisonPopup from "../components/ComparisonPopup";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -151,6 +152,8 @@ export default function RFQDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [comparing, setComparing] = useState(false);
 
+  const [comparisonData, setComparisonData] = useState(null);
+  const [showComparisonPopup, setShowComparisonPopup] = useState(false);
   // Quotation Form State
   const [quotationForm, setQuotationForm] = useState({
     supplierId: "",
@@ -367,7 +370,12 @@ export default function RFQDetailPage() {
   const handleCompareQuotations = async () => {
     try {
       setComparing(true);
-      await compareQuotationsAPI(rfqId);
+      const result = await compareQuotationsAPI(rfqId);
+
+      // The API returns the comparison data directly
+      // Store it in state and show the popup
+      setComparisonData(result);
+      setShowComparisonPopup(true);
 
       // Reload RFQ to get updated data with ranks
       await loadRFQ();
@@ -378,7 +386,20 @@ export default function RFQDetailPage() {
       setComparing(false);
     }
   };
-
+  const handleConvertToPO = async (quotationId) => {
+    try {
+      const result = await ConvertPO(quotationId);
+      setSuccessMessage("Quotation converted to PO successfully!");
+      // Reload the data
+      await loadRFQ();
+      // Close the popup
+      setShowComparisonPopup(false);
+      setComparisonData(null);
+    } catch (error) {
+      console.error("Error converting to PO:", error);
+      setErrorMessage("Failed to convert quotation to PO.");
+    }
+  };
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -571,6 +592,7 @@ export default function RFQDetailPage() {
                   setShowQuotationForm(true);
                   loadSuppliers(0, "");
                 }}
+                load={() => loadSuppliers(0, "")}
                 ConvertPO={ConvertPO}
                 onCompare={handleCompareQuotations}
                 comparing={comparing}
@@ -601,6 +623,16 @@ export default function RFQDetailPage() {
             submitting={submitting}
             handleQuotationChange={handleQuotationChange}
             handleItemChange={handleItemChange}
+          />
+        )}
+        {showComparisonPopup && comparisonData && (
+          <ComparisonPopup
+            data={comparisonData}
+            onClose={() => {
+              setShowComparisonPopup(false);
+              setComparisonData(null);
+            }}
+            onConvertToPO={handleConvertToPO}
           />
         )}
       </div>
@@ -833,6 +865,7 @@ function ItemsTab({ rfq }) {
           </tfoot>
         </table>
       </div>
+      {/* Comparison Popup */}
     </div>
   );
 }
@@ -846,12 +879,13 @@ function QuotationsTab({
   comparing,
   ConvertPO,
   setSuccessMessage,
+  load,
 }) {
   const handleCOnvertToPO = async (quotationId) => {
     const result = await ConvertPO(quotationId);
     console.log("jjj", result);
     setSuccessMessage("Quotation converted to PO successfully!");
-    onCompare();
+    load();
   };
   return (
     <div>
@@ -1337,7 +1371,7 @@ function QuotationFormModal({
                         <td className="px-3 py-2 text-right text-gray-900 font-medium">
                           {item.quantity}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 text-end">
                           <input
                             type="number"
                             value={item.unitPrice || ""}
@@ -1356,7 +1390,7 @@ function QuotationFormModal({
                             disabled={submitting}
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2  text-end">
                           <input
                             type="number"
                             value={item.gstRate || ""}
