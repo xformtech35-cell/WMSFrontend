@@ -26,13 +26,16 @@ import {
   Send,
   Download,
   RotateCw,
-  CheckCircle2,
   ThumbsUp,
+  CheckCircle2,
 } from "lucide-react";
 import api from "@/lib/api";
-import PurchaseOrderViewModal from "./PurchaseOrderViewPage";
-import StatusUpdateModal from "./component/StatusUpdateModal";
-import InboundCreationModal from "./component/InboundCreationModal";
+// import PurchaseOrderViewModal from "./PurchaseOrderViewPage";
+import InboundCreationModal from "../purchase-orders/component/InboundCreationModal";
+import StatusUpdateModal from "../purchase-orders/component/StatusUpdateModal";
+import PurchaseOrderViewModal from "../purchase-orders/PurchaseOrderViewPage";
+// import StatusUpdateModal from "./component/StatusUpdateModal";
+// import InboundCreationModal from "./component/InboundCreationModal";
 // import StatusUpdateModal from "@/components/purchase-orders/StatusUpdateModal";
 
 // API Functions
@@ -123,50 +126,50 @@ export default function PurchaseOrderPage() {
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
-  const allStatuses = [
-    {
-      value: "PENDING",
-      label: "PENDING",
-      color: "bg-amber-100 text-amber-700 border-amber-200",
-      icon: <Clock className="w-4 h-4" />,
-      bgColor: "hover:bg-amber-50",
-    },
-    // {
-    //   value: 'APPROVED',
-    //   label: 'APPROVED',
-    //   color: 'bg-blue-100 text-blue-700 border-blue-200',
-    //   icon: <ThumbsUp className="w-4 h-4" />,
-    //   bgColor: 'hover:bg-blue-50'
-    // },
-    {
-      value: "SEND",
-      label: "SEND",
-      color: "bg-cyan-100 text-cyan-700 border-cyan-200",
-      icon: <Send className="w-4 h-4" />,
-      bgColor: "hover:bg-cyan-50",
-    },
-    {
-      value: "ACCEPTED",
-      label: "ACCEPTED",
-      color: "bg-green-100 text-green-700 border-green-200",
-      icon: <CheckCircle2 className="w-4 h-4" />,
-      bgColor: "hover:bg-green-50",
-    },
-    // {
-    //   value: 'REJECTED',
-    //   label: 'Rejected',
-    //   color: 'bg-red-100 text-red-700 border-red-200',
-    //   icon: <XCircle className="w-4 h-4" />,
-    //   bgColor: 'hover:bg-red-50'
-    // },
-  ];
+
   useEffect(() => {
     if (errorMessage) {
       const timer = setTimeout(() => setErrorMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
-
+ const allStatuses = [
+  { 
+    value: 'PENDING', 
+    label: 'PENDING', 
+    color: 'bg-amber-100 text-amber-700 border-amber-200',
+    icon: <Clock className="w-4 h-4" />,
+    bgColor: 'hover:bg-amber-50'
+  },
+  { 
+    value: 'APPROVED', 
+    label: 'APPROVED', 
+    color: 'bg-blue-100 text-blue-700 border-blue-200',
+    icon: <ThumbsUp className="w-4 h-4" />,
+    bgColor: 'hover:bg-blue-50'
+  },
+  { 
+    value: 'SEND', 
+    label: 'SEND', 
+    color: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+    icon: <Send className="w-4 h-4" />,
+    bgColor: 'hover:bg-cyan-50'
+  },
+  { 
+    value: 'ACCEPTED', 
+    label: 'ACCEPTED', 
+    color: 'bg-green-100 text-green-700 border-green-200',
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    bgColor: 'hover:bg-green-50'
+  },
+  { 
+    value: 'REJECTED', 
+    label: 'Rejected', 
+    color: 'bg-red-100 text-red-700 border-red-200',
+    icon: <XCircle className="w-4 h-4" />,
+    bgColor: 'hover:bg-red-50'
+  },
+];
   const loadPurchaseOrders = async () => {
     try {
       setLoading(true);
@@ -262,6 +265,7 @@ export default function PurchaseOrderPage() {
       CLOSED: "bg-gray-100 text-gray-500",
       ACCEPTED: "bg-green-100 text-green-700 border-green-200",
       SEND: "bg-cyan-100 text-cyan-700 border-cyan-200",
+
     };
     return colors[status] || colors.DRAFT;
   };
@@ -495,16 +499,16 @@ export default function PurchaseOrderPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {(po.status === "APPROVED" || po.status === "ACCEPTED" || po.status === "SEND") && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleStatusUpdateClick(po)}
-                                className="text-purple-600 hover:text-purple-800 transition-colors"
-                                title="Update Status"
-                              >
-                                <RotateCw className="w-4 h-4" />
-                              </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStatusUpdateClick(po)}
+                            className="text-purple-600 hover:text-purple-800 transition-colors"
+                            title="Update Status"
+                          >
+                            <RotateCw className="w-4 h-4" />
+                          </button>
+                          {/* {po.status === "PENDING" && ( */}
+                            {/* <> */}
                               <button
                                 type="button"
                                 className="text-green-600 hover:text-green-800 transition-colors"
@@ -512,10 +516,6 @@ export default function PurchaseOrderPage() {
                               >
                                 <Send className="w-4 h-4" />
                               </button>
-                            </>
-                          )}
-                          {po.status === "PENDING" && (
-                            <>
                               <button
                                 type="button"
                                 className="text-purple-600 hover:text-purple-800 transition-colors"
@@ -523,8 +523,8 @@ export default function PurchaseOrderPage() {
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
-                            </>
-                          )}
+                            {/* </> */}
+                          {/* )} */}
                         </div>
                       </td>
                     </tr>
@@ -570,6 +570,7 @@ export default function PurchaseOrderPage() {
             setStatusUpdatePO(null);
           }}
           allStatuses={allStatuses}
+
           purchaseOrder={statusUpdatePO}
           onStatusUpdate={handleStatusUpdate}
           loading={statusUpdateLoading}

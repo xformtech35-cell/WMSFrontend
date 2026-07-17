@@ -32,7 +32,9 @@ import {
   Loader,
 } from "lucide-react";
 import api from "@/lib/api";
-import InboundViewModal from "./component/InboundViewModal";
+import InboundViewModal from "../inbound/component/InboundViewModal";
+import GoodsReceivingModal from "./component/GoodsReceivingModal";
+// import InboundViewModal from "./component/InboundViewModal";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -46,7 +48,7 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
     const result = response.data;
     if (result && result.success === false) {
       throw new Error(
-        result?.message || `API request failed: ${response.status}`
+        result?.message || `API request failed: ${response.status}`,
       );
     }
     return result?.data || result;
@@ -56,7 +58,7 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
       error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        "API request failed"
+        "API request failed",
     );
   }
 };
@@ -94,6 +96,8 @@ export default function InboundPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingInbound, setViewingInbound] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [showReceivingModal, setShowReceivingModal] = useState(false);
+  const [receivingInbound, setReceivingInbound] = useState(null);
 
   // Debounce search term
   useEffect(() => {
@@ -162,6 +166,17 @@ export default function InboundPage() {
   const handleViewClose = () => {
     setShowViewModal(false);
     setViewingInbound(null);
+  };
+  const handleReceivingClick = (inbound) => {
+    setReceivingInbound(inbound);
+    setShowReceivingModal(true);
+  };
+
+  const handleReceivingSuccess = (receivingData) => {
+    setSuccessMessage(
+      `Goods received successfully for ${receivingInbound?.inboundNumber}!`,
+    );
+    loadInbounds(); // Refresh the list
   };
 
   const getStatusColor = (status) => {
@@ -277,9 +292,9 @@ export default function InboundPage() {
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold text-white">
-                      Inbound Management
+                      Goods Receiving
                     </h1>
-                <p className="text-blue-100 text-sm mt-1">
+                    <p className="text-blue-100 text-sm mt-1">
                       Track and manage all inbound shipments
                     </p>
                   </div>
@@ -367,7 +382,9 @@ export default function InboundPage() {
                     <td colSpan="8" className="text-center py-12">
                       <div className="flex justify-center items-center gap-3">
                         <div className="animate-spin rounded-full h-8 w-8 border-3 border-emerald-500 border-t-transparent"></div>
-                        <span className="text-gray-500 font-medium">Loading inbounds...</span>
+                        <span className="text-gray-500 font-medium">
+                          Loading inbounds...
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -376,8 +393,12 @@ export default function InboundPage() {
                     <td colSpan="8" className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <Warehouse className="w-12 h-12 text-gray-300" />
-                        <p className="text-gray-500 font-medium">No inbound records found</p>
-                        <p className="text-sm text-gray-400">Try adjusting your search criteria</p>
+                        <p className="text-gray-500 font-medium">
+                          No inbound records found
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Try adjusting your search criteria
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -443,22 +464,16 @@ export default function InboundPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {inbound.status === "PENDING" && (
+                          {inbound.stage === "UNLOADING" && (
                             <button
                               type="button"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Process Inbound"
+                              onClick={() => handleReceivingClick(inbound)}
+                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
                             >
-                              <ArrowUpDown className="w-4 h-4" />
+                              {/* <Clipboard className="w-3.5 h-3.5" /> */}
+                              Receive
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="Print"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -472,7 +487,8 @@ export default function InboundPage() {
           {totalPages > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
-                Page {currentPage + 1} of {totalPages} | Total: {totalElements} records
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                records
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -496,7 +512,17 @@ export default function InboundPage() {
             </div>
           )}
         </div>
-
+        {showReceivingModal && receivingInbound && (
+          <GoodsReceivingModal
+            isOpen={showReceivingModal}
+            onClose={() => {
+              setShowReceivingModal(false);
+              setReceivingInbound(null);
+            }}
+            inbound={receivingInbound}
+            onSuccess={handleReceivingSuccess}
+          />
+        )}
         {/* View Modal */}
         {showViewModal && viewingInbound && (
           <InboundViewModal

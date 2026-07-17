@@ -592,7 +592,7 @@ export default function RFQDetailPage() {
                   setShowQuotationForm(true);
                   loadSuppliers(0, "");
                 }}
-                load={() => loadSuppliers(0, "")}
+                load={() => loadRFQ()}
                 ConvertPO={ConvertPO}
                 onCompare={handleCompareQuotations}
                 comparing={comparing}
@@ -885,7 +885,7 @@ function QuotationsTab({
     const result = await ConvertPO(quotationId);
     console.log("jjj", result);
     setSuccessMessage("Quotation converted to PO successfully!");
-    load();
+    load()
   };
   return (
     <div>
