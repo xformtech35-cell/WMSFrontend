@@ -14,10 +14,12 @@ import {
   Building2,
   Flag,
   CheckCircle,
+  Send,
 } from "lucide-react";
 import api from "@/lib/api";
 import PurchaseRequestForm from "./components/PurchaseRequestForm";
 import PurchaseRequestView from "./components/PurchaseRequestView";
+import RFQForm from "../purchase-approval/components/RFQForm";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -94,6 +96,8 @@ export default function PurchaseRequestPage() {
   const [editingPR, setEditingPR] = useState(null);
   const [viewingPR, setViewingPR] = useState(null);
   const [formMode, setFormMode] = useState("create"); // "create" or "edit"
+  const [showRFQForm, setShowRFQForm] = useState(false);
+  const [selectedPRForRFQ, setSelectedPRForRFQ] = useState(null);
 
   // Debounce search term
   useEffect(() => {
@@ -185,7 +189,24 @@ export default function PurchaseRequestPage() {
       setLoading(false);
     }
   };
-
+  const handleCreateRFQ = (pr) => {
+    setSelectedPRForRFQ(pr);
+    setShowRFQForm(true);
+  };
+  const handleRFQClose = () => {
+    setShowRFQForm(false);
+    setSelectedPRForRFQ(null);
+  };
+  const handleRFQSuccess = (result) => {
+    setSuccessMessage(
+      `RFQ created successfully! Reference: ${result.referenceNumber || "N/A"}`,
+    );
+    setShowSuccess(true);
+    setShowRFQForm(false);
+    setSelectedPRForRFQ(null);
+    // Reload the list to update status
+    loadPurchaseRequests();
+  };
   const handleCreateClick = () => {
     setEditingPR(null);
     setFormMode("create");
@@ -489,6 +510,18 @@ export default function PurchaseRequestPage() {
                               <Edit className="w-4 h-4" />
                             </button>
                           )}
+                          {(pr.status === "SUBMITTED" ||
+                            pr.status === "APPROVED" ||
+                            pr.status === "PENDING") && (
+                            <button
+                              type="button"
+                              onClick={() => handleCreateRFQ(pr)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                              title="Create RFQ"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -562,6 +595,14 @@ export default function PurchaseRequestPage() {
               </div>
             </div>
           </div>
+        )}
+        {showRFQForm && selectedPRForRFQ && (
+          <RFQForm
+            isOpen={showRFQForm}
+            onClose={handleRFQClose}
+            purchaseRequest={selectedPRForRFQ}
+            onSuccess={handleRFQSuccess}
+          />
         )}
       </div>
 

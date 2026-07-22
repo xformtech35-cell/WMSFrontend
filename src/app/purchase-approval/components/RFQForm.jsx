@@ -466,7 +466,7 @@ export default function RFQForm({
                       RFQ Date *
                     </label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                      {/* <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" /> */}
                       <input
                         type="date"
                         name="rfqDate"
@@ -483,7 +483,7 @@ export default function RFQForm({
                       Closing Date *
                     </label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                      {/* <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" /> */}
                       <input
                         type="date"
                         name="closingDate"
@@ -501,7 +501,7 @@ export default function RFQForm({
                       Reference Number
                     </label>
                     <div className="relative">
-                      <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                      {/* <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" /> */}
                       <input
                         type="text"
                         name="referenceNumber"
@@ -518,13 +518,13 @@ export default function RFQForm({
                       Remarks
                     </label>
                     <div className="relative">
-                      <FileText className="absolute left-3 top-3 text-gray-400 w-4 h-4 pointer-events-none" />
+                      {/* <FileText className="absolute left-3 top-3 text-gray-400 w-4 h-4 pointer-events-none" /> */}
                       <textarea
                         name="remarks"
                         value={formData.remarks}
                         onChange={handleInputChange}
                         rows="1"
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        className="w-full pl-2 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                         placeholder="Additional remarks"
                       />
                     </div>
