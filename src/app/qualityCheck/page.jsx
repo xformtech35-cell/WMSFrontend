@@ -68,6 +68,7 @@ const getInboundsAPI = async (page = 0, size = 10, searchTerm = "") => {
   const requestBody = {
     filters: {
       searchTerm: searchTerm || "",
+      status: "RECEIVING",
     },
     page: page,
     size: size,

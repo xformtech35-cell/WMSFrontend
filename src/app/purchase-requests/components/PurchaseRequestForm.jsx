@@ -888,7 +888,7 @@ export default function PurchaseRequestForm({
             >
               Cancel
             </button>
-            {mode === "edit" && prData.status === "DRAFT" && (
+            {/* {mode === "edit" && prData.status === "DRAFT" && (
               <button
                 type="button"
                 onClick={handleSaveDraft}
@@ -898,8 +898,8 @@ export default function PurchaseRequestForm({
                 <Save className="w-4 h-4" />
                 {savingDraft ? "Saving..." : "Update Draft"}
               </button>
-            )}
-            {mode === "create" && (
+            )} */}
+            {/* {mode === "create" && (
               <button
                 type="button"
                 onClick={handleSaveDraft}
@@ -909,7 +909,7 @@ export default function PurchaseRequestForm({
                 <Save className="w-4 h-4" />
                 {savingDraft ? "Saving..." : "Save as Draft"}
               </button>
-            )}
+            )} */}
             <button
               type="submit"
               disabled={submitting}
@@ -926,7 +926,7 @@ export default function PurchaseRequestForm({
                 ? "Submitting..."
                 : mode === "edit"
                   ? "Update & Submit"
-                  : "Submit Request"}
+                  : "Save Request"}
             </button>
           </div>
         </form>

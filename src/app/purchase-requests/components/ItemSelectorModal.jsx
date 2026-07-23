@@ -214,7 +214,7 @@ export default function ItemSelectorModal({
               </div>
             </div>
 
-            {/* Items Grid */}
+            {/* Items Table - Horizontal/Raw-wise Layout */}
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -229,74 +229,98 @@ export default function ItemSelectorModal({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {items.map((item) => {
-                  const isSelected = selectedItem?.id === item.id;
-                  const isAlreadyAdded = selectedItems.some(
-                    selected => selected.itemId === item.id || selected.itemCode === item.itemCode
-                  );
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Item Code</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Item Name</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Category</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Brand</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">UOM</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Unit Price</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Stock</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                      <th className="text-center px-4 py-3 font-medium text-gray-600">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {items.map((item) => {
+                      const isSelected = selectedItem?.id === item.id;
+                      const isAlreadyAdded = selectedItems.some(
+                        selected => selected.itemId === item.id || selected.itemCode === item.itemCode
+                      );
 
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => !isAlreadyAdded && handleSelectItem(item)}
-                      className={`
-                        border rounded-lg p-4 cursor-pointer transition-all
-                        ${isAlreadyAdded 
-                          ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60' 
-                          : 'hover:shadow-md hover:border-blue-400'
-                        }
-                        ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' : 'border-gray-200'}
-                      `}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-medium text-gray-900">
+                      return (
+                        <tr 
+                          key={item.id}
+                          className={`
+                            hover:bg-gray-50 transition-colors
+                            ${isAlreadyAdded ? 'bg-gray-50 opacity-60' : ''}
+                            ${isSelected ? 'bg-blue-50' : ''}
+                          `}
+                        >
+                          <td className="px-4 py-3 font-medium text-gray-900">
                             {item.itemCode}
-                          </h3>
-                          <p className="text-sm text-gray-600">{item.itemName}</p>
-                        </div>
-                        {isSelected && (
-                          <span className="bg-blue-600 text-white rounded-full p-1">
-                            <Check className="w-4 h-4" />
-                          </span>
-                        )}
-                        {isAlreadyAdded && (
-                          <span className="bg-gray-400 text-white text-xs px-2 py-1 rounded">
-                            Added
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="space-y-1 text-sm text-gray-600">
-                        {item.category && (
-                          <p><span className="font-medium">Category:</span> {item.category}</p>
-                        )}
-                        {item.brand && (
-                          <p><span className="font-medium">Brand:</span> {item.brand}</p>
-                        )}
-                        <p><span className="font-medium">UOM:</span> {item.uom}</p>
-                        <p><span className="font-medium">Unit Price:</span> ₹{item.unitPrice?.toFixed(2) || "0.00"}</p>
-                        <p><span className="font-medium">Stock:</span> {item.currentStock || 0}</p>
-                        {item.isGstApplicable && (
-                          <p><span className="font-medium">GST:</span> {item.gstRate}%</p>
-                        )}
-                        <div className="mt-2 flex gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            item.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {item.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                          {item.currentStock <= item.minStockLevel && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                              Low Stock
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {item.itemName}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {item.category || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {item.brand || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {item.uom}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            ₹{item.unitPrice?.toFixed(2) || "0.00"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`font-medium ${item.currentStock <= item.minStockLevel ? 'text-yellow-600' : 'text-gray-700'}`}>
+                              {item.currentStock || 0}
                             </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                            {item.currentStock <= item.minStockLevel && (
+                              <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                                Low
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              item.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {item.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {isAlreadyAdded ? (
+                              <span className="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">
+                                <Check className="w-3 h-3 mr-1" />
+                                Added
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleSelectItem(item)}
+                                className={`
+                                  px-3 py-1 text-xs font-medium rounded-full transition-colors
+                                  ${isSelected 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  }
+                                `}
+                              >
+                                {isSelected ? 'Selected' : 'Select'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
 

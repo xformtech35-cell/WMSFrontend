@@ -329,14 +329,7 @@ export default function PurchaseRequestPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => router.push("/master/suppliers")}
-                  className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm"
-                >
-                  <Building2 className="w-4 h-4" />
-                  Suppliers
-                </button>
+               
                 <button
                   type="button"
                   onClick={handleCreateClick}
@@ -511,8 +504,7 @@ export default function PurchaseRequestPage() {
                             </button>
                           )}
                           {(pr.status === "SUBMITTED" ||
-                            pr.status === "APPROVED" ||
-                            pr.status === "PENDING") && (
+                            pr.status === "APPROVED" ) && (
                             <button
                               type="button"
                               onClick={() => handleCreateRFQ(pr)}
@@ -567,7 +559,7 @@ export default function PurchaseRequestPage() {
                 className="fixed inset-0 bg-black/50"
                 onClick={handleFormClose}
               />
-              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
                 <PurchaseRequestForm
                   mode={formMode}
                   initialData={editingPR}

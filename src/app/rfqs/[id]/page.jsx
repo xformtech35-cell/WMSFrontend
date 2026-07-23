@@ -1161,7 +1161,6 @@ function QuotationFormModal({
 
               {/* Search Bar */}
               <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search suppliers..."
@@ -1347,7 +1346,7 @@ function QuotationFormModal({
                         Unit Price *
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 border-b">
-                        GST %
+                        VAT/GST %
                       </th>
                     </tr>
                   </thead>

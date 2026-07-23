@@ -443,7 +443,7 @@ export default function InboundPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {inbound.status === "PENDING" && (
+                          {/* {inbound.status === "PENDING" && (
                             <button
                               type="button"
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -451,7 +451,7 @@ export default function InboundPage() {
                             >
                               <ArrowUpDown className="w-4 h-4" />
                             </button>
-                          )}
+                          )} */}
                           <button
                             type="button"
                             className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"

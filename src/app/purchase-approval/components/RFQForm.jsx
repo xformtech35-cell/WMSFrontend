@@ -49,7 +49,12 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getSuppliersAPI = async (page = 0, size = 10, search = "", isActive = null) => {
+const getSuppliersAPI = async (
+  page = 0,
+  size = 10,
+  search = "",
+  isActive = null,
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -118,11 +123,11 @@ const createRFQFromPRAPI = async (data) => {
   return apiRequest("/rfqs/create-from-pr", "POST", data);
 };
 
-export default function RFQForm({ 
-  isOpen, 
-  onClose, 
-  purchaseRequest, 
-  onSuccess 
+export default function RFQForm({
+  isOpen,
+  onClose,
+  purchaseRequest,
+  onSuccess,
 }) {
   const [formData, setFormData] = useState({
     rfqDate: new Date().toISOString().split("T")[0],
@@ -144,7 +149,7 @@ export default function RFQForm({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [showItems, setShowItems] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -156,11 +161,11 @@ export default function RFQForm({
     if (isOpen) {
       loadSuppliers(0, "");
       if (purchaseRequest) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           purchaseRequestId: purchaseRequest.id,
           referenceNumber: purchaseRequest.prNumber || "",
-          remarks: `RFQ for ${purchaseRequest.prNumber} - ${purchaseRequest.requestedBy || ''}`,
+          remarks: `RFQ for ${purchaseRequest.prNumber} - ${purchaseRequest.requestedBy || ""}`,
         }));
       }
     }
@@ -200,14 +205,14 @@ export default function RFQForm({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const toggleSupplierSelection = (supplier) => {
-    setSelectedSuppliers(prev => {
-      const isSelected = prev.some(s => s.id === supplier.id);
+    setSelectedSuppliers((prev) => {
+      const isSelected = prev.some((s) => s.id === supplier.id);
       if (isSelected) {
-        return prev.filter(s => s.id !== supplier.id);
+        return prev.filter((s) => s.id !== supplier.id);
       } else {
         return [...prev, supplier];
       }
@@ -215,7 +220,7 @@ export default function RFQForm({
   };
 
   const removeSupplier = (supplierId) => {
-    setSelectedSuppliers(prev => prev.filter(s => s.id !== supplierId));
+    setSelectedSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
   };
 
   const handleSubmit = async (e) => {
@@ -243,13 +248,15 @@ export default function RFQForm({
         termsAndConditions: formData.termsAndConditions || "",
         deliveryTerms: formData.deliveryTerms || "",
         paymentTerms: formData.paymentTerms || "",
-        supplierIds: selectedSuppliers.map(s => s.id),
+        supplierIds: selectedSuppliers.map((s) => s.id),
       };
 
       const result = await createRFQFromPRAPI(submitData);
-      
-      setSuccessMessage(`RFQ created successfully! Reference: ${result.referenceNumber || 'N/A'}`);
-      
+
+      setSuccessMessage(
+        `RFQ created successfully! Reference: ${result.referenceNumber || "N/A"}`,
+      );
+
       if (onSuccess) {
         onSuccess(result);
       }
@@ -258,10 +265,11 @@ export default function RFQForm({
       setTimeout(() => {
         onClose();
       }, 2000);
-
     } catch (error) {
       console.error("Error creating RFQ:", error);
-      setErrorMessage(error.message || "Failed to create RFQ. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to create RFQ. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -289,7 +297,7 @@ export default function RFQForm({
         />
 
         {/* Modal */}
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
             <div>
@@ -344,7 +352,8 @@ export default function RFQForm({
                     onClick={() => setShowItems(!showItems)}
                     className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                   >
-                    {showItems ? "Hide Items" : "Show Items"} ({purchaseRequest.items?.length || 0})
+                    {showItems ? "Hide Items" : "Show Items"} (
+                    {purchaseRequest.items?.length || 0})
                   </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -375,80 +384,95 @@ export default function RFQForm({
                 </div>
 
                 {/* Items List */}
-                {showItems && purchaseRequest.items && purchaseRequest.items.length > 0 && (
-                  <div className="mt-3 border-t border-blue-200 pt-3">
-                    <h4 className="text-sm font-medium text-blue-800 mb-2">Items List</h4>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-blue-200">
-                        <thead className="bg-blue-100/50">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
-                              #
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
-                              Item Code
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
-                              Item Name
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
-                              Description
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
-                              UOM
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-blue-700 uppercase tracking-wider">
-                              Qty
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-blue-700 uppercase tracking-wider">
+                {showItems &&
+                  purchaseRequest.items &&
+                  purchaseRequest.items.length > 0 && (
+                    <div className="mt-3 border-t border-blue-200 pt-3">
+                      <h4 className="text-sm font-medium text-blue-800 mb-2">
+                        Items List
+                      </h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-blue-200">
+                          <thead className="bg-blue-100/50">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                                #
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                                Item Code
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                                Item Name
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                                Description
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                                UOM
+                              </th>
+                              <th className="px-3 py-2 text-right text-xs font-medium text-blue-700 uppercase tracking-wider">
+                                Qty
+                              </th>
+                              {/* <th className="px-3 py-2 text-right text-xs font-medium text-blue-700 uppercase tracking-wider">
                               Unit Price
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {purchaseRequest.items.map((item, index) => (
-                            <tr key={index} className="hover:bg-blue-50/50">
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {index + 1}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                                {item.itemCode || '-'}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                                {item.itemName}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-500 max-w-[150px] truncate">
-                                {item.description || '-'}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                {item.uom || 'Nos'}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
-                                {item.requestedQty || 0}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
+                            </th> */}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {purchaseRequest.items.map((item, index) => (
+                              <tr key={index} className="hover:bg-blue-50/50">
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                  {index + 1}
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                                  {item.itemCode || "-"}
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                                  {item.itemName}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-500 max-w-[150px] truncate">
+                                  {item.description || "-"}
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                  {item.uom || "Nos"}
+                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
+                                  {item.requestedQty || 0}
+                                </td>
+                                {/* <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
                                 ₹{(item.unitPrice || 0).toFixed(2)}
+                              </td> */}
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="bg-blue-50/50">
+                            <tr>
+                              <td className="px-3 py-2 text-sm font-medium text-gray-700 text-left">
+                                Total Items:
+                              </td>
+                              <td className="px-3 py-2 text-sm font-bold text-gray-900 text-left">
+                                {purchaseRequest.items?.length || 0}
+                              </td>
+                              <td
+                                colSpan="3"
+                                className="px-3 py-2 text-sm font-medium text-gray-700 text-right"
+                              >
+                                {" "}
+                                Total Qty:
+                              </td>
+                              <td className="px-3 py-2 text-sm font-bold text-gray-900 text-right">
+                                {purchaseRequest.items?.reduce(
+                                  (total, item) =>
+                                    total + (Number(item.requestedQty) || 0),
+                                  0,
+                                )}
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                        <tfoot className="bg-blue-50/50">
-                          <tr>
-                            <td colSpan="5" className="px-3 py-2 text-sm font-medium text-gray-700 text-right">
-                              Total Items:
-                            </td>
-                            <td className="px-3 py-2 text-sm font-bold text-gray-900 text-right">
-                              {purchaseRequest.items?.length || 0}
-                            </td>
-                            <td className="px-3 py-2 text-sm font-bold text-gray-900 text-right">
-                              ₹{(purchaseRequest.items?.reduce((sum, item) => sum + (item.unitPrice || 0) * (item.requestedQty || 0), 0) || 0).toFixed(2)}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                          </tfoot>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 
@@ -588,159 +612,189 @@ export default function RFQForm({
             </div>
 
             {/* Supplier Selection */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-              <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center flex-wrap gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Select Suppliers *
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {selectedSuppliers.length} supplier(s) selected
-                  </p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+  <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center flex-wrap gap-3">
+    <div>
+      <h3 className="text-lg font-semibold text-gray-800">
+        Select Suppliers *
+      </h3>
+      <p className="text-sm text-gray-500">
+        {selectedSuppliers.length} supplier(s) selected
+      </p>
+    </div>
+    <div className="relative">
+      <input
+        type="text"
+        placeholder="Search suppliers..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="pl-10 w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+      />
+    </div>
+  </div>
+
+  {/* Selected Suppliers */}
+  {selectedSuppliers.length > 0 && (
+    <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
+      <div className="flex flex-wrap gap-2">
+        {selectedSuppliers.map((supplier) => (
+          <div
+            key={supplier.id}
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm"
+          >
+            <Building2 className="w-3 h-3" />
+            <span>{supplier.name}</span>
+            <button
+              type="button"
+              onClick={() => removeSupplier(supplier.id)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              <XCircle className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div className="p-6">
+    {loadingSuppliers ? (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-2 text-sm text-gray-500">
+          Loading suppliers...
+        </p>
+      </div>
+    ) : suppliers.length === 0 ? (
+      <div className="text-center py-8 text-gray-500">
+        {searchTerm
+          ? "No suppliers found matching your search"
+          : "No suppliers available"}
+      </div>
+    ) : (
+      <>
+        <div className="overflow-x-auto max-h-60 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 w-10">
                   <input
-                    type="text"
-                    placeholder="Search suppliers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    type="checkbox"
+                    checked={selectedSuppliers.length === suppliers.length && suppliers.length > 0}
+                    onChange={() => {
+                      if (selectedSuppliers.length === suppliers.length) {
+                        // Deselect all
+                        suppliers.forEach(s => removeSupplier(s.id));
+                      } else {
+                        // Select all
+                        suppliers.forEach(s => toggleSupplierSelection(s));
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
-                </div>
-              </div>
-
-              {/* Selected Suppliers */}
-              {selectedSuppliers.length > 0 && (
-                <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSuppliers.map((supplier) => (
-                      <div
-                        key={supplier.id}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm"
-                      >
-                        <Building2 className="w-3 h-3" />
-                        <span>{supplier.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeSupplier(supplier.id)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <XCircle className="w-3 h-3" />
-                        </button>
+                </th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Supplier Name</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Contact Person</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Phone</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">VAT/GST</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-600">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {suppliers.map((supplier) => {
+                const isSelected = selectedSuppliers.some(
+                  (s) => s.id === supplier.id,
+                );
+                return (
+                  <tr
+                    key={supplier.id}
+                    onClick={() => toggleSupplierSelection(supplier)}
+                    className={`cursor-pointer transition-all hover:bg-gray-50 ${
+                      isSelected ? "bg-blue-50" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium text-gray-900">
+                          {supplier.name}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {supplier.contactPerson || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {supplier.email || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {supplier.phone || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {supplier.gstNumber || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {isSelected ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Selected
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          Available
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-              <div className="p-6">
-                {loadingSuppliers ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-sm text-gray-500">Loading suppliers...</p>
-                  </div>
-                ) : suppliers.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    {searchTerm ? "No suppliers found matching your search" : "No suppliers available"}
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-                      {suppliers.map((supplier) => {
-                        const isSelected = selectedSuppliers.some(s => s.id === supplier.id);
-                        return (
-                          <div
-                            key={supplier.id}
-                            onClick={() => toggleSupplierSelection(supplier)}
-                            className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                              isSelected
-                                ? "border-blue-500 bg-blue-50 shadow-sm"
-                                : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {}}
-                                className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  <span className="font-medium text-gray-900 truncate">
-                                    {supplier.name}
-                                  </span>
-                                </div>
-                                <div className="mt-1 space-y-1 text-sm text-gray-500">
-                                  {supplier.contactPerson && (
-                                    <div className="flex items-center gap-1">
-                                      <User className="w-3 h-3" />
-                                      <span>{supplier.contactPerson}</span>
-                                    </div>
-                                  )}
-                                  {supplier.email && (
-                                    <div className="flex items-center gap-1">
-                                      <Mail className="w-3 h-3" />
-                                      <span className="truncate">{supplier.email}</span>
-                                    </div>
-                                  )}
-                                  {supplier.phone && (
-                                    <div className="flex items-center gap-1">
-                                      <Phone className="w-3 h-3" />
-                                      <span>{supplier.phone}</span>
-                                    </div>
-                                  )}
-                                  {supplier.gstNumber && (
-                                    <div className="text-xs text-gray-400">
-                                      GST: {supplier.gstNumber}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Pagination */}
-                    {totalPages > 0 && (
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
-                        <div className="text-sm text-gray-500">
-                          Showing {suppliers.length} of {totalElements} suppliers
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 0}
-                            className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <span className="text-sm text-gray-600">
-                            {currentPage + 1} / {totalPages}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages - 1}
-                            className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+        {/* Pagination */}
+        {totalPages > 0 && (
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+            <div className="text-sm text-gray-500">
+              Showing {suppliers.length} of {totalElements} suppliers
             </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+                className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm text-gray-600">
+                {currentPage + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages - 1}
+                className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</div>
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
