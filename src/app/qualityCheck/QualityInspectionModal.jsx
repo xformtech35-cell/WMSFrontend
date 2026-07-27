@@ -1,6 +1,6 @@
 // components/inbound/QualityInspectionModal.jsx
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from "react";
 import {
   X,
   AlertCircle,
@@ -25,48 +25,48 @@ import {
   AlertTriangle,
   Search,
   XCircle,
-} from 'lucide-react';
-import api from '@/lib/api';
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+} from "lucide-react";
+import api from "@/lib/api";
 
-const QualityInspectionModal = ({
-  isOpen,
-  onClose,
-  inbound,
-  onSuccess,
-}) => {
+const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  
+  const fileInputRefs = useRef({});
+
   // Form state
   const [formData, setFormData] = useState({
     inspectedBy: 1, // Default to current user
-    overallRemarks: '',
+    overallRemarks: "",
     items: [],
   });
 
   // Reset form when modal opens
   React.useEffect(() => {
     if (isOpen && inbound) {
-      const items = inbound.lines?.map((line) => ({
-        lineId: line.id,
-        itemCode: line.itemCode,
-        itemName: line.itemName,
-        receivedQuantity: line.receivedQuantity || line.orderedQuantity || 0,
-        acceptedQuantity: 0,
-        rejectedQuantity: 0,
-        defectiveQuantity: 0,
-        qualityStatus: 'PENDING',
-        reason: '',
-        remarks: '',
-      })) || [];
-      
+      const items =
+        inbound.lines?.map((line) => ({
+          lineId: line.id,
+          itemCode: line.itemCode,
+          itemName: line.itemName,
+          receivedQuantity: line.receivedQuantity || 0,
+          acceptedQuantity: 0,
+          rejectedQuantity: 0,
+          qualityStatus: "PENDING",
+          reason: "",
+          remarks: "",
+          images: [], // Store uploaded images
+        })) || [];
+
       setFormData({
         inspectedBy: 1,
         overallRemarks: `Quality inspection for ${inbound.inboundNumber}`,
         items: items,
       });
-      setError('');
+      setError("");
       setSuccess(false);
     }
   }, [isOpen, inbound]);
@@ -74,37 +74,43 @@ const QualityInspectionModal = ({
   const handleItemChange = (index, field, value) => {
     const updatedItems = [...formData.items];
     const item = updatedItems[index];
-    
-    if (field === 'acceptedQuantity' || field === 'rejectedQuantity' || field === 'defectiveQuantity') {
+
+    if (field === "acceptedQuantity" || field === "rejectedQuantity") {
       const newValue = parseInt(value) || 0;
       item[field] = newValue;
-      
+
       // Auto-calculate quality status based on quantities
-      const totalIssues = item.rejectedQuantity + item.defectiveQuantity;
-      if (totalIssues === 0 && item.acceptedQuantity === item.receivedQuantity) {
-        item.qualityStatus = 'ACCEPTED';
-      } else if (item.acceptedQuantity === 0 && totalIssues === item.receivedQuantity) {
-        item.qualityStatus = 'REJECTED';
+      const totalIssues = item.rejectedQuantity;
+      if (
+        totalIssues === 0 &&
+        item.acceptedQuantity === item.receivedQuantity
+      ) {
+        item.qualityStatus = "ACCEPTED";
+      } else if (
+        item.acceptedQuantity === 0 &&
+        totalIssues === item.receivedQuantity
+      ) {
+        item.qualityStatus = "REJECTED";
       } else if (item.acceptedQuantity > 0 && totalIssues > 0) {
-        item.qualityStatus = 'PARTIAL';
+        item.qualityStatus = "PARTIAL";
       } else {
-        item.qualityStatus = 'PENDING';
+        item.qualityStatus = "PENDING";
       }
     } else {
       item[field] = value;
     }
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      items: updatedItems
+      items: updatedItems,
     }));
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -113,13 +119,12 @@ const QualityInspectionModal = ({
     const item = updatedItems[index];
     item.acceptedQuantity = item.receivedQuantity;
     item.rejectedQuantity = 0;
-    item.defectiveQuantity = 0;
-    item.qualityStatus = 'ACCEPTED';
-    item.reason = '';
-    item.remarks = 'All items accepted';
-    setFormData(prev => ({
+    item.qualityStatus = "ACCEPTED";
+    item.reason = "";
+    item.remarks = "All items accepted";
+    setFormData((prev) => ({
       ...prev,
-      items: updatedItems
+      items: updatedItems,
     }));
   };
 
@@ -128,58 +133,124 @@ const QualityInspectionModal = ({
     const item = updatedItems[index];
     item.acceptedQuantity = 0;
     item.rejectedQuantity = item.receivedQuantity;
-    item.defectiveQuantity = 0;
-    item.qualityStatus = 'REJECTED';
-    item.reason = 'All items rejected';
-    item.remarks = 'All items rejected';
-    setFormData(prev => ({
+    item.qualityStatus = "REJECTED";
+    item.reason = "All items rejected";
+    item.remarks = "All items rejected";
+    setFormData((prev) => ({
       ...prev,
-      items: updatedItems
+      items: updatedItems,
     }));
+  };
+
+  const handleImageUpload = (index, event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    const updatedItems = [...formData.items];
+    const item = updatedItems[index];
+
+    // Add new images to the item's images array
+    item.images = [...(item.images || []), ...files];
+
+    setFormData((prev) => ({
+      ...prev,
+      items: updatedItems,
+    }));
+
+    // Reset the input value to allow re-uploading the same file
+    if (fileInputRefs.current[index]) {
+      fileInputRefs.current[index].value = "";
+    }
+  };
+
+  const handleRemoveImage = (itemIndex, imageIndex) => {
+    const updatedItems = [...formData.items];
+    const item = updatedItems[itemIndex];
+    item.images = item.images.filter((_, idx) => idx !== imageIndex);
+
+    setFormData((prev) => ({
+      ...prev,
+      items: updatedItems,
+    }));
+  };
+
+  const getImagePreview = (file) => {
+    return URL.createObjectURL(file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       // Validate - check if any items are inspected
-      const itemsToInspect = formData.items.filter(item => 
-        item.acceptedQuantity > 0 || item.rejectedQuantity > 0 || item.defectiveQuantity > 0
+      const itemsToInspect = formData.items.filter(
+        (item) => item.acceptedQuantity > 0 || item.rejectedQuantity > 0,
       );
-      
+
       if (itemsToInspect.length === 0) {
-        throw new Error('Please inspect at least one item');
+        throw new Error("Please inspect at least one item");
       }
 
       // Validate quantities
       for (const item of itemsToInspect) {
-        const totalInspected = item.acceptedQuantity + item.rejectedQuantity + item.defectiveQuantity;
+        const totalInspected = item.acceptedQuantity + item.rejectedQuantity;
         if (totalInspected > item.receivedQuantity) {
-          throw new Error(`Total inspected quantity for ${item.itemName} cannot exceed received quantity (${item.receivedQuantity})`);
+          throw new Error(
+            `Total inspected quantity for ${item.itemName} cannot exceed received quantity (${item.receivedQuantity})`,
+          );
         }
       }
 
+      // Create FormData for multipart upload
+      const formDataToSend = new FormData();
+
+      // Add inspection data as JSON
       const inspectionData = {
         inspectedBy: formData.inspectedBy,
         overallRemarks: formData.overallRemarks || null,
-        items: itemsToInspect.map(item => ({
+        items: itemsToInspect.map((item) => ({
           lineId: item.lineId,
           itemCode: item.itemCode,
           itemName: item.itemName,
           receivedQuantity: item.receivedQuantity,
           acceptedQuantity: item.acceptedQuantity,
           rejectedQuantity: item.rejectedQuantity,
-          defectiveQuantity: item.defectiveQuantity,
           qualityStatus: item.qualityStatus,
           reason: item.reason || null,
           remarks: item.remarks || null,
         })),
       };
 
-      const response = await api.post(`/inbound/${inbound.id}/quality-inspection`, inspectionData);
-      
+      formDataToSend.append("inspectionData", JSON.stringify(inspectionData));
+
+      // Add images for each item
+      formData.items.forEach((item, index) => {
+        if (item.images && item.images.length > 0) {
+          // Check if any quantity was inspected for this item
+          const hasInspection =
+            item.acceptedQuantity > 0 || item.rejectedQuantity > 0;
+          if (hasInspection) {
+            item.images.forEach((imageFile, imgIndex) => {
+              // Use the format: images_item_1, images_item_1 (for multiple images per item)
+              const fieldName = `images_item_${index + 1}`;
+              formDataToSend.append(fieldName, imageFile);
+            });
+          }
+        }
+      });
+
+      const response = await api.post(
+        `/inbound/${inbound.id}/quality-inspection`,
+        formDataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
       if (response.data.success) {
         setSuccess(true);
         onSuccess?.(response.data.data);
@@ -187,11 +258,17 @@ const QualityInspectionModal = ({
           onClose();
         }, 1500);
       } else {
-        throw new Error(response.data.message || 'Failed to record quality inspection');
+        throw new Error(
+          response.data.message || "Failed to record quality inspection",
+        );
       }
     } catch (err) {
-      console.error('Quality inspection error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to record quality inspection');
+      console.error("Quality inspection error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to record quality inspection",
+      );
     } finally {
       setLoading(false);
     }
@@ -205,10 +282,10 @@ const QualityInspectionModal = ({
 
   const getQualityStatusColor = (status) => {
     const colors = {
-      PENDING: 'bg-gray-100 text-gray-700',
-      ACCEPTED: 'bg-green-100 text-green-700',
-      REJECTED: 'bg-red-100 text-red-700',
-      PARTIAL: 'bg-yellow-100 text-yellow-700',
+      PENDING: "bg-gray-100 text-gray-700",
+      ACCEPTED: "bg-green-100 text-green-700",
+      REJECTED: "bg-red-100 text-red-700",
+      PARTIAL: "bg-yellow-100 text-yellow-700",
     };
     return colors[status] || colors.PENDING;
   };
@@ -228,14 +305,14 @@ const QualityInspectionModal = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop with blur */}
-      <div 
+      <div
         className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
         onClick={handleClose}
       />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col animate-scale-up">
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col animate-scale-up">
           {/* Decorative gradient header */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-t-2xl"></div>
 
@@ -270,7 +347,9 @@ const QualityInspectionModal = ({
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-green-800">Quality Inspection Completed!</p>
+                <p className="text-sm font-semibold text-green-800">
+                  Quality Inspection Completed!
+                </p>
                 <p className="text-xs text-green-600">Redirecting...</p>
               </div>
             </div>
@@ -297,15 +376,21 @@ const QualityInspectionModal = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <p className="text-xs text-gray-500">Inbound Number</p>
-                    <p className="text-sm font-semibold text-gray-900">{inbound?.inboundNumber}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {inbound?.inboundNumber}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">PO Number</p>
-                    <p className="text-sm font-semibold text-gray-900">{inbound?.poNumber}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {inbound?.poNumber}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Supplier</p>
-                    <p className="text-sm font-semibold text-gray-900">{inbound?.supplierName}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {inbound?.supplierName}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Stage</p>
@@ -328,27 +413,53 @@ const QualityInspectionModal = ({
                 </div>
 
                 <div className="border border-gray-200 rounded-xl overflow-x-auto">
-                  <table className="w-full min-w-[900px]">
+                  <table className="w-full min-w-[1100px]">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">Item</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500">UOM</th>
-                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">Received</th>
-                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">Accepted</th>
-                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">Rejected</th>
-                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">Defective</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
-                        <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">Reason</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500">Action</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">
+                          Item
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500">
+                          UOM
+                        </th>
+                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">
+                          Received
+                        </th>
+                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">
+                          Accepted
+                        </th>
+                        <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">
+                          Rejected
+                        </th>
+                        {/* <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">Defective</th> */}
+                        <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">
+                          Status
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">
+                          Reason
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500">
+                          Images
+                        </th>
+                        <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500">
+                          Action
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {formData.items.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                        <tr
+                          key={index}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
                           <td className="px-3 py-2.5">
                             <div>
-                              <p className="text-sm font-medium text-gray-700">{item.itemName}</p>
-                              <p className="text-xs text-gray-400">{item.itemCode}</p>
+                              <p className="text-sm font-medium text-gray-700">
+                                {item.itemName}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {item.itemCode}
+                              </p>
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-center text-sm text-gray-600">
@@ -360,8 +471,14 @@ const QualityInspectionModal = ({
                           <td className="px-3 py-2.5">
                             <input
                               type="number"
-                              value={item.acceptedQuantity || ''}
-                              onChange={(e) => handleItemChange(index, 'acceptedQuantity', e.target.value)}
+                              value={item.acceptedQuantity || ""}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "acceptedQuantity",
+                                  e.target.value,
+                                )
+                              }
                               min="0"
                               max={item.receivedQuantity}
                               className="w-16 px-2 py-1 text-right text-sm border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
@@ -371,15 +488,21 @@ const QualityInspectionModal = ({
                           <td className="px-3 py-2.5">
                             <input
                               type="number"
-                              value={item.rejectedQuantity || ''}
-                              onChange={(e) => handleItemChange(index, 'rejectedQuantity', e.target.value)}
+                              value={item.rejectedQuantity || ""}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "rejectedQuantity",
+                                  e.target.value,
+                                )
+                              }
                               min="0"
                               max={item.receivedQuantity}
                               className="w-16 px-2 py-1 text-right text-sm border-2 border-red-200 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all"
                               placeholder="0"
                             />
                           </td>
-                          <td className="px-3 py-2.5">
+                          {/* <td className="px-3 py-2.5">
                             <input
                               type="number"
                               value={item.defectiveQuantity || ''}
@@ -389,11 +512,13 @@ const QualityInspectionModal = ({
                               className="w-16 px-2 py-1 text-right text-sm border-2 border-yellow-200 rounded-lg focus:ring-2 focus:ring-yellow-100 focus:border-yellow-400 transition-all"
                               placeholder="0"
                             />
-                          </td>
+                          </td> */}
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-1.5">
                               {getQualityStatusIcon(item.qualityStatus)}
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getQualityStatusColor(item.qualityStatus)}`}>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs font-medium ${getQualityStatusColor(item.qualityStatus)}`}
+                              >
                                 {item.qualityStatus}
                               </span>
                             </div>
@@ -401,11 +526,74 @@ const QualityInspectionModal = ({
                           <td className="px-3 py-2.5">
                             <input
                               type="text"
-                              value={item.reason || ''}
-                              onChange={(e) => handleItemChange(index, 'reason', e.target.value)}
+                              value={item.reason || ""}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "reason",
+                                  e.target.value,
+                                )
+                              }
                               className="w-full px-2 py-1 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-100 focus:border-purple-400 transition-all"
                               placeholder="Reason..."
                             />
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex flex-col items-center gap-1">
+                              {/* Image Upload */}
+                              <div className="flex items-center gap-1">
+                                <input
+                                  ref={(el) =>
+                                    (fileInputRefs.current[index] = el)
+                                  }
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={(e) => handleImageUpload(index, e)}
+                                  className="hidden"
+                                  id={`image-upload-${index}`}
+                                />
+                                <label
+                                  htmlFor={`image-upload-${index}`}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Upload images"
+                                >
+                                  <Upload className="w-4 h-4" />
+                                </label>
+                              </div>
+                              {/* Image Previews */}
+                              {item.images && item.images.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1 max-w-[120px]">
+                                  {item.images.map((image, imgIndex) => (
+                                    <div
+                                      key={imgIndex}
+                                      className="relative group"
+                                    >
+                                      <img
+                                        src={getImagePreview(image)}
+                                        alt={`Item ${index + 1} - Image ${imgIndex + 1}`}
+                                        className="w-8 h-8 object-cover rounded border border-gray-200"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleRemoveImage(index, imgIndex)
+                                        }
+                                        className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <XCircle className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {item.images && item.images.length > 0 && (
+                                <span className="text-xs text-gray-400">
+                                  {item.images.length} image
+                                  {item.images.length > 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex items-center justify-center gap-1">
@@ -456,7 +644,9 @@ const QualityInspectionModal = ({
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Overall Remarks
-                    <span className="text-gray-400 text-xs ml-2">(optional)</span>
+                    <span className="text-gray-400 text-xs ml-2">
+                      (optional)
+                    </span>
                   </label>
                   <textarea
                     name="overallRemarks"

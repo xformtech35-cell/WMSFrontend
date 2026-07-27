@@ -35,6 +35,7 @@ import {
 import api from "@/lib/api";
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import UnloadingModal from "./component/UnloadingModal";
+import { formatDateTime } from "@/lib/utils/common";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -63,11 +64,16 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getInboundsAPI = async (page = 0, size = 10, searchTerm = "") => {
+const getInboundsAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  filterStatus,
+) => {
   const requestBody = {
     filters: {
       searchTerm: searchTerm || "",
-      status:"GATE_ENTRY"
+      status: filterStatus,
     },
     page: page,
     size: size,
@@ -99,7 +105,8 @@ export default function MaterialUnload() {
   const [viewLoading, setViewLoading] = useState(false);
   const [showUnloadingModal, setShowUnloadingModal] = useState(false);
   const [unloadingInbound, setUnloadingInbound] = useState(null);
-  const [gateEntryInbound, setGateEntryInbound] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("GATE_ENTRY"); // null = all, 'PENDING' = pending only
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -111,7 +118,7 @@ export default function MaterialUnload() {
   // Load data on page change
   useEffect(() => {
     loadInbounds();
-  }, [currentPage]);
+  }, [currentPage, filterStatus]);
 
   // Auto-clear messages
   useEffect(() => {
@@ -131,7 +138,12 @@ export default function MaterialUnload() {
   const loadInbounds = async () => {
     try {
       setLoading(true);
-      const response = await getInboundsAPI(currentPage, pageSize, searchTerm);
+      const response = await getInboundsAPI(
+        currentPage,
+        pageSize,
+        searchTerm,
+        filterStatus,
+      );
 
       if (response && response.content) {
         setInbounds(response.content || []);
@@ -229,18 +241,6 @@ export default function MaterialUnload() {
     });
   };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";
     return `₹${amount.toFixed(2)}`;
@@ -250,6 +250,14 @@ export default function MaterialUnload() {
     if (newPage >= 0 && newPage < totalPages) {
       setCurrentPage(newPage);
     }
+  };
+  const handleFilterToggle = (status) => {
+    if (filterStatus === status) {
+      setFilterStatus(null); // Toggle off
+    } else {
+      setFilterStatus(status); // Set filter
+    }
+    setCurrentPage(0); // Reset to first page on filter change
   };
 
   return (
@@ -329,7 +337,29 @@ export default function MaterialUnload() {
                 />
               </div>
             </div>
-
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleFilterToggle("GATE_ENTRY")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  filterStatus === "GATE_ENTRY"
+                    ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Pending Only
+              </button>
+              <button
+                onClick={() => handleFilterToggle(null)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === null
+                    ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-300"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                All Records
+              </button>
+            </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span className="px-3 py-1.5 bg-gray-100 rounded-lg">
                 {totalElements} records
@@ -359,11 +389,18 @@ export default function MaterialUnload() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
                   </th>
+                  {filterStatus === "GATE_ENTRY" && (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Stage
+                      </th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stage
+                    Unloaded Time
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -431,21 +468,32 @@ export default function MaterialUnload() {
                           {inbound.invoiceNumber || "N/A"}
                         </span>
                       </td>
+                      {filterStatus === "GATE_ENTRY" && (
+                        <>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              {getStatusIcon(inbound.status)}
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
+                              >
+                                {inbound.status?.replace(/_/g, " ") || "N/A"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
+                            >
+                              {inbound.stage?.replace(/_/g, " ") || "N/A"}
+                            </span>
+                          </td>
+                        </>
+                      )}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          {getStatusIcon(inbound.status)}
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
-                          >
-                            {inbound.status?.replace(/_/g, " ") || "N/A"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
-                        >
-                          {inbound.stage?.replace(/_/g, " ") || "N/A"}
+                        <span className="text-sm text-gray-600">
+                          {inbound.unloadingEndTime
+                            ? formatDateTime(inbound.unloadingEndTime)
+                            : "Not Loaded"}
                         </span>
                       </td>
                       <td className="px-1 py-3">
@@ -453,24 +501,27 @@ export default function MaterialUnload() {
                           <button
                             type="button"
                             onClick={() => handleViewClick(inbound)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            className="p-1.5 cursor-pointer text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleUnloadingClick(inbound)}
-                            className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
-                            title="Record Unloading"
-                            disabled={
-                              inbound.status !== "GATE_ENTRY"
-                            }
-                          >
-                            <Box className="w-3.5 h-3.5" />
-                            Unload
-                          </button>
+                          {!inbound?.unloadingEndTime ? (
+                            <button
+                              type="button"
+                              onClick={() => handleUnloadingClick(inbound)}
+                              className="px-3 py-1.5 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                              title="Record Unloading"
+                              disabled={inbound.status !== "GATE_ENTRY"}
+                            >
+                              <Box className="w-3.5 h-3.5" />
+                              Unload
+                            </button>
+                          ) :<span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                                                        <CheckCircle className="w-3 h-3" />
+                                                        Loaded
+                                                      </span>}
                         </div>
                       </td>
                     </tr>

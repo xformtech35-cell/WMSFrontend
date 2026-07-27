@@ -1,6 +1,6 @@
 // components/inbound/UnloadingModal.jsx
 "use client";
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   X,
   AlertCircle,
@@ -15,59 +15,57 @@ import {
   UserCheck,
   FileText,
   Calendar,
-} from 'lucide-react';
-import api from '@/lib/api';
+} from "lucide-react";
+import api from "@/lib/api";
 
-const UnloadingModal = ({
-  isOpen,
-  onClose,
-  inbound,
-  onSuccess,
-}) => {
+const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    boxesUnloadedQuantity: '',
-    unloadedBy: '',
-    remarks: '',
+    boxesUnloadedQuantity: "",
+    unloadedBy: "",
+    remarks: "",
   });
 
   // Reset form when modal opens
   React.useEffect(() => {
     if (isOpen && inbound) {
       setFormData({
-        boxesUnloadedQuantity: '',
-        unloadedBy: '',
+        boxesUnloadedQuantity: "",
+        unloadedBy: "",
         remarks: `Unloading for ${inbound.inboundNumber}`,
       });
-      setError('');
+      setError("");
       setSuccess(false);
     }
   }, [isOpen, inbound]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       // Validate required fields
-      if (!formData.boxesUnloadedQuantity || parseInt(formData.boxesUnloadedQuantity) <= 0) {
-        throw new Error('Please enter a valid number of boxes unloaded');
+      if (
+        !formData.boxesUnloadedQuantity ||
+        parseInt(formData.boxesUnloadedQuantity) <= 0
+      ) {
+        throw new Error("Please enter a valid number of boxes unloaded");
       }
       if (!formData.unloadedBy) {
-        throw new Error('Unloaded by is required');
+        throw new Error("Unloaded by is required");
       }
 
       const unloadingData = {
@@ -76,8 +74,11 @@ const UnloadingModal = ({
         remarks: formData.remarks || null,
       };
 
-      const response = await api.post(`/inbound/${inbound.id}/unloading`, unloadingData);
-      
+      const response = await api.post(
+        `/inbound/${inbound.id}/unloading`,
+        unloadingData,
+      );
+
       if (response.data.success) {
         setSuccess(true);
         onSuccess?.(response.data.data);
@@ -85,11 +86,15 @@ const UnloadingModal = ({
           onClose();
         }, 1500);
       } else {
-        throw new Error(response.data.message || 'Failed to record unloading');
+        throw new Error(response.data.message || "Failed to record unloading");
       }
     } catch (err) {
-      console.error('Unloading error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to record unloading');
+      console.error("Unloading error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to record unloading",
+      );
     } finally {
       setLoading(false);
     }
@@ -106,7 +111,7 @@ const UnloadingModal = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop with blur */}
-      <div 
+      <div
         className="fixed inset-0   transition-opacity"
         onClick={handleClose}
       />
@@ -120,7 +125,6 @@ const UnloadingModal = ({
           {/* Header */}
           <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-6 pt-7 border-b border-gray-100">
             <div className="flex items-center gap-4">
-              
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
                   Record Unloading
@@ -146,7 +150,9 @@ const UnloadingModal = ({
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-green-800">Unloading Recorded Successfully!</p>
+                <p className="text-sm font-semibold text-green-800">
+                  Unloading Recorded Successfully!
+                </p>
                 <p className="text-xs text-green-600">Redirecting...</p>
               </div>
             </div>
@@ -172,20 +178,26 @@ const UnloadingModal = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500">Inbound Number</p>
-                  <p className="text-sm font-semibold text-gray-900">{inbound?.inboundNumber}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.inboundNumber}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">PO Number</p>
-                  <p className="text-sm font-semibold text-gray-900">{inbound?.poNumber}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.poNumber}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Supplier</p>
-                  <p className="text-sm font-semibold text-gray-900">{inbound?.supplierName}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.supplierName}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Current Stage</p>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
-                    {inbound?.stage?.replace(/_/g, ' ')}
+                    {inbound?.stage?.replace(/_/g, " ")}
                   </span>
                 </div>
               </div>
@@ -207,7 +219,9 @@ const UnloadingModal = ({
                   </div>
                 ))}
                 {inbound?.lines?.length > 3 && (
-                  <p className="text-xs text-gray-400">+ {inbound.lines.length - 3} more items</p>
+                  <p className="text-xs text-gray-400">
+                    + {inbound.lines.length - 3} more items
+                  </p>
                 )}
               </div>
             </div>
@@ -232,7 +246,9 @@ const UnloadingModal = ({
                     required
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-400">Enter the total number of boxes unloaded</p>
+                <p className="mt-1 text-xs text-gray-400">
+                  Enter the total number of boxes unloaded
+                </p>
               </div>
 
               {/* Unloaded By */}

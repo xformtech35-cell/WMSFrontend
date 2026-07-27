@@ -35,6 +35,7 @@ import {
 import api from "@/lib/api";
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import QualityInspectionModal from "./QualityInspectionModal";
+import { formatDateTime } from "@/lib/utils/common";
 // import InboundViewModal from "./component/InboundViewModal";
 
 // API Functions
@@ -64,11 +65,16 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getInboundsAPI = async (page = 0, size = 10, searchTerm = "") => {
+const getInboundsAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  filterStatus,
+) => {
   const requestBody = {
     filters: {
       searchTerm: searchTerm || "",
-      status: "RECEIVING",
+      status: filterStatus,
     },
     page: page,
     size: size,
@@ -100,6 +106,7 @@ export default function InboundPage() {
   const [viewLoading, setViewLoading] = useState(false);
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [inspectionInbound, setInspectionInbound] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("RECEIVING"); // null = all, 'PENDING' = pending only
 
   // Debounce search term
   useEffect(() => {
@@ -112,7 +119,7 @@ export default function InboundPage() {
   // Load data on page change
   useEffect(() => {
     loadInbounds();
-  }, [currentPage]);
+  }, [currentPage, filterStatus]);
 
   // Auto-clear messages
   useEffect(() => {
@@ -132,7 +139,12 @@ export default function InboundPage() {
   const loadInbounds = async () => {
     try {
       setLoading(true);
-      const response = await getInboundsAPI(currentPage, pageSize, searchTerm);
+      const response = await getInboundsAPI(
+        currentPage,
+        pageSize,
+        searchTerm,
+        filterStatus,
+      );
 
       if (response && response.content) {
         setInbounds(response.content || []);
@@ -228,17 +240,7 @@ export default function InboundPage() {
     });
   };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";
@@ -249,6 +251,14 @@ export default function InboundPage() {
     if (newPage >= 0 && newPage < totalPages) {
       setCurrentPage(newPage);
     }
+  };
+  const handleFilterToggle = (status) => {
+    if (filterStatus === status) {
+      setFilterStatus(null); // Toggle off
+    } else {
+      setFilterStatus(status); // Set filter
+    }
+    setCurrentPage(0); // Reset to first page on filter change
   };
 
   return (
@@ -336,6 +346,29 @@ export default function InboundPage() {
                 />
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleFilterToggle("RECEIVING")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  filterStatus === "RECEIVING"
+                    ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Pending Only
+              </button>
+              <button
+                onClick={() => handleFilterToggle(null)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === null
+                    ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-300"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                All Records
+              </button>
+            </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span className="px-3 py-1.5 bg-gray-100 rounded-lg">
@@ -366,12 +399,19 @@ export default function InboundPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stage
-                  </th>
+                  {filterStatus === "RECEIVING" && (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Stage
+                      </th>
+                    </>
+                  )}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Inspected Date
+                      </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -418,7 +458,7 @@ export default function InboundPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDate(inbound.inboundDate)}
+                        {formatDateTime(inbound.inboundDate)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium text-blue-600">
@@ -438,21 +478,32 @@ export default function InboundPage() {
                           {inbound.invoiceNumber || "N/A"}
                         </span>
                       </td>
+                      {filterStatus === "RECEIVING" && (
+                        <>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              {getStatusIcon(inbound.status)}
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
+                              >
+                                {inbound.status?.replace(/_/g, " ") || "N/A"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
+                            >
+                              {inbound.stage?.replace(/_/g, " ") || "N/A"}
+                            </span>
+                          </td>
+                        </>
+                      )}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          {getStatusIcon(inbound.status)}
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
-                          >
-                            {inbound.status?.replace(/_/g, " ") || "N/A"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
-                        >
-                          {inbound.stage?.replace(/_/g, " ") || "N/A"}
+                        <span className="text-sm text-gray-600">
+                          {inbound.inspectionDate
+                            ? formatDateTime(inbound.inspectionDate)
+                            : "Not Checked"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -475,6 +526,12 @@ export default function InboundPage() {
                               <Shield className="w-3.5 h-3.5" />
                               Inspect
                             </button>
+                          )}
+                          {inbound.inspectionDate && (
+                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Checked
+                            </span>
                           )}
                         </div>
                       </td>

@@ -24,6 +24,8 @@ import {
   Loader,
   Warehouse,
 } from "lucide-react";
+import ImageGallery from "@/components/ImageGallery";
+import { API_ROOT } from "@/lib/config";
 
 const InboundViewModal = ({
   inbound,
@@ -61,10 +63,7 @@ const InboundViewModal = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 transition-opacity" 
-        onClick={onClose} 
-      />
+      <div className="fixed inset-0 transition-opacity" onClick={onClose} />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -268,6 +267,15 @@ const InboundViewModal = ({
                         <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">
                           Pending
                         </th>
+                        <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">
+                          Accept
+                        </th>
+                        <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">
+                          Reject
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
+                          Images
+                        </th>
                         <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
                           Status
                         </th>
@@ -288,11 +296,23 @@ const InboundViewModal = ({
                           <td className="px-4 py-2.5 text-sm text-gray-600 text-right">
                             {item.orderedQuantity}
                           </td>
-                          <td className="px-4 py-2.5 text-sm font-medium text-emerald-600 text-right">
+                          <td className="px-4 py-2.5 text-sm font-medium text-blue-600 text-right">
                             {item.receivedQuantity}
                           </td>
                           <td className="px-4 py-2.5 text-sm text-orange-600 text-right">
                             {item.pendingQuantity}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-green-600 text-right">
+                            {item.acceptedQuantity}
+                          </td>
+                          <td className="px-4 py-2.5 text-sm text-orange-600 text-right">
+                            {item.rejectedQuantity}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <ImageGallery
+                              images={item.images}
+                              baseUrl={API_ROOT} // your image server URL
+                            />
                           </td>
                           <td className="px-4 py-2.5">
                             <span

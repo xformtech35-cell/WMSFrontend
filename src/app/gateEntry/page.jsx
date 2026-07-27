@@ -31,11 +31,12 @@ import {
   CheckSquare,
   Loader,
   Shield,
+  DoorOpen,
 } from "lucide-react";
 import api from "@/lib/api";
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import GateEntryModal from "./component/GateEntryModal";
-// import InboundViewModal from "./component/InboundViewModal";
+import { formatDateTime } from "@/lib/utils/common";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -64,12 +65,16 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getInboundsAPI = async (page = 0, size = 10, searchTerm = "") => {
+const getInboundsAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  filterStatus = null,
+) => {
   const requestBody = {
     filters: {
       searchTerm: searchTerm || "",
-      status:"PENDING"
-
+      ...(filterStatus && { status: filterStatus }),
     },
     page: page,
     size: size,
@@ -94,13 +99,15 @@ export default function GateEntry() {
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("PENDING"); // null = all, 'PENDING' = pending only
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingInbound, setViewingInbound] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
- const [showGateEntryModal, setShowGateEntryModal] = useState(false);
+  const [showGateEntryModal, setShowGateEntryModal] = useState(false);
   const [gateEntryInbound, setGateEntryInbound] = useState(null);
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -109,10 +116,10 @@ export default function GateEntry() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Load data on page change
+  // Load data on page change or filter change
   useEffect(() => {
     loadInbounds();
-  }, [currentPage]);
+  }, [currentPage, filterStatus]);
 
   // Auto-clear messages
   useEffect(() => {
@@ -132,7 +139,12 @@ export default function GateEntry() {
   const loadInbounds = async () => {
     try {
       setLoading(true);
-      const response = await getInboundsAPI(currentPage, pageSize, searchTerm);
+      const response = await getInboundsAPI(
+        currentPage,
+        pageSize,
+        searchTerm,
+        filterStatus,
+      );
 
       if (response && response.content) {
         setInbounds(response.content || []);
@@ -176,7 +188,9 @@ export default function GateEntry() {
   };
 
   const handleGateEntrySuccess = (gateEntryData) => {
-    setSuccessMessage(`Gate entry created successfully for ${gateEntryInbound?.inboundNumber}!`);
+    setSuccessMessage(
+      `Gate entry created successfully for ${gateEntryInbound?.inboundNumber}!`,
+    );
     loadInbounds(); // Refresh the list
   };
 
@@ -228,17 +242,7 @@ export default function GateEntry() {
     });
   };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+ 
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";
@@ -249,6 +253,15 @@ export default function GateEntry() {
     if (newPage >= 0 && newPage < totalPages) {
       setCurrentPage(newPage);
     }
+  };
+
+  const handleFilterToggle = (status) => {
+    if (filterStatus === status) {
+      setFilterStatus(null); // Toggle off
+    } else {
+      setFilterStatus(status); // Set filter
+    }
+    setCurrentPage(0); // Reset to first page on filter change
   };
 
   return (
@@ -329,7 +342,31 @@ export default function GateEntry() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleFilterToggle("PENDING")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  filterStatus === "PENDING"
+                    ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                Pending Only
+              </button>
+              <button
+                onClick={() => handleFilterToggle(null)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === null
+                    ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-300"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                All Records
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-500 ml-auto">
               <span className="px-3 py-1.5 bg-gray-100 rounded-lg">
                 {totalElements} records
               </span>
@@ -358,11 +395,18 @@ export default function GateEntry() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
                   </th>
+                  {filterStatus === "PENDING" && (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Stage
+                      </th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stage
+                    Gate Entry Time
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -372,7 +416,7 @@ export default function GateEntry() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-12">
+                    <td colSpan="9" className="text-center py-12">
                       <div className="flex justify-center items-center gap-3">
                         <div className="animate-spin rounded-full h-8 w-8 border-3 border-emerald-500 border-t-transparent"></div>
                         <span className="text-gray-500 font-medium">
@@ -383,7 +427,7 @@ export default function GateEntry() {
                   </tr>
                 ) : inbounds.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-12">
+                    <td colSpan="9" className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <Warehouse className="w-12 h-12 text-gray-300" />
                         <p className="text-gray-500 font-medium">
@@ -410,7 +454,7 @@ export default function GateEntry() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDate(inbound.inboundDate)}
+                        {formatDateTime(inbound.inboundDate)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium text-blue-600">
@@ -430,44 +474,72 @@ export default function GateEntry() {
                           {inbound.invoiceNumber || "N/A"}
                         </span>
                       </td>
+                      {filterStatus === "PENDING" && (
+                        <>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              {getStatusIcon(inbound.status)}
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
+                              >
+                                {inbound.status?.replace(/_/g, " ") || "N/A"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
+                            >
+                              {inbound.stage?.replace(/_/g, " ") || "N/A"}
+                            </span>
+                          </td>
+                        </>
+                      )}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          {getStatusIcon(inbound.status)}
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
-                          >
-                            {inbound.status?.replace(/_/g, " ") || "N/A"}
+                        {inbound.gateEntryDateTime ? (
+                          <div className="flex items-center gap-1.5 text-sm text-green-600">
+                            <DoorOpen className="w-3.5 h-3.5" />
+                            <span className="font-medium">
+                              {formatDateTime(inbound.gateEntryDateTime)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            Not entered
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
-                        >
-                          {inbound.stage?.replace(/_/g, " ") || "N/A"}
-                        </span>
+                        )}
                       </td>
                       <td className="px-1 py-3">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
-            type="button"
-            onClick={() => handleViewClick(inbound)}
-            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-            title="View Details"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
+                            type="button"
+                            onClick={() => handleViewClick(inbound)}
+                            className="p-1.5 cursor-pointer text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
 
-          <button
-            type="button"
-            onClick={() => handleGateEntryClick(inbound)}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
-            title="Process Gate Entry"
-            disabled={inbound.status !== 'PENDING'}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            Gate In
-          </button>
+                          {!inbound.gateEntryDateTime &&
+                            inbound.status === "PENDING" && (
+                              <button
+                                type="button"
+                                onClick={() => handleGateEntryClick(inbound)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                                title="Process Gate Entry"
+                              >
+                                <Shield className="w-3.5 h-3.5" />
+                                Gate In
+                              </button>
+                            )}
+
+                          {inbound.gateEntryDateTime && (
+                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Entered
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -507,35 +579,35 @@ export default function GateEntry() {
           )}
         </div>
 
-         {showGateEntryModal && gateEntryInbound && (
-        <GateEntryModal
-          isOpen={showGateEntryModal}
-          onClose={() => {
-            setShowGateEntryModal(false);
-            setGateEntryInbound(null);
-          }}
-          inbound={gateEntryInbound}
-          onSuccess={handleGateEntrySuccess}
-        />
-      )}
+        {showGateEntryModal && gateEntryInbound && (
+          <GateEntryModal
+            isOpen={showGateEntryModal}
+            onClose={() => {
+              setShowGateEntryModal(false);
+              setGateEntryInbound(null);
+            }}
+            inbound={gateEntryInbound}
+            onSuccess={handleGateEntrySuccess}
+          />
+        )}
 
-      {/* View Modal */}
-      {showViewModal && viewingInbound && (
-        <InboundViewModal
-          inbound={viewingInbound}
-          onClose={handleViewClose}
-          formatDate={formatDate}
-          formatDateTime={formatDateTime}
-          formatCurrency={formatCurrency}
-          getStatusColor={getStatusColor}
-          getStageColor={getStageColor}
-          onProcess={(inbound) => {
-            handleViewClose();
-            handleGateEntryClick(inbound);
-          }}
-          onPrint={() => window.print()}
-        />
-      )}
+        {/* View Modal */}
+        {showViewModal && viewingInbound && (
+          <InboundViewModal
+            inbound={viewingInbound}
+            onClose={handleViewClose}
+            formatDate={formatDate}
+            formatDateTime={formatDateTime}
+            formatCurrency={formatCurrency}
+            getStatusColor={getStatusColor}
+            getStageColor={getStageColor}
+            onProcess={(inbound) => {
+              handleViewClose();
+              handleGateEntryClick(inbound);
+            }}
+            onPrint={() => window.print()}
+          />
+        )}
       </div>
 
       <style jsx>{`
