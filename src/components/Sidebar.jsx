@@ -134,6 +134,20 @@ const ALL_MENU_ITEMS = [
     permission: P.INBOUND_VIEW,
   },
   {
+    href: "/qualityApproval",
+    label: "Quality Approval",
+    icon: Package,
+    group: "Inbound",
+    permission: P.INBOUND_VIEW,
+  },
+  {
+    href: "/grn",
+    label: "GRN",
+    icon: Package,
+    group: "Inbound",
+    permission: P.INBOUND_VIEW,
+  },
+  {
     href: "/putaway",
     label: "Putaway",
     icon: Warehouse,

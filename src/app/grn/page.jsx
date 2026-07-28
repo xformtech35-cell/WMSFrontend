@@ -31,12 +31,14 @@ import {
   CheckSquare,
   Loader,
   Shield,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import api from "@/lib/api";
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import QualityInspectionModal from "./QualityInspectionModal";
 import { formatDateTime } from "@/lib/utils/common";
-// import InboundViewModal from "./component/InboundViewModal";
+import QualityApprovalInspectionModal from "./QualityInspectionModal";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -86,7 +88,14 @@ const getInboundByIdAPI = async (id) => {
   return apiRequest(`/inbound/${id}`);
 };
 
-export default function InboundPage() {
+const updateGrnStatusAPI = async (inboundId, grnStatus, remarks) => {
+  return apiRequest(`/inbounds/${inboundId}/grn-status`, "PUT", {
+    grnStatus,
+    remarks,
+  });
+};
+
+export default function GRN() {
   const router = useRouter();
 
   // List State
@@ -106,7 +115,12 @@ export default function InboundPage() {
   const [viewLoading, setViewLoading] = useState(false);
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [inspectionInbound, setInspectionInbound] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("RECEIVING"); // null = all, 'PENDING' = pending only
+  const [filterStatus, setFilterStatus] = useState("COMPLETED");
+  const [showGrnStatusModal, setShowGrnStatusModal] = useState(false);
+  const [grnStatusInbound, setGrnStatusInbound] = useState(null);
+  const [grnStatus, setGrnStatus] = useState("PENDING");
+  const [grnRemarks, setGrnRemarks] = useState("");
+  const [updatingGrn, setUpdatingGrn] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -181,6 +195,7 @@ export default function InboundPage() {
     setShowViewModal(false);
     setViewingInbound(null);
   };
+
   const handleInspectionClick = (inbound) => {
     setInspectionInbound(inbound);
     setShowInspectionModal(true);
@@ -192,6 +207,34 @@ export default function InboundPage() {
     );
     loadInbounds(); // Refresh the list
   };
+
+  const handleGrnStatusClick = (inbound) => {
+    setGrnStatusInbound(inbound);
+    setGrnStatus(inbound.grnStatus || "PENDING");
+    setGrnRemarks("");
+    setShowGrnStatusModal(true);
+  };
+
+  const handleUpdateGrnStatus = async () => {
+    if (!grnStatusInbound) return;
+
+    try {
+      setUpdatingGrn(true);
+      await updateGrnStatusAPI(grnStatusInbound.id, grnStatus, grnRemarks);
+
+      setSuccessMessage(
+        `GRN status updated to ${grnStatus} for ${grnStatusInbound.inboundNumber}!`,
+      );
+      setShowGrnStatusModal(false);
+      loadInbounds(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating GRN status:", error);
+      setErrorMessage("Failed to update GRN status.");
+    } finally {
+      setUpdatingGrn(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       PENDING: "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -240,8 +283,6 @@ export default function InboundPage() {
     });
   };
 
-
-
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";
     return `₹${amount.toFixed(2)}`;
@@ -252,13 +293,14 @@ export default function InboundPage() {
       setCurrentPage(newPage);
     }
   };
+
   const handleFilterToggle = (status) => {
     if (filterStatus === status) {
-      setFilterStatus(null); // Toggle off
+      setFilterStatus(null);
     } else {
-      setFilterStatus(status); // Set filter
+      setFilterStatus(status);
     }
-    setCurrentPage(0); // Reset to first page on filter change
+    setCurrentPage(0);
   };
 
   return (
@@ -302,10 +344,7 @@ export default function InboundPage() {
                     <Warehouse className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-white">
-                     Quality Checking
-                    </h1>
-                      
+                    <h1 className="text-2xl font-bold text-white">GRN</h1>
                   </div>
                 </div>
               </div>
@@ -346,9 +385,9 @@ export default function InboundPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleFilterToggle("RECEIVING")}
+                onClick={() => handleFilterToggle("COMPLETED")}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  filterStatus === "RECEIVING"
+                  filterStatus === "COMPLETED"
                     ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
@@ -383,7 +422,7 @@ export default function InboundPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Inbound #
+                    GRN #
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
@@ -397,19 +436,15 @@ export default function InboundPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
                   </th>
-                  {filterStatus === "RECEIVING" && (
-                    <>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Stage
-                      </th>
-                    </>
-                  )}
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Inspected Date
-                      </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    GRN Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    GRN Date
+                  </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -418,7 +453,7 @@ export default function InboundPage() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-12">
+                    <td colSpan="9" className="text-center py-12">
                       <div className="flex justify-center items-center gap-3">
                         <div className="animate-spin rounded-full h-8 w-8 border-3 border-emerald-500 border-t-transparent"></div>
                         <span className="text-gray-500 font-medium">
@@ -429,7 +464,7 @@ export default function InboundPage() {
                   </tr>
                 ) : inbounds.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-12">
+                    <td colSpan="9" className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <Warehouse className="w-12 h-12 text-gray-300" />
                         <p className="text-gray-500 font-medium">
@@ -452,11 +487,11 @@ export default function InboundPage() {
                           onClick={() => handleViewClick(inbound)}
                           className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline cursor-pointer transition-colors"
                         >
-                          {inbound.inboundNumber}
+                          {inbound.grnNumber || inbound.inboundNumber}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDateTime(inbound.inboundDate)}
+                        {formatDateTime(inbound.grnDate || inbound.inboundDate)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium text-blue-600">
@@ -476,36 +511,38 @@ export default function InboundPage() {
                           {inbound.invoiceNumber || "N/A"}
                         </span>
                       </td>
-                      {filterStatus === "RECEIVING" && (
-                        <>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              {getStatusIcon(inbound.status)}
-                              <span
-                                className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
-                              >
-                                {inbound.status?.replace(/_/g, " ") || "N/A"}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStageColor(inbound.stage)}`}
-                            >
-                              {inbound.stage?.replace(/_/g, " ") || "N/A"}
-                            </span>
-                          </td>
-                        </>
-                      )}
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-600">
-                          {inbound.inspectionDate
-                            ? formatDateTime(inbound.inspectionDate)
-                            : "Not Checked"}
+                        <div className="flex items-center gap-1.5">
+                          {getStatusIcon(inbound.status)}
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
+                          >
+                            {inbound.status?.replace(/_/g, " ") || "N/A"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                            inbound.grnStatus === "APPROVED"
+                              ? "bg-green-100 text-green-700 border-green-200"
+                              : inbound.grnStatus === "REJECTED"
+                                ? "bg-red-100 text-red-700 border-red-200"
+                                : "bg-yellow-100 text-yellow-700 border-yellow-200"
+                          }`}
+                        >
+                          {inbound.grnStatus || "PENDING"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-sm text-gray-600">
+                          {inbound.grnDate
+                            ? formatDateTime(inbound.grnDate)
+                            : "Not Generated"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           <button
                             type="button"
                             onClick={() => handleViewClick(inbound)}
@@ -514,23 +551,33 @@ export default function InboundPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {inbound.stage === "GOODS_RECEIVING" && (
+                          {inbound.stage === "COMPLETED" && (
                             <button
                               type="button"
-                              onClick={() => handleInspectionClick(inbound)}
-                              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                              onClick={() => handleGrnStatusClick(inbound)}
+                              className="px-3 cursor-pointer py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
                               title="Quality Inspection"
                             >
                               <Shield className="w-3.5 h-3.5" />
-                              Inspect
+                              Generate
                             </button>
                           )}
-                          {inbound.inspectionDate && (
-                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                          {/* {inbound.grnStatus && (
+                            <button
+                              type="button"
+                              onClick={() => handleGrnStatusClick(inbound)}
+                              className={`text-xs font-medium px-2 py-1 rounded-lg flex items-center gap-1 transition-colors ${
+                                inbound.grnStatus === "APPROVED"
+                                  ? "text-green-600 bg-green-50 hover:bg-green-100"
+                                  : inbound.grnStatus === "REJECTED"
+                                  ? "text-red-600 bg-red-50 hover:bg-red-100"
+                                  : "text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
+                              }`}
+                            >
                               <CheckCircle className="w-3 h-3" />
-                              Checked
-                            </span>
-                          )}
+                              {inbound.grnStatus}
+                            </button>
+                          )} */}
                         </div>
                       </td>
                     </tr>
@@ -569,20 +616,174 @@ export default function InboundPage() {
             </div>
           )}
         </div>
-        {showInspectionModal && inspectionInbound && (
-          <QualityInspectionModal
-            isOpen={showInspectionModal}
-            onClose={() => {
-              setShowInspectionModal(false);
-              setInspectionInbound(null);
-            }}
-            inbound={inspectionInbound}
-            onSuccess={handleInspectionSuccess}
-          />
+
+        {/* Quality Inspection Modal */}
+
+        {/* GRN Status Update Modal */}
+        {showGrnStatusModal && grnStatusInbound && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div
+              className="fixed inset-0 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowGrnStatusModal(false)}
+            />
+            <div className="flex min-h-full items-center justify-center p-4">
+              <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scale-up">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-2xl"></div>
+
+                {/* Header */}
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-50 rounded-xl">
+                        <CheckCircle className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          Update GRN Status
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {grnStatusInbound.inboundNumber}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowGrnStatusModal(false)}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      GRN Status
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setGrnStatus("APPROVED")}
+                        className={`p-3 rounded-xl border-2 transition-all ${
+                          grnStatus === "APPROVED"
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-green-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <ThumbsUp
+                            className={`w-4 h-4 ${grnStatus === "APPROVED" ? "text-green-500" : "text-gray-400"}`}
+                          />
+                          <span
+                            className={`font-medium ${grnStatus === "APPROVED" ? "text-green-700" : "text-gray-700"}`}
+                          >
+                            Approve
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGrnStatus("REJECTED")}
+                        className={`p-3 rounded-xl border-2 transition-all ${
+                          grnStatus === "REJECTED"
+                            ? "border-red-500 bg-red-50"
+                            : "border-gray-200 hover:border-red-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <ThumbsDown
+                            className={`w-4 h-4 ${grnStatus === "REJECTED" ? "text-red-500" : "text-gray-400"}`}
+                          />
+                          <span
+                            className={`font-medium ${grnStatus === "REJECTED" ? "text-red-700" : "text-gray-700"}`}
+                          >
+                            Reject
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Remarks
+                      <span className="text-gray-400 text-xs ml-2">
+                        (optional)
+                      </span>
+                    </label>
+                    <textarea
+                      value={grnRemarks}
+                      onChange={(e) => setGrnRemarks(e.target.value)}
+                      rows="3"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                      placeholder="Enter remarks..."
+                    />
+                  </div>
+
+                  {/* Current Status Display */}
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Current Status
+                      </span>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          grnStatusInbound.grnStatus === "APPROVED"
+                            ? "bg-green-100 text-green-700"
+                            : grnStatusInbound.grnStatus === "REJECTED"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {grnStatusInbound.grnStatus || "PENDING"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowGrnStatusModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateGrnStatus}
+                    disabled={updatingGrn}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-xl transition-all flex items-center gap-2 ${
+                      grnStatus === "APPROVED"
+                        ? "bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800"
+                        : "bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800"
+                    }`}
+                  >
+                    {updatingGrn ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        {/* <Save className="w-4 h-4" /> */}
+                        Update Status
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
+
         {/* View Modal */}
         {showViewModal && viewingInbound && (
           <InboundViewModal
+            isgrn={true}
             inbound={viewingInbound}
             onClose={handleViewClose}
             formatDate={formatDate}
@@ -610,8 +811,21 @@ export default function InboundPage() {
             transform: translateY(0);
           }
         }
+        @keyframes scale-up {
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
         .animate-slide-down {
           animation: slide-down 0.3s ease-out;
+        }
+        .animate-scale-up {
+          animation: scale-up 0.2s ease-out;
         }
         .border-3 {
           border-width: 3px;

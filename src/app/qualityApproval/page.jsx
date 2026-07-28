@@ -36,6 +36,7 @@ import api from "@/lib/api";
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import QualityInspectionModal from "./QualityInspectionModal";
 import { formatDateTime } from "@/lib/utils/common";
+import QualityApprovalInspectionModal from "./QualityInspectionModal";
 // import InboundViewModal from "./component/InboundViewModal";
 
 // API Functions
@@ -86,7 +87,7 @@ const getInboundByIdAPI = async (id) => {
   return apiRequest(`/inbound/${id}`);
 };
 
-export default function InboundPage() {
+export default function QualityApproval() {
   const router = useRouter();
 
   // List State
@@ -106,7 +107,7 @@ export default function InboundPage() {
   const [viewLoading, setViewLoading] = useState(false);
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [inspectionInbound, setInspectionInbound] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("RECEIVING"); // null = all, 'PENDING' = pending only
+  const [filterStatus, setFilterStatus] = useState("QUALITY_INSPECTION"); // null = all, 'PENDING' = pending only
 
   // Debounce search term
   useEffect(() => {
@@ -303,9 +304,9 @@ export default function InboundPage() {
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold text-white">
-                     Quality Checking
+                      Quality Approval
                     </h1>
-                      
+                    
                   </div>
                 </div>
               </div>
@@ -346,9 +347,9 @@ export default function InboundPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleFilterToggle("RECEIVING")}
+                onClick={() => handleFilterToggle("QUALITY_INSPECTION")}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  filterStatus === "RECEIVING"
+                  filterStatus === "QUALITY_INSPECTION"
                     ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
@@ -397,7 +398,7 @@ export default function InboundPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Invoice
                   </th>
-                  {filterStatus === "RECEIVING" && (
+                  {filterStatus === "QUALITY_INSPECTION" && (
                     <>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
@@ -408,7 +409,7 @@ export default function InboundPage() {
                     </>
                   )}
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Inspected Date
+                        Approval Date
                       </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -476,7 +477,7 @@ export default function InboundPage() {
                           {inbound.invoiceNumber || "N/A"}
                         </span>
                       </td>
-                      {filterStatus === "RECEIVING" && (
+                      {filterStatus === "QUALITY_INSPECTION" && (
                         <>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
@@ -499,9 +500,9 @@ export default function InboundPage() {
                       )}
                       <td className="px-4 py-3">
                         <span className="text-sm text-gray-600">
-                          {inbound.inspectionDate
-                            ? formatDateTime(inbound.inspectionDate)
-                            : "Not Checked"}
+                          {inbound.approvalDate
+                            ? formatDateTime(inbound.approvalDate)
+                            : "Not Approved"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -514,21 +515,21 @@ export default function InboundPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {inbound.stage === "GOODS_RECEIVING" && (
+                          {inbound.stage === "QUALITY_INSPECTION" && (
                             <button
                               type="button"
                               onClick={() => handleInspectionClick(inbound)}
-                              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                              className="px-3 cursor-pointer py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
                               title="Quality Inspection"
                             >
                               <Shield className="w-3.5 h-3.5" />
-                              Inspect
+                              Approval
                             </button>
                           )}
-                          {inbound.inspectionDate && (
-                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                          {inbound.approvalDate && (
+                            <span className={`text-xs  ${inbound.approvalStatus ==="REJECTED" ? "text-red-600":"text-blue-600"}  font-medium ${inbound.approvalStatus ==="REJECTED" ? "bg-red-50":"bg-blue-50"} px-2 py-1 rounded-lg flex items-center gap-1`}>
                               <CheckCircle className="w-3 h-3" />
-                              Checked
+                              {inbound.approvalStatus}
                             </span>
                           )}
                         </div>
@@ -570,7 +571,7 @@ export default function InboundPage() {
           )}
         </div>
         {showInspectionModal && inspectionInbound && (
-          <QualityInspectionModal
+          <QualityApprovalInspectionModal
             isOpen={showInspectionModal}
             onClose={() => {
               setShowInspectionModal(false);

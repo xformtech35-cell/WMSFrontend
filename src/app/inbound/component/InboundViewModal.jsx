@@ -37,6 +37,7 @@ const InboundViewModal = ({
   getStageColor,
   onProcess,
   onPrint,
+  isgrn = false,
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -61,12 +62,12 @@ const InboundViewModal = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-10 overflow-y-auto">
       {/* Backdrop */}
       <div className="fixed inset-0 transition-opacity" onClick={onClose} />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full z-10 items-center justify-center p-4">
         <div className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
           {/* Decorative header */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-t-2xl"></div>
@@ -77,7 +78,7 @@ const InboundViewModal = ({
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <h3 className="text-xl font-bold text-gray-900">
-                    {inbound.inboundNumber}
+                    {isgrn ? inbound.grnNumber : inbound.inboundNumber}
                   </h3>
                   <span
                     className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(inbound.status)}`}
