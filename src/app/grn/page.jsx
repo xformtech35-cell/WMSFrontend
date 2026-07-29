@@ -89,7 +89,7 @@ const getInboundByIdAPI = async (id) => {
 };
 
 const updateGrnStatusAPI = async (inboundId, grnStatus, remarks) => {
-  return apiRequest(`/inbounds/${inboundId}/grn-status`, "PUT", {
+  return apiRequest(`/inbound/${inboundId}/grn-status`, "PUT", {
     grnStatus,
     remarks,
   });
@@ -115,7 +115,7 @@ export default function GRN() {
   const [viewLoading, setViewLoading] = useState(false);
   const [showInspectionModal, setShowInspectionModal] = useState(false);
   const [inspectionInbound, setInspectionInbound] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("COMPLETED");
+  const [filterStatus, setFilterStatus] = useState("GRN_PENDING");
   const [showGrnStatusModal, setShowGrnStatusModal] = useState(false);
   const [grnStatusInbound, setGrnStatusInbound] = useState(null);
   const [grnStatus, setGrnStatus] = useState("PENDING");
@@ -240,7 +240,7 @@ export default function GRN() {
       PENDING: "bg-yellow-100 text-yellow-700 border-yellow-200",
       IN_PROGRESS: "bg-blue-100 text-blue-700 border-blue-200",
       PARTIAL: "bg-orange-100 text-orange-700 border-orange-200",
-      COMPLETED: "bg-green-100 text-green-700 border-green-200",
+      GRN_PENDING: "bg-green-100 text-green-700 border-green-200",
       REJECTED: "bg-red-100 text-red-700 border-red-200",
       CANCELLED: "bg-gray-100 text-gray-500 border-gray-200",
     };
@@ -256,7 +256,7 @@ export default function GRN() {
       INSPECTION: "bg-teal-100 text-teal-700 border-teal-200",
       QUALITY_CHECK: "bg-emerald-100 text-emerald-700 border-emerald-200",
       GRN_GENERATION: "bg-green-100 text-green-700 border-green-200",
-      COMPLETED: "bg-green-100 text-green-700 border-green-200",
+      GRN_PENDING: "bg-green-100 text-green-700 border-green-200",
     };
     return colors[stage] || "bg-gray-100 text-gray-700 border-gray-200";
   };
@@ -266,7 +266,7 @@ export default function GRN() {
       PENDING: <Clock className="w-4 h-4" />,
       IN_PROGRESS: <Loader className="w-4 h-4" />,
       PARTIAL: <Package className="w-4 h-4" />,
-      COMPLETED: <CheckCircle className="w-4 h-4" />,
+      GRN_PENDING: <CheckCircle className="w-4 h-4" />,
       REJECTED: <XCircle className="w-4 h-4" />,
       CANCELLED: <XCircle className="w-4 h-4" />,
     };
@@ -385,9 +385,9 @@ export default function GRN() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleFilterToggle("COMPLETED")}
+                onClick={() => handleFilterToggle("GRN_PENDING")}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  filterStatus === "COMPLETED"
+                  filterStatus === "GRN_PENDING"
                     ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
@@ -551,7 +551,7 @@ export default function GRN() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {inbound.stage === "COMPLETED" && (
+                          {inbound.status === "GRN_PENDING" && (
                             <button
                               type="button"
                               onClick={() => handleGrnStatusClick(inbound)}
