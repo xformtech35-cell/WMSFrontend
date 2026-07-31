@@ -371,14 +371,14 @@ export default function PurchaseRequestPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
+                {/* <button
                   type="button"
                   onClick={() => router.push("/master/suppliers")}
                   className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm"
                 >
                   <Building2 className="w-4 h-4" />
                   Suppliers
-                </button>
+                </button> */}
                 <button
                   type="button"
                   onClick={loadPurchaseRequests}

@@ -27,6 +27,7 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  devIndicators: false ,
   async rewrites() {
     if (!API_ROOT) {
       return [];

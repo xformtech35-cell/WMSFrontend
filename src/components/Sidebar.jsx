@@ -788,7 +788,7 @@ const Sidebar = () => {
         </div>
 
         {/* Theme toggle */}
-        <div className="px-2 pb-2">
+        {/* <div className="px-2 pb-2">
           <button
             suppressHydrationWarning
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -817,7 +817,7 @@ const Sidebar = () => {
               </span>
             )}
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* ── Collapse / expand toggle pill ── */}

@@ -351,21 +351,21 @@ export default function PurchaseOrderPage() {
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Purchase Orders
+                  Purchase Order Approval
                 </h1>
                 <p className="text-blue-100 text-sm mt-1">
                   Manage and track purchase orders
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
+                {/* <button
                   type="button"
                   onClick={() => router.push("/purchase-orders/create")}
                   className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm"
                 >
                   <Plus className="w-4 h-4" />
                   Create PO
-                </button>
+                </button> */}
                 <button
                   type="button"
                   onClick={loadPurchaseOrders}
