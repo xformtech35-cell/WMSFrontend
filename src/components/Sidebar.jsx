@@ -148,6 +148,13 @@ const ALL_MENU_ITEMS = [
     permission: P.INBOUND_VIEW,
   },
   {
+    href: "/qrgenerater",
+    label: "QR Generator",
+    icon: Package,
+    group: "QR/Barcode",
+    permission: P.INBOUND_VIEW,
+  },
+  {
     href: "/putaway",
     label: "Putaway",
     icon: Warehouse,

@@ -1,11 +1,26 @@
 'use client';
-export const dynamic = 'force-dynamic';
 
-import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../lib/api';
-import PageHeader from '@/components/PageHeader';
-import StatusBadge from '@/components/StatusBadge';
+import { useState, useMemo, useEffect } from "react";
+import {
+  Package,
+  CheckCircle2,
+  Download,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import api from "@/lib/api";
+import PageHeader from "@/components/PageHeader";
+import SlideOverForm from "@/components/ui/SlideOverForm";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SheetFooter } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -13,156 +28,321 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import {
-  SheetFooter,
-} from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { usePaginatedItems } from '@/lib/hooks/usePaginatedItems';
-import TablePagination from '@/components/TablePagination';
-import { toast } from 'sonner';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Database, Plus, Package, Search, X, Download, Pencil, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { exportWmsWorkbook } from '@/lib/exportExcel';
-import SlideOverForm from '@/components/ui/SlideOverForm';
+} from "@/components/ui/table";
+import { exportWmsWorkbook } from "@/lib/exportExcel";
+import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
+import TablePagination from "@/components/TablePagination";
+import { CREATE, DELETE, update } from "@/components/apiRequest";
+import StatusBadge from "@/components/StatusBadge";
+import { Progress } from "@/components/ui/progress";
 
-const binSchema = z.object({
-  rackId: z.coerce.number().int().positive('Rack is required'),
-  barcode: z.string().min(1, 'Barcode is required'),
-  lengthCm: z.coerce.number().positive('Length is required'),
-  widthCm: z.coerce.number().positive('Width is required'),
-  heightCm: z.coerce.number().positive('Height is required'),
-  maxWeightG: z.coerce.number().positive('Max weight is required'),
-  status: z.enum(['AVAILABLE', 'FULL', 'BLOCKED']),
-});
-
-async function exportBinsExcel(bins) {
+async function exportBinsExcel(items) {
   await exportWmsWorkbook({
-    fileName: `bins_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
-    sheetName: 'Bins',
-    title: 'WMS Bin Master Export',
+    fileName: `bins_${format(new Date(), "yyyy-MM-dd")}.xlsx`,
+    sheetName: "Bins",
+    title: "WMS Bin Master Export",
     columns: [
-      { header: 'Barcode', key: 'barcode', width: 18 },
-      { header: 'Status', key: 'status', width: 14, align: 'center' },
-      { header: 'Utilization %', key: 'utilization', width: 14, align: 'right' },
-      { header: 'Length (cm)', key: 'lengthCm', width: 12, align: 'right' },
-      { header: 'Width (cm)', key: 'widthCm', width: 12, align: 'right' },
-      { header: 'Height (cm)', key: 'heightCm', width: 12, align: 'right' },
-      { header: 'Max Weight (g)', key: 'maxWeightG', width: 16, align: 'right' },
+      { header: "ID", key: "id", width: 10, align: "right" },
+      { header: "Barcode", key: "barcode", width: 18 },
+      { header: "Dimensions", key: "dimensions", width: 20 },
+      { header: "Length", key: "lengthCm", width: 12, align: "right" },
+      { header: "Width", key: "widthCm", width: 12, align: "right" },
+      { header: "Height", key: "heightCm", width: 12, align: "right" },
+      { header: "Unit", key: "unit", width: 10 },
+      { header: "Max Weight (g)", key: "maxWeightG", width: 16, align: "right" },
+      { header: "Volume", key: "volume", width: 14, align: "right" },
+      { header: "Utilization %", key: "utilization", width: 14, align: "right" },
+      { header: "Status", key: "status", width: 14 },
+      { header: "Rack", key: "rack", width: 20 },
+      { header: "Aisle", key: "aisle", width: 20 },
+      { header: "Zone", key: "zone", width: 24 },
+      { header: "Warehouse", key: "warehouse", width: 28 },
     ],
-    rows: bins.map((b) => ({
-      barcode: b.barcode,
-      status: b.status ?? 'AVAILABLE',
+    rows: items.map((b) => ({
+      id: b.id,
+      barcode: b.barcode ?? "",
+      dimensions: b.lengthCm && b.widthCm && b.heightCm 
+        ? `${b.lengthCm} × ${b.widthCm} × ${b.heightCm}`
+        : "",
+      lengthCm: b.lengthCm ?? "",
+      widthCm: b.widthCm ?? "",
+      heightCm: b.heightCm ?? "",
+      unit: b.unit ?? "cm",
+      maxWeightG: b.maxWeightG ?? "",
+      volume: b.lengthCm && b.widthCm && b.heightCm 
+        ? (b.lengthCm * b.widthCm * b.heightCm).toLocaleString()
+        : "",
       utilization: b.utilization ?? b.utilizationPct ?? 0,
-      lengthCm: b.length_cm ?? b.lengthCm ?? '',
-      widthCm: b.width_cm ?? b.widthCm ?? '',
-      heightCm: b.height_cm ?? b.heightCm ?? '',
-      maxWeightG: b.max_weight_g ?? b.maxWeightG ?? '',
+      status: b.status ?? "AVAILABLE",
+      rack: b.rack?.rackId || b.rack?.name || "",
+      aisle: b.rack?.aisle?.aisleNumber || b.rack?.aisle?.aisleId || "",
+      zone: b.rack?.aisle?.zone?.name ?? "",
+      warehouse: b.rack?.aisle?.zone?.warehouse?.name ?? "",
     })),
   });
-  toast.success('Bins exported to Excel');
+  toast.success("Bins exported to Excel");
 }
 
-const BinsPage = () => {
-  const queryClient = useQueryClient();
+export default function BinsPage() {
+  // State for bins data
+  const [bins, setBins] = useState([]);
+  const [racks, setRacks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // State for modal
   const [open, setOpen] = useState(false);
-  const [editBin, setEditBin] = useState(null);
-  const [search, setSearch] = useState('');
+  const [editItem, setEditItem] = useState(null);
 
-  const { data: bins, isLoading } = useQuery({
-    queryKey: ['bins'],
-    queryFn: () => api.get('/master/bins').then((r) => r.data),
-    staleTime: 60_000,
+  // State for search and filter
+  const [search, setSearch] = useState("");
+  const [rackFilter, setRackFilter] = useState("ALL");
+
+  // State for form data
+  const [formData, setFormData] = useState({
+    barcode: "",
+    lengthCm: "",
+    widthCm: "",
+    heightCm: "",
+    unit: "cm",
+    maxWeightG: "",
+    status: "AVAILABLE",
+    rackId: "",
   });
 
-  const { data: racks = [] } = useQuery({
-    queryKey: ['racks'],
-    queryFn: () => api.get('/master/racks').then((r) => r.data ?? []),
-    staleTime: 60_000,
-  });
+  // State for form errors
+  const [formErrors, setFormErrors] = useState({});
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({ resolver: zodResolver(binSchema) });
-  const [length, width, height] = useWatch({ control, name: ['lengthCm', 'widthCm', 'heightCm'] });
-  const volume = (length || 0) * (width || 0) * (height || 0);
+  // Calculate volume for display
+  const volume = useMemo(() => {
+    const length = parseFloat(formData.lengthCm) || 0;
+    const width = parseFloat(formData.widthCm) || 0;
+    const height = parseFloat(formData.heightCm) || 0;
+    return length * width * height;
+  }, [formData.lengthCm, formData.widthCm, formData.heightCm]);
 
-  const mutation = useMutation({
-    mutationFn: (data) => api.post('/master/bins', data),
-    onSuccess: () => {
-      toast.success('Bin created successfully.');
-      queryClient.invalidateQueries({ queryKey: ['bins'] });
-      reset();
-      setOpen(false);
-    },
-    onError: (err) => toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Failed to create bin.'),
-  });
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchBins();
+    fetchRacks();
+  }, []);
 
-  const editMutation = useMutation({
-    mutationFn: ({ id, data }) => api.put(`/master/bins/${id}`, data),
-    onSuccess: () => {
-      toast.success('Bin updated.');
-      queryClient.invalidateQueries({ queryKey: ['bins'] });
-      setEditBin(null);
-      setOpen(false);
-      reset();
-    },
-    onError: (err) => toast.error(err?.response?.data?.detail || err?.response?.data?.message || 'Failed to update bin.'),
-  });
-
-  const onSubmit = (data) => {
-    if (editBin) {
-      editMutation.mutate({ id: editBin.id, data });
-    } else {
-      mutation.mutate(data);
+  const fetchBins = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get("/master/bins");
+      setBins(response.data?.data?.content || response.data?.content || response.data || []);
+    } catch (error) {
+      console.error("Error fetching bins:", error);
+      toast.error("Failed to load bins.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const openEdit = (bin) => {
-    setEditBin(bin);
-    reset({
-      rackId: bin.rackId,
-      barcode: bin.barcode,
-      lengthCm: bin.lengthCm ?? bin.length_cm,
-      widthCm: bin.widthCm ?? bin.width_cm,
-      heightCm: bin.heightCm ?? bin.height_cm,
-      maxWeightG: bin.maxWeightG ?? bin.max_weight_g,
-      status: bin.status ?? 'AVAILABLE',
+  const fetchRacks = async () => {
+    try {
+      const response = await api.get("/master/racks");
+      setRacks(response.data?.data?.content || response.data?.content || response.data || []);
+    } catch (error) {
+      console.error("Error fetching racks:", error);
+      toast.error("Failed to load racks.");
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.barcode || formData.barcode.trim() === "") {
+      errors.barcode = "Barcode is required";
+    }
+    if (!formData.rackId || formData.rackId === "") {
+      errors.rackId = "Rack is required";
+    }
+    if (!formData.lengthCm || parseFloat(formData.lengthCm) <= 0) {
+      errors.lengthCm = "Valid length is required";
+    }
+    if (!formData.widthCm || parseFloat(formData.widthCm) <= 0) {
+      errors.widthCm = "Valid width is required";
+    }
+    if (!formData.heightCm || parseFloat(formData.heightCm) <= 0) {
+      errors.heightCm = "Valid height is required";
+    }
+    if (!formData.maxWeightG || parseFloat(formData.maxWeightG) <= 0) {
+      errors.maxWeightG = "Valid max weight is required";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+    // Clear error for this field when user types
+    if (formErrors[name]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    // Prepare payload with all required fields
+    const payload = {
+      barcode: formData.barcode.trim().toUpperCase(),
+      lengthCm: parseFloat(formData.lengthCm),
+      widthCm: parseFloat(formData.widthCm),
+      heightCm: parseFloat(formData.heightCm),
+      unit: formData.unit || "cm",
+      maxWeightG: parseFloat(formData.maxWeightG),
+      status: formData.status,
+      rackId: Number(formData.rackId),
+    };
+
+    try {
+      setIsSubmitting(true);
+
+      if (editItem) {
+        // Update existing bin
+        await update(`/master/bins/${editItem?.id}`, payload);
+        toast.success("Bin updated successfully");
+      } else {
+        // Create new bin
+        await CREATE("/master/bins", payload);
+        toast.success("Bin created successfully");
+      }
+
+      // Refresh the list
+      await fetchBins();
+
+      // Close modal and reset form
+      setOpen(false);
+      setEditItem(null);
+      resetForm();
+    } catch (error) {
+      console.error("Error saving bin:", error);
+      toast.error(
+        error.response?.data?.message ||
+          error.response?.data?.detail ||
+          "Failed to save bin."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this bin?")) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await DELETE(`/master/bins/${id}`);
+      await fetchBins();
+      toast.success("Bin deleted successfully");
+    } catch (error) {
+      console.error("Error deleting bin:", error);
+      toast.error(error?.response?.data?.detail || "Unable to delete bin.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      barcode: "",
+      lengthCm: "",
+      widthCm: "",
+      heightCm: "",
+      unit: "cm",
+      maxWeightG: "",
+      status: "AVAILABLE",
+      rackId: "",
     });
-    setOpen(true);
+    setFormErrors({});
   };
 
   const openCreate = () => {
-    setEditBin(null);
-    reset({
-      rackId: racks[0]?.id,
-      barcode: '',
-      lengthCm: undefined,
-      widthCm: undefined,
-      heightCm: undefined,
-      maxWeightG: undefined,
-      status: 'AVAILABLE',
+    setEditItem(null);
+    setFormData({
+      barcode: "",
+      lengthCm: "",
+      widthCm: "",
+      heightCm: "",
+      unit: "cm",
+      maxWeightG: "",
+      status: "AVAILABLE",
+      rackId: racks[0]?.id || "",
     });
+    setFormErrors({});
+    setOpen(true);
+  };
+
+  const openEdit = (item) => {
+    setEditItem(item);
+    setFormData({
+      barcode: item.barcode || "",
+      lengthCm: item.lengthCm?.toString() || item.length_cm?.toString() || "",
+      widthCm: item.widthCm?.toString() || item.width_cm?.toString() || "",
+      heightCm: item.heightCm?.toString() || item.height_cm?.toString() || "",
+      unit: item.unit || "cm",
+      maxWeightG: item.maxWeightG?.toString() || item.max_weight_g?.toString() || "",
+      status: item.status || "AVAILABLE",
+      rackId: item.rackId || item.rack?.id || "",
+    });
+    setFormErrors({});
     setOpen(true);
   };
 
   const filtered = useMemo(() => {
-    let list = bins ?? [];
+    let list = bins;
+    if (rackFilter !== "ALL") {
+      list = list.filter(
+        (b) => String(b.rackId ?? b.rack?.id ?? "") === rackFilter
+      );
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = (bins ?? []).filter(
+      list = list.filter(
         (b) =>
-          b.barcode.toLowerCase().includes(q) ||
-          (b.status ?? '').toLowerCase().includes(q),
+          String(b.barcode ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.status ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.rack?.rackId ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.rack?.name ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.rack?.aisle?.aisleNumber ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.rack?.aisle?.zone?.name ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.rack?.aisle?.zone?.warehouse?.name ?? "")
+            .toLowerCase()
+            .includes(q)
       );
     }
     return [...list].sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0));
-  }, [bins, search]);
+  }, [bins, search, rackFilter]);
 
   const {
     page,
@@ -172,27 +352,25 @@ const BinsPage = () => {
     startItem,
     endItem,
     paginatedItems: visibleBins,
-  } = usePaginatedItems(filtered, { resetDeps: [search, bins?.length ?? 0] });
+  } = usePaginatedItems(filtered, {
+    resetDeps: [search, rackFilter, bins?.length ?? 0],
+  });
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="glass-card rounded-2xl p-6 space-y-3">
-          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10" />)}
-        </div>
-      </div>
-    );
-  }
+  const showInitialLoading = isLoading && !bins?.length;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Bin Master"
-        description="Manage warehouse bin locations and dimensions."
+        description="Manage bins inside racks for item storage."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => exportBinsExcel(bins ?? [])} disabled={!bins?.length}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exportBinsExcel(filtered)}
+              disabled={!filtered.length}
+            >
               <Download className="mr-1.5 size-3.5" /> Export Excel
             </Button>
             <Button size="sm" onClick={openCreate}>
@@ -204,99 +382,271 @@ const BinsPage = () => {
 
       <SlideOverForm
         open={open}
-        onOpenChange={(v) => { setOpen(v); if (!v) { setEditBin(null); reset(); } }}
-        title={editBin ? 'Edit Bin' : 'Create Bin'}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) {
+            setEditItem(null);
+            resetForm();
+          }
+        }}
+        title={editItem ? "Edit Bin" : "Create Bin"}
+        description="Bins are storage locations inside a rack for inventory placement."
       >
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="rackId">Rack</Label>
-              <select
-                id="rackId"
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                {...register('rackId', { valueAsNumber: true })}
-              >
-                <option value="">Select rack</option>
-                {racks.map((rack) => (
-                  <option key={rack.id} value={rack.id}>
-                    {rack.rackIdentifier ?? `Rack ${rack.id}`}
-                  </option>
-                ))}
-              </select>
-              {errors.rackId ? <p className="text-xs text-destructive">{errors.rackId.message}</p> : null}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="barcode">Barcode / Location Code</Label>
-              <Input id="barcode" {...register('barcode')} placeholder="e.g. A-01-01" />
-              {errors.barcode ? <p className="text-xs text-destructive">{errors.barcode.message}</p> : null}
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label>Length (cm)</Label>
-                <Input type="number" step="0.1" {...register('lengthCm', { valueAsNumber: true })} placeholder="100" />
-                {errors.lengthCm ? <p className="text-xs text-destructive">{errors.lengthCm.message}</p> : null}
-              </div>
-              <div className="space-y-1.5">
-                <Label>Width (cm)</Label>
-                <Input type="number" step="0.1" {...register('widthCm', { valueAsNumber: true })} placeholder="60" />
-                {errors.widthCm ? <p className="text-xs text-destructive">{errors.widthCm.message}</p> : null}
-              </div>
-              <div className="space-y-1.5">
-                <Label>Height (cm)</Label>
-                <Input type="number" step="0.1" {...register('heightCm', { valueAsNumber: true })} placeholder="50" />
-                {errors.heightCm ? <p className="text-xs text-destructive">{errors.heightCm.message}</p> : null}
-              </div>
-            </div>
-            {volume > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Volume: <span className="font-medium text-foreground">{volume.toLocaleString()} cm³</span>
-              </p>
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
+        >
+          {/* Barcode */}
+          <div className="space-y-1.5">
+            <Label htmlFor="barcode">Barcode *</Label>
+            <Input
+              id="barcode"
+              name="barcode"
+              placeholder="e.g. BIN-001, A-01-01-01"
+              value={formData.barcode}
+              onChange={handleInputChange}
+              className={formErrors.barcode ? "border-red-500" : ""}
+            />
+            {formErrors.barcode && (
+              <p className="text-xs text-red-500">{formErrors.barcode}</p>
             )}
+          </div>
+
+          {/* Dimensions */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label>Max Weight (g)</Label>
-              <Input type="number" {...register('maxWeightG', { valueAsNumber: true })} placeholder="50000" />
-              {errors.maxWeightG ? <p className="text-xs text-destructive">{errors.maxWeightG.message}</p> : null}
+              <Label htmlFor="lengthCm">Length *</Label>
+              <Input
+                id="lengthCm"
+                name="lengthCm"
+                type="number"
+                step="0.1"
+                min="0.1"
+                placeholder="50.0"
+                value={formData.lengthCm}
+                onChange={handleInputChange}
+                className={formErrors.lengthCm ? "border-red-500" : ""}
+              />
+              {formErrors.lengthCm && (
+                <p className="text-xs text-red-500">{formErrors.lengthCm}</p>
+              )}
             </div>
+
             <div className="space-y-1.5">
-              <Label>Status</Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                {...register('status')}
-              >
-                <option value="AVAILABLE">AVAILABLE</option>
-                <option value="FULL">FULL</option>
-                <option value="BLOCKED">BLOCKED</option>
-              </select>
+              <Label htmlFor="widthCm">Width *</Label>
+              <Input
+                id="widthCm"
+                name="widthCm"
+                type="number"
+                step="0.1"
+                min="0.1"
+                placeholder="40.0"
+                value={formData.widthCm}
+                onChange={handleInputChange}
+                className={formErrors.widthCm ? "border-red-500" : ""}
+              />
+              {formErrors.widthCm && (
+                <p className="text-xs text-red-500">{formErrors.widthCm}</p>
+              )}
             </div>
-            <SheetFooter>
-              <Button type="button" variant="outline" onClick={() => { setOpen(false); setEditBin(null); reset(); }}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending || editMutation.isPending}>
-                {editBin ? <><CheckCircle2 className="mr-1.5 size-3.5" /> Save Changes</> : <><Plus className="mr-1.5 size-3.5" /> Create Bin</>}
-              </Button>
-            </SheetFooter>
-          </form>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="heightCm">Height *</Label>
+              <Input
+                id="heightCm"
+                name="heightCm"
+                type="number"
+                step="0.1"
+                min="0.1"
+                placeholder="30.0"
+                value={formData.heightCm}
+                onChange={handleInputChange}
+                className={formErrors.heightCm ? "border-red-500" : ""}
+              />
+              {formErrors.heightCm && (
+                <p className="text-xs text-red-500">{formErrors.heightCm}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Unit */}
+          <div className="space-y-1.5">
+            <Label htmlFor="unit">Unit of Measurement</Label>
+            <select
+              id="unit"
+              name="unit"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={formData.unit}
+              onChange={handleInputChange}
+            >
+              <option value="cm">Centimeter (cm)</option>
+              <option value="m">Meter (m)</option>
+              <option value="mm">Millimeter (mm)</option>
+              <option value="inch">Inch (in)</option>
+              <option value="ft">Feet (ft)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Select the unit for length, width, and height measurements
+            </p>
+          </div>
+
+          {/* Volume display */}
+          {volume > 0 && (
+            <div className="rounded-md bg-blue-50 dark:bg-blue-950/50 p-2 text-center">
+              <p className="text-xs text-muted-foreground">
+                Volume: <span className="font-medium text-foreground">{volume.toLocaleString()} {formData.unit}³</span>
+                {" • "}
+                Max Weight:{" "}
+                <span className="font-medium text-foreground">
+                  {formData.maxWeightG ? `${(parseFloat(formData.maxWeightG) / 1000).toFixed(2)} kg` : "-"}
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Max Weight */}
+          <div className="space-y-1.5">
+            <Label htmlFor="maxWeightG">Max Weight (g) *</Label>
+            <Input
+              id="maxWeightG"
+              name="maxWeightG"
+              type="number"
+              step="0.1"
+              min="0.1"
+              placeholder="1000.0"
+              value={formData.maxWeightG}
+              onChange={handleInputChange}
+              className={formErrors.maxWeightG ? "border-red-500" : ""}
+            />
+            {formErrors.maxWeightG && (
+              <p className="text-xs text-red-500">{formErrors.maxWeightG}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Enter weight in grams (g). Example: 1000g = 1kg
+            </p>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-1.5">
+            <Label htmlFor="status">Status</Label>
+            <select
+              id="status"
+              name="status"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={formData.status}
+              onChange={handleInputChange}
+            >
+              <option value="AVAILABLE">Available</option>
+              <option value="FULL">Full</option>
+              <option value="BLOCKED">Blocked</option>
+            </select>
+          </div>
+
+          {/* Rack */}
+          <div className="space-y-1.5">
+            <Label htmlFor="rackId">Rack *</Label>
+            <select
+              id="rackId"
+              name="rackId"
+              className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
+                formErrors.rackId ? "border-red-500" : ""
+              }`}
+              value={formData.rackId}
+              onChange={handleInputChange}
+            >
+              <option value="">Select rack</option>
+              {racks.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+                  {r.name ? ` - ${r.name}` : ""}
+                  {r.aisle?.aisleNumber ? ` (Aisle: ${r.aisle.aisleNumber})` : ""}
+                  {r.aisle?.zone?.name ? ` @ ${r.aisle.zone.name}` : ""}
+                </option>
+              ))}
+            </select>
+            {formErrors.rackId && (
+              <p className="text-xs text-red-500">{formErrors.rackId}</p>
+            )}
+          </div>
+
+          <SheetFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                setEditItem(null);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                "Saving..."
+              ) : editItem ? (
+                <>
+                  <CheckCircle2 className="mr-1.5 size-3.5" /> Save Changes
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-1.5 size-3.5" /> Create Bin
+                </>
+              )}
+            </Button>
+          </SheetFooter>
+        </form>
       </SlideOverForm>
 
-      {/* Search bar */}
-      <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-        <Input
-          placeholder="Search by barcode or status..."
-          className="pl-8 h-9"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-            <X className="size-3.5 text-muted-foreground hover:text-foreground" />
-          </button>
-        )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 pl-8 pr-8"
+            placeholder="Search barcode, rack, zone..."
+          />
+          {search ? (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2"
+              onClick={() => setSearch("")}
+            >
+              <X className="size-3.5 text-muted-foreground hover:text-foreground" />
+            </button>
+          ) : null}
+        </div>
+
+        <select
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          value={rackFilter}
+          onChange={(e) => setRackFilter(e.target.value)}
+        >
+          <option value="ALL">All Racks</option>
+          {racks.map((r) => (
+            <option key={r.id} value={String(r.id)}>
+              {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="glass-card rounded-2xl overflow-hidden">
-        {!filtered.length ? (
+      <div className="glass-card overflow-hidden rounded-2xl">
+        {showInitialLoading ? (
+          <div className="p-6 space-y-3">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-10" />
+            ))}
+          </div>
+        ) : !filtered.length ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
             <Package className="size-12 opacity-30" />
-            <p className="text-sm">{bins?.length ? 'No bins match the search.' : 'No bins yet - create your first bin'}</p>
+            <p className="text-sm">
+              {bins.length
+                ? "No bins match your filters."
+                : "No bins yet. Create your first bin."}
+            </p>
           </div>
         ) : (
           <>
@@ -305,44 +655,97 @@ const BinsPage = () => {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>#</TableHead>
                   <TableHead>Barcode</TableHead>
-                  <TableHead>Dimensions (cm)</TableHead>
+                  <TableHead>Dimensions</TableHead>
+                  <TableHead>Unit</TableHead>
                   <TableHead>Max Weight</TableHead>
+                  <TableHead>Volume</TableHead>
                   <TableHead className="min-w-44">Utilization</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Rack</TableHead>
+                  <TableHead>Aisle</TableHead>
+                  <TableHead>Zone</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleBins.map((bin, idx) => (
-                  <TableRow key={bin.id} className="table-row-hover">
-                    <TableCell className="text-muted-foreground text-xs">{idx + 1}</TableCell>
-                    <TableCell className="font-mono text-xs font-medium">{bin.barcode}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {(bin.lengthCm ?? bin.length_cm) && (bin.widthCm ?? bin.width_cm) && (bin.heightCm ?? bin.height_cm)
-                        ? `${bin.lengthCm ?? bin.length_cm} x ${bin.widthCm ?? bin.width_cm} x ${bin.heightCm ?? bin.height_cm}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {(bin.maxWeightG ?? bin.max_weight_g) ? `${((bin.maxWeightG ?? bin.max_weight_g) / 1000).toFixed(1)} kg` : '-'}
-                    </TableCell>
-                    <TableCell className="min-w-44">
-                      <div className="flex items-center gap-2">
-                        <Progress value={bin.utilization ?? 0} className="h-1.5 flex-1" />
-                        <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
-                          {bin.utilization ?? 0}%
+                {visibleBins.map((b, idx) => {
+                  const length = b.lengthCm ?? b.length_cm;
+                  const width = b.widthCm ?? b.width_cm;
+                  const height = b.heightCm ?? b.height_cm;
+                  const maxWeight = b.maxWeightG ?? b.max_weight_g;
+                  const utilization = b.utilization ?? b.utilizationPct ?? 0;
+                  const volume = length && width && height 
+                    ? (length * width * height).toLocaleString()
+                    : "-";
+                  const unit = b.unit || "cm";
+
+                  return (
+                    <TableRow key={b.id} className="table-row-hover">
+                      <TableCell className="text-xs text-muted-foreground">
+                        {idx + 1}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs font-medium">
+                        {b.barcode || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {length && width && height
+                          ? `${length} × ${width} × ${height}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                          {unit}
                         </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={bin.status ?? 'AVAILABLE'} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(bin)}>
-                        <Pencil className="size-3.5 mr-1" /> Edit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {maxWeight ? `${(maxWeight / 1000).toFixed(1)} kg` : "-"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {volume}
+                      </TableCell>
+                      <TableCell className="min-w-44">
+                        <div className="flex items-center gap-2">
+                          <Progress value={utilization} className="h-1.5 flex-1" />
+                          <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
+                            {utilization}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={b.status || "AVAILABLE"} />
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {b.rack?.rackId || b.rack?.rackIdentifier || b.rackName || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {b.rack?.aisle?.aisleNumber || b.rack?.aisle?.aisleId || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {b.rack?.aisle?.zone?.name || "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(b)}
+                          >
+                            <Pencil className="mr-1 size-3.5" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleDelete(b.id)}
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="mr-1 size-3.5" /> Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
             <TablePagination
@@ -359,13 +762,6 @@ const BinsPage = () => {
           </>
         )}
       </div>
-      {filtered.length > 0 && (
-        <p className="text-xs text-muted-foreground px-1">
-          Showing {filtered.length} of {bins?.length ?? 0} bins
-        </p>
-      )}
     </div>
   );
-};
-
-export default BinsPage;
+}
