@@ -53,6 +53,7 @@ async function exportBinsExcel(items) {
       { header: "Volume", key: "volume", width: 14, align: "right" },
       { header: "Utilization %", key: "utilization", width: 14, align: "right" },
       { header: "Status", key: "status", width: 14 },
+      { header: "Level", key: "level", width: 20 },
       { header: "Rack", key: "rack", width: 20 },
       { header: "Aisle", key: "aisle", width: 20 },
       { header: "Zone", key: "zone", width: 24 },
@@ -74,6 +75,7 @@ async function exportBinsExcel(items) {
         : "",
       utilization: b.utilization ?? b.utilizationPct ?? 0,
       status: b.status ?? "AVAILABLE",
+      level: b.level?.levelId || b.level?.name || "",
       rack: b.rack?.rackId || b.rack?.name || "",
       aisle: b.rack?.aisle?.aisleNumber || b.rack?.aisle?.aisleId || "",
       zone: b.rack?.aisle?.zone?.name ?? "",
@@ -87,6 +89,7 @@ export default function BinsPage() {
   // State for bins data
   const [bins, setBins] = useState([]);
   const [racks, setRacks] = useState([]);
+  const [levels, setLevels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -98,6 +101,7 @@ export default function BinsPage() {
   // State for search and filter
   const [search, setSearch] = useState("");
   const [rackFilter, setRackFilter] = useState("ALL");
+  const [levelFilter, setLevelFilter] = useState("ALL");
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -109,6 +113,7 @@ export default function BinsPage() {
     maxWeightG: "",
     status: "AVAILABLE",
     rackId: "",
+    levelId: "",
   });
 
   // State for form errors
@@ -126,12 +131,13 @@ export default function BinsPage() {
   useEffect(() => {
     fetchBins();
     fetchRacks();
+    fetchLevels();
   }, []);
 
   const fetchBins = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get("/master/bins");
+      const response = await api.get("/bins");
       setBins(response.data?.data?.content || response.data?.content || response.data || []);
     } catch (error) {
       console.error("Error fetching bins:", error);
@@ -143,11 +149,21 @@ export default function BinsPage() {
 
   const fetchRacks = async () => {
     try {
-      const response = await api.get("/master/racks");
+      const response = await api.get("/racks");
       setRacks(response.data?.data?.content || response.data?.content || response.data || []);
     } catch (error) {
       console.error("Error fetching racks:", error);
       toast.error("Failed to load racks.");
+    }
+  };
+
+  const fetchLevels = async () => {
+    try {
+      const response = await api.get("/levels");
+      setLevels(response.data?.data?.content || response.data?.content || response.data || []);
+    } catch (error) {
+      console.error("Error fetching levels:", error);
+      toast.error("Failed to load levels.");
     }
   };
 
@@ -159,6 +175,9 @@ export default function BinsPage() {
     }
     if (!formData.rackId || formData.rackId === "") {
       errors.rackId = "Rack is required";
+    }
+    if (!formData.levelId || formData.levelId === "") {
+      errors.levelId = "Level is required";
     }
     if (!formData.lengthCm || parseFloat(formData.lengthCm) <= 0) {
       errors.lengthCm = "Valid length is required";
@@ -209,6 +228,7 @@ export default function BinsPage() {
       maxWeightG: parseFloat(formData.maxWeightG),
       status: formData.status,
       rackId: Number(formData.rackId),
+      levelId: Number(formData.levelId),
     };
 
     try {
@@ -216,11 +236,11 @@ export default function BinsPage() {
 
       if (editItem) {
         // Update existing bin
-        await update(`/master/bins/${editItem?.id}`, payload);
+        await update(`/bins/${editItem?.id}`, payload);
         toast.success("Bin updated successfully");
       } else {
         // Create new bin
-        await CREATE("/master/bins", payload);
+        await CREATE("/bins", payload);
         toast.success("Bin created successfully");
       }
 
@@ -250,7 +270,7 @@ export default function BinsPage() {
 
     try {
       setIsDeleting(true);
-      await DELETE(`/master/bins/${id}`);
+      await DELETE(`/bins/${id}`);
       await fetchBins();
       toast.success("Bin deleted successfully");
     } catch (error) {
@@ -271,6 +291,7 @@ export default function BinsPage() {
       maxWeightG: "",
       status: "AVAILABLE",
       rackId: "",
+      levelId: "",
     });
     setFormErrors({});
   };
@@ -286,6 +307,7 @@ export default function BinsPage() {
       maxWeightG: "",
       status: "AVAILABLE",
       rackId: racks[0]?.id || "",
+      levelId: levels[0]?.id || "",
     });
     setFormErrors({});
     setOpen(true);
@@ -302,6 +324,7 @@ export default function BinsPage() {
       maxWeightG: item.maxWeightG?.toString() || item.max_weight_g?.toString() || "",
       status: item.status || "AVAILABLE",
       rackId: item.rackId || item.rack?.id || "",
+      levelId: item.levelId || item.level?.id || "",
     });
     setFormErrors({});
     setOpen(true);
@@ -314,6 +337,11 @@ export default function BinsPage() {
         (b) => String(b.rackId ?? b.rack?.id ?? "") === rackFilter
       );
     }
+    if (levelFilter !== "ALL") {
+      list = list.filter(
+        (b) => String(b.levelId ?? b.level?.id ?? "") === levelFilter
+      );
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -322,6 +350,12 @@ export default function BinsPage() {
             .toLowerCase()
             .includes(q) ||
           String(b.status ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.level?.levelId ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.level?.name ?? "")
             .toLowerCase()
             .includes(q) ||
           String(b.rack?.rackId ?? "")
@@ -342,7 +376,7 @@ export default function BinsPage() {
       );
     }
     return [...list].sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0));
-  }, [bins, search, rackFilter]);
+  }, [bins, search, rackFilter, levelFilter]);
 
   const {
     page,
@@ -353,7 +387,7 @@ export default function BinsPage() {
     endItem,
     paginatedItems: visibleBins,
   } = usePaginatedItems(filtered, {
-    resetDeps: [search, rackFilter, bins?.length ?? 0],
+    resetDeps: [search, rackFilter, levelFilter, bins?.length ?? 0],
   });
 
   const showInitialLoading = isLoading && !bins?.length;
@@ -569,6 +603,32 @@ export default function BinsPage() {
             )}
           </div>
 
+          {/* Level */}
+          <div className="space-y-1.5">
+            <Label htmlFor="levelId">Level *</Label>
+            <select
+              id="levelId"
+              name="levelId"
+              className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
+                formErrors.levelId ? "border-red-500" : ""
+              }`}
+              value={formData.levelId}
+              onChange={handleInputChange}
+            >
+              <option value="">Select level</option>
+              {levels.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.levelId || `Level ${l.id}`}
+                  {l.name ? ` - ${l.name}` : ""}
+                  {l.levelNumber ? ` (#${l.levelNumber})` : ""}
+                </option>
+              ))}
+            </select>
+            {formErrors.levelId && (
+              <p className="text-xs text-red-500">{formErrors.levelId}</p>
+            )}
+          </div>
+
           <SheetFooter>
             <Button
               type="button"
@@ -605,7 +665,7 @@ export default function BinsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 pr-8"
-            placeholder="Search barcode, rack, zone..."
+            placeholder="Search barcode, rack, level, zone..."
           />
           {search ? (
             <button
@@ -618,18 +678,34 @@ export default function BinsPage() {
           ) : null}
         </div>
 
-        <select
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-          value={rackFilter}
-          onChange={(e) => setRackFilter(e.target.value)}
-        >
-          <option value="ALL">All Racks</option>
-          {racks.map((r) => (
-            <option key={r.id} value={String(r.id)}>
-              {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            value={rackFilter}
+            onChange={(e) => setRackFilter(e.target.value)}
+          >
+            <option value="ALL">All Racks</option>
+            {racks.map((r) => (
+              <option key={r.id} value={String(r.id)}>
+                {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+          >
+            <option value="ALL">All Levels</option>
+            {levels.map((l) => (
+              <option key={l.id} value={String(l.id)}>
+                {l.levelId || `Level ${l.id}`}
+                {l.name ? ` - ${l.name}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="glass-card overflow-hidden rounded-2xl">
@@ -661,6 +737,7 @@ export default function BinsPage() {
                   <TableHead>Volume</TableHead>
                   <TableHead className="min-w-44">Utilization</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Level</TableHead>
                   <TableHead>Rack</TableHead>
                   <TableHead>Aisle</TableHead>
                   <TableHead>Zone</TableHead>
@@ -715,13 +792,16 @@ export default function BinsPage() {
                         <StatusBadge status={b.status || "AVAILABLE"} />
                       </TableCell>
                       <TableCell className="text-xs">
-                        {b.rack?.rackId || b.rack?.rackIdentifier || b.rackName || "-"}
+                        {b.level?.levelId || b.level?.name || "-"}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {b.rack?.aisle?.aisleNumber || b.rack?.aisle?.aisleId || "-"}
+                        {b.level?.rack.name || "-"}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {b.rack?.aisle?.zone?.name || "-"}
+                        {b.level?.rack?.aisle?.name || b.rack?.aisle?.aisleId || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {b.level?.rack?.aisle?.zone?.name || "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-1">

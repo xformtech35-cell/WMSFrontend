@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -9,6 +9,7 @@ import {
   Search,
   X,
   Eye,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -32,19 +33,44 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import QRCodeHistoryTable from "./component/QRCodeHistoryTable";
 
 // QR Code Types
 const QR_TYPES = ["QR_CODE", "BARCODE", "DATA_MATRIX"];
-const LABEL_LEVELS = ["PALLET", "CASE", "ITEM", "BIN", "RACK", "ZONE", "WAREHOUSE"];
-const LABEL_TYPES = ["GRN", "PICK", "PUTAWAY", "INVENTORY", "SHIPPING", "RECEIVING"];
+const LABEL_LEVELS = [
+  "PALLET",
+  "CASE",
+  "ITEM",
+  "BIN",
+  "RACK",
+  "ZONE",
+  "WAREHOUSE",
+];
+const LABEL_TYPES = [
+  "GRN",
+  "PICK",
+  "PUTAWAY",
+  "INVENTORY",
+  "SHIPPING",
+  "RECEIVING",
+];
 const LABEL_FORMATS = ["PNG", "JPEG", "SVG", "PDF"];
 const TEMPLATES = ["standard", "compact", "detailed", "warehouse"];
 
 async function generateQRCode(payload) {
   const response = await api.post("/qr-codes/generate", payload);
+  return response.data;
+}
+
+async function fetchQRCodes(params = {}) {
+  const response = await api.get("/qr-codes", { params });
   return response.data;
 }
 
@@ -84,39 +110,78 @@ export default function QRCodeGeneratorPage() {
     remarks: "",
   });
 
-  // State for QR history
+  // State for QR history from API
   const [qrHistory, setQrHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [search, setSearch] = useState("");
   const [previewQr, setPreviewQr] = useState(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
+  const [generate, setGenerate] = useState(false);
+
+  // Pagination state from API
+  const [pagination, setPagination] = useState({
+    currentPage: 0,
+    pageSize: 20,
+    totalElements: 0,
+    totalPages: 0,
+    first: true,
+    last: true,
+  });
+
   // State for form errors
   const [formErrors, setFormErrors] = useState({});
 
-  // Fetch master data
+  // Fetch master data and QR codes on mount
   useEffect(() => {
     fetchMasterData();
+    fetchQRCodesList(0);
   }, []);
 
   const fetchMasterData = async () => {
     try {
       setIsLoadingMaster(true);
-      
-      const [warehousesRes, zonesRes, aislesRes, racksRes, binsRes] = await Promise.all([
-        api.get("/warehouses").catch(() => ({ data: [] })),
-        api.get("/zones").catch(() => ({ data: [] })),
-        api.get("/aisles").catch(() => ({ data: [] })),
-        api.get("/racks").catch(() => ({ data: [] })),
-        api.get("/bins").catch(() => ({ data: [] })),
-      ]);
 
-      setWarehouses(warehousesRes.data?.data?.content || warehousesRes.data?.content || warehousesRes.data || []);
-      setZones(zonesRes.data?.data?.content || zonesRes.data?.content || zonesRes.data || []);
-      setAisles(aislesRes.data?.data?.content || aislesRes.data?.content || aislesRes.data || []);
-      setRacks(racksRes.data?.data?.content || racksRes.data?.content || racksRes.data || []);
-      setBins(binsRes.data?.data?.content || binsRes.data?.content || binsRes.data || []);
+      const [warehousesRes, zonesRes, aislesRes, racksRes, binsRes] =
+        await Promise.all([
+          api.get("/warehouses").catch(() => ({ data: [] })),
+          api.get("/zones").catch(() => ({ data: [] })),
+          api.get("/aisles").catch(() => ({ data: [] })),
+          api.get("/racks").catch(() => ({ data: [] })),
+          api.get("/bins").catch(() => ({ data: [] })),
+        ]);
+
+      setWarehouses(
+        warehousesRes.data?.data?.content ||
+          warehousesRes.data?.content ||
+          warehousesRes.data ||
+          [],
+      );
+      setZones(
+        zonesRes.data?.data?.content ||
+          zonesRes.data?.content ||
+          zonesRes.data ||
+          [],
+      );
+      setAisles(
+        aislesRes.data?.data?.content ||
+          aislesRes.data?.content ||
+          aislesRes.data ||
+          [],
+      );
+      setRacks(
+        racksRes.data?.data?.content ||
+          racksRes.data?.content ||
+          racksRes.data ||
+          [],
+      );
+      setBins(
+        binsRes.data?.data?.content ||
+          binsRes.data?.content ||
+          binsRes.data ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching master data:", error);
       toast.error("Failed to load master data for dropdowns.");
@@ -125,25 +190,125 @@ export default function QRCodeGeneratorPage() {
     }
   };
 
+  // Fetch QR codes from API with pagination
+  const fetchQRCodesList = async (page = 0, searchQuery = "") => {
+    try {
+      setIsLoadingHistory(true);
+      const params = {
+        page: page,
+        size: pagination.pageSize,
+      };
+
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+
+      const response = await fetchQRCodes(params);
+
+      // Handle the paginated response structure
+      const content = response.data?.content || response.content || [];
+      const totalElements =
+        response.data?.totalElements || response.totalElements || 0;
+      const totalPages = response.data?.totalPages || response.totalPages || 0;
+      const currentPage = response.data?.number || response.number || page;
+      const pageSize =
+        response.data?.size || response.size || pagination.pageSize;
+      const first = response.data?.first || response.first || true;
+      const last = response.data?.last || response.last || true;
+
+      // Transform API data to match component format
+      const transformedData = content.map((item) => ({
+        id: item.id,
+        qrId: item.qrId,
+        qrCode: item.qrCode,
+        qrImage: item.qrImage,
+        barcode: item.barcode,
+        barcodeImage: item.barcodeImage,
+        grnNumber: item.grnNumber,
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        batchNumber: item.batchNumber,
+        quantity: item.quantity,
+        uom: item.uom,
+        warehouseId: item.warehouseId,
+        zone: item.zone,
+        aisle: item.aisle,
+        rack: item.rack,
+        shelf: item.shelf,
+        binId: item.binId,
+        palletNumber: item.palletNumber,
+        labelType: item.labelType,
+        labelLevel: item.labelLevel,
+        qrType: item.qrType,
+        status: item.status || "GENERATED",
+        generatedAt: item.createdAt || item.generatedAt,
+        generatedBy: item.generatedBy || "admin",
+        displayWarehouse: item.warehouseId,
+        displayZone: item.zone,
+        displayAisle: item.aisle,
+        displayRack: item.rack,
+        displayBin: item.binId,
+      }));
+
+      setQrHistory(transformedData);
+      setPagination({
+        currentPage,
+        pageSize,
+        totalElements,
+        totalPages,
+        first,
+        last,
+      });
+    } catch (error) {
+      console.error("Error fetching QR codes:", error);
+      toast.error("Failed to load QR code history.");
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < pagination.totalPages) {
+      fetchQRCodesList(newPage, search);
+    }
+  };
+
   // Get filtered zones based on selected warehouse
   const filteredZones = useMemo(() => {
     if (!formData.warehouseId) return zones;
-    return zones.filter(z => z.warehouse?.id === parseInt(formData.warehouseId) || z.warehouseId === parseInt(formData.warehouseId));
+    return zones.filter(
+      (z) =>
+        z.warehouse?.id === parseInt(formData.warehouseId) ||
+        z.warehouseId === parseInt(formData.warehouseId),
+    );
   }, [zones, formData.warehouseId]);
 
   const filteredAisles = useMemo(() => {
     if (!formData.zoneId) return aisles;
-    return aisles.filter(a => a.zone?.id === parseInt(formData.zoneId) || a.zoneId === parseInt(formData.zoneId));
+    return aisles.filter(
+      (a) =>
+        a.zone?.id === parseInt(formData.zoneId) ||
+        a.zoneId === parseInt(formData.zoneId),
+    );
   }, [aisles, formData.zoneId]);
 
   const filteredRacks = useMemo(() => {
     if (!formData.aisleId) return racks;
-    return racks.filter(r => r.aisle?.id === parseInt(formData.aisleId) || r.aisleId === parseInt(formData.aisleId));
+    return racks.filter(
+      (r) =>
+        r.aisle?.id === parseInt(formData.aisleId) ||
+        r.aisleId === parseInt(formData.aisleId),
+    );
   }, [racks, formData.aisleId]);
 
   const filteredBins = useMemo(() => {
     if (!formData.rackId) return bins;
-    return bins.filter(b => b.rack?.id === parseInt(formData.rackId) || b.rackId === parseInt(formData.rackId));
+    return bins.filter(
+      (b) =>
+        b.rack?.id === parseInt(formData.rackId) ||
+        b.rackId === parseInt(formData.rackId),
+    );
   }, [bins, formData.rackId]);
 
   const handleInputChange = (e) => {
@@ -160,7 +325,13 @@ export default function QRCodeGeneratorPage() {
     }
 
     if (name === "warehouseId") {
-      setFormData((prev) => ({ ...prev, zoneId: "", aisleId: "", rackId: "", binId: "" }));
+      setFormData((prev) => ({
+        ...prev,
+        zoneId: "",
+        aisleId: "",
+        rackId: "",
+        binId: "",
+      }));
     } else if (name === "zoneId") {
       setFormData((prev) => ({ ...prev, aisleId: "", rackId: "", binId: "" }));
     } else if (name === "aisleId") {
@@ -197,11 +368,15 @@ export default function QRCodeGeneratorPage() {
       return;
     }
 
-    const selectedWarehouse = warehouses.find(w => w.id === parseInt(formData.warehouseId));
-    const selectedZone = zones.find(z => z.id === parseInt(formData.zoneId));
-    const selectedAisle = aisles.find(a => a.id === parseInt(formData.aisleId));
-    const selectedRack = racks.find(r => r.id === parseInt(formData.rackId));
-    const selectedBin = bins.find(b => b.id === parseInt(formData.binId));
+    const selectedWarehouse = warehouses.find(
+      (w) => w.id === parseInt(formData.warehouseId),
+    );
+    const selectedZone = zones.find((z) => z.id === parseInt(formData.zoneId));
+    const selectedAisle = aisles.find(
+      (a) => a.id === parseInt(formData.aisleId),
+    );
+    const selectedRack = racks.find((r) => r.id === parseInt(formData.rackId));
+    const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
 
     const payload = {
       qrType: formData.qrType,
@@ -209,14 +384,19 @@ export default function QRCodeGeneratorPage() {
       labelType: formData.labelType,
       grnNumber: formData.grnNumber.trim(),
       inboundId: formData.inboundId ? parseInt(formData.inboundId) : null,
-      inboundLineId: formData.inboundLineId ? parseInt(formData.inboundLineId) : null,
+      inboundLineId: formData.inboundLineId
+        ? parseInt(formData.inboundLineId)
+        : null,
       itemCode: formData.itemCode.trim(),
       itemName: formData.itemName.trim(),
       batchNumber: formData.batchNumber.trim(),
       serialNumbers: formData.serialNumbers.trim(),
       quantity: parseInt(formData.quantity),
       uom: formData.uom,
-      warehouseId: selectedWarehouse?.warehouseId || selectedWarehouse?.id || formData.warehouseId,
+      warehouseId:
+        selectedWarehouse?.warehouseId ||
+        selectedWarehouse?.id ||
+        formData.warehouseId,
       zone: selectedZone?.zoneId || selectedZone?.name || "",
       aisle: selectedAisle?.aisleId || selectedAisle?.aisleNumber || "",
       rack: selectedRack?.rackId || selectedRack?.name || "",
@@ -232,16 +412,21 @@ export default function QRCodeGeneratorPage() {
     try {
       setIsGenerating(true);
       const response = await generateQRCode(payload);
-      
+
       // Extract QR data from response
       const qrData = response.data || response;
-      
-      // Add to history with QR image
+
+      toast.success("QR Code generated successfully!");
+      setGenerate(false); // Close the generate form
+      // Refresh the QR codes list - go to first page
+      await fetchQRCodesList(0, search);
+
+      // Open preview with the newly generated QR
       const newQr = {
         id: qrData.id || Date.now(),
         qrId: qrData.qrId,
         qrCode: qrData.qrCode,
-        qrImage: qrData.qrImage, // Base64 image
+        qrImage: qrData.qrImage,
         barcode: qrData.barcode,
         barcodeImage: qrData.barcodeImage,
         grnNumber: qrData.grnNumber || payload.grnNumber,
@@ -269,15 +454,10 @@ export default function QRCodeGeneratorPage() {
         displayRack: selectedRack?.name || qrData.rack,
         displayBin: selectedBin?.barcode || qrData.binId,
       };
-      
-      setQrHistory((prev) => [newQr, ...prev]);
-      
-      toast.success("QR Code generated successfully!");
-      
-      // Open preview
+
       setPreviewQr(newQr);
       setPreviewDialogOpen(true);
-      
+
       // Reset form partially
       setFormData((prev) => ({
         ...prev,
@@ -291,11 +471,20 @@ export default function QRCodeGeneratorPage() {
       toast.error(
         error.response?.data?.message ||
           error.response?.data?.detail ||
-          "Failed to generate QR code."
+          "Failed to generate QR code.",
       );
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchQRCodesList(0, search);
+  };
+
+  const handleRefresh = () => {
+    fetchQRCodesList(pagination.currentPage, search);
   };
 
   const handleDownload = (qrData) => {
@@ -321,10 +510,33 @@ export default function QRCodeGeneratorPage() {
       toast.error("No QR image available to download");
     }
   };
+   const handleDownloadbarcode = (qrData) => {
+    if (qrData.barcodeImage) {
+      // Convert base64 to blob and download
+      const byteCharacters = atob(qrData.barcodeImage);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${qrData.barcode || qrData.grnNumber || "code"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Barcode downloaded");
+    } else {
+      toast.error("No Barcode image available to download");
+    }
+  };
 
   const handlePrint = (qrData) => {
     if (qrData.qrImage) {
-      const printWindow = window.open('', '_blank', 'width=600,height=600');
+      const printWindow = window.open("", "_blank", "width=600,height=600");
       if (printWindow) {
         printWindow.document.write(`
           <html>
@@ -351,53 +563,14 @@ export default function QRCodeGeneratorPage() {
     }
   };
 
-  const filteredHistory = useMemo(() => {
-    let list = qrHistory;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (h) =>
-          String(h.grnNumber || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(h.itemCode || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(h.itemName || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(h.batchNumber || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(h.warehouseId || "")
-            .toLowerCase()
-            .includes(q) ||
-          String(h.qrId || "")
-            .toLowerCase()
-            .includes(q)
-      );
-    }
-    return list;
-  }, [qrHistory, search]);
-
-  const {
-    page,
-    setPage,
-    totalPages,
-    totalItems,
-    startItem,
-    endItem,
-    paginatedItems: visibleHistory,
-  } = usePaginatedItems(filteredHistory, {
-    resetDeps: [search, qrHistory.length],
-  });
-
   if (isLoadingMaster) {
     return (
       <div className="flex flex-col gap-6">
         <Skeleton className="h-10 w-48" />
         <div className="glass-card rounded-2xl p-6 space-y-3">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-10" />)}
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
         </div>
       </div>
     );
@@ -405,435 +578,498 @@ export default function QRCodeGeneratorPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="QR Code Generator"
-        description="Generate QR codes for warehouse labels and tracking."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                toast.info("Export functionality coming soon");
-              }}
-              disabled={!qrHistory.length}
-            >
-              <Download className="mr-1.5 size-3.5" /> Export History
-            </Button>
-          </div>
-        }
-      />
-
-      {/* QR Code Generator Form */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <QrCode className="size-5" />
-            Generate QR Code
-          </CardTitle>
-          <CardDescription>
-            Fill in the details below to generate a QR code for warehouse labeling.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="qrType">QR Type</Label>
-                <select
-                  id="qrType"
-                  name="qrType"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.qrType}
-                  onChange={handleInputChange}
-                >
-                  {QR_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type.replace("_", " ")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="labelLevel">Label Level</Label>
-                <select
-                  id="labelLevel"
-                  name="labelLevel"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.labelLevel}
-                  onChange={handleInputChange}
-                >
-                  {LABEL_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level.charAt(0) + level.slice(1).toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="labelType">Label Type</Label>
-                <select
-                  id="labelType"
-                  name="labelType"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.labelType}
-                  onChange={handleInputChange}
-                >
-                  {LABEL_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type.charAt(0) + type.slice(1).toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="labelFormat">Label Format</Label>
-                <select
-                  id="labelFormat"
-                  name="labelFormat"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.labelFormat}
-                  onChange={handleInputChange}
-                >
-                  {LABEL_FORMATS.map((format) => (
-                    <option key={format} value={format}>
-                      {format}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                QR Code Generator
+              </h1>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="grnNumber">GRN Number *</Label>
-                <Input
-                  id="grnNumber"
-                  name="grnNumber"
-                  placeholder="e.g. GRN-INB-20260717-0003"
-                  value={formData.grnNumber}
-                  onChange={handleInputChange}
-                  className={formErrors.grnNumber ? "border-red-500" : ""}
-                />
-                {formErrors.grnNumber && (
-                  <p className="text-xs text-red-500">{formErrors.grnNumber}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="palletNumber">Pallet Number</Label>
-                <Input
-                  id="palletNumber"
-                  name="palletNumber"
-                  placeholder="e.g. PAL-001"
-                  value={formData.palletNumber}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="itemCode">Item Code *</Label>
-                <Input
-                  id="itemCode"
-                  name="itemCode"
-                  placeholder="e.g. mobile_23"
-                  value={formData.itemCode}
-                  onChange={handleInputChange}
-                  className={formErrors.itemCode ? "border-red-500" : ""}
-                />
-                {formErrors.itemCode && (
-                  <p className="text-xs text-red-500">{formErrors.itemCode}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="itemName">Item Name</Label>
-                <Input
-                  id="itemName"
-                  name="itemName"
-                  placeholder="e.g. Barcode Scanner"
-                  value={formData.itemName}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="batchNumber">Batch Number</Label>
-                <Input
-                  id="batchNumber"
-                  name="batchNumber"
-                  placeholder="e.g. BATCH-2026-001"
-                  value={formData.batchNumber}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="serialNumbers">Serial Numbers</Label>
-                <Input
-                  id="serialNumbers"
-                  name="serialNumbers"
-                  placeholder="e.g. SN001,SN002,SN003"
-                  value={formData.serialNumbers}
-                  onChange={handleInputChange}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Comma-separated serial numbers
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="quantity">Quantity *</Label>
-                <Input
-                  id="quantity"
-                  name="quantity"
-                  type="number"
-                  min="1"
-                  placeholder="15"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
-                  className={formErrors.quantity ? "border-red-500" : ""}
-                />
-                {formErrors.quantity && (
-                  <p className="text-xs text-red-500">{formErrors.quantity}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="uom">Unit of Measure</Label>
-                <Input
-                  id="uom"
-                  name="uom"
-                  placeholder="e.g. Nos, KG, PCS"
-                  value={formData.uom}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="warehouseId">Warehouse *</Label>
-                <select
-                  id="warehouseId"
-                  name="warehouseId"
-                  className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
-                    formErrors.warehouseId ? "border-red-500" : ""
-                  }`}
-                  value={formData.warehouseId}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select warehouse</option>
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} {w.warehouseId ? `(${w.warehouseId})` : ""}
-                    </option>
-                  ))}
-                </select>
-                {formErrors.warehouseId && (
-                  <p className="text-xs text-red-500">{formErrors.warehouseId}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="zoneId">Zone</Label>
-                <select
-                  id="zoneId"
-                  name="zoneId"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.zoneId}
-                  onChange={handleInputChange}
-                  disabled={!formData.warehouseId}
-                >
-                  <option value="">Select zone</option>
-                  {filteredZones.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name} {z.zoneId ? `(${z.zoneId})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="aisleId">Aisle</Label>
-                <select
-                  id="aisleId"
-                  name="aisleId"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.aisleId}
-                  onChange={handleInputChange}
-                  disabled={!formData.zoneId}
-                >
-                  <option value="">Select aisle</option>
-                  {filteredAisles.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
-                      {a.name ? ` - ${a.name}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="rackId">Rack</Label>
-                <select
-                  id="rackId"
-                  name="rackId"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.rackId}
-                  onChange={handleInputChange}
-                  disabled={!formData.aisleId}
-                >
-                  <option value="">Select rack</option>
-                  {filteredRacks.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
-                      {r.name ? ` - ${r.name}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="shelfId">Shelf</Label>
-                <Input
-                  id="shelfId"
-                  name="shelfId"
-                  placeholder="e.g. S-02"
-                  value={formData.shelfId}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="binId">Bin</Label>
-                <select
-                  id="binId"
-                  name="binId"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.binId}
-                  onChange={handleInputChange}
-                  disabled={!formData.rackId}
-                >
-                  <option value="">Select bin</option>
-                  {filteredBins.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.barcode || b.binId || `Bin ${b.id}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="templateName">Template</Label>
-                <select
-                  id="templateName"
-                  name="templateName"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formData.templateName}
-                  onChange={handleInputChange}
-                >
-                  {TEMPLATES.map((template) => (
-                    <option key={template} value={template}>
-                      {template.charAt(0).toUpperCase() + template.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="inboundId">Inbound ID</Label>
-                <Input
-                  id="inboundId"
-                  name="inboundId"
-                  type="number"
-                  placeholder="1"
-                  value={formData.inboundId}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="inboundLineId">Inbound Line ID</Label>
-                <Input
-                  id="inboundLineId"
-                  name="inboundLineId"
-                  type="number"
-                  placeholder="1"
-                  value={formData.inboundLineId}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="remarks">Remarks</Label>
-                <Input
-                  id="remarks"
-                  name="remarks"
-                  placeholder="Additional notes"
-                  value={formData.remarks}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={isGenerating} className="flex-1">
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="mr-1.5 size-3.5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="mr-1.5 size-3.5" />
-                    Generate QR Code
-                  </>
-                )}
-              </Button>
-              <Button
+            <div className="flex items-center gap-3">
+              <button
                 type="button"
-                variant="outline"
-                onClick={() => {
-                  setFormData({
-                    qrType: "QR_CODE",
-                    labelLevel: "PALLET",
-                    labelType: "GRN",
-                    grnNumber: "",
-                    inboundId: "",
-                    inboundLineId: "",
-                    itemCode: "",
-                    itemName: "",
-                    batchNumber: "",
-                    serialNumbers: "",
-                    quantity: "",
-                    uom: "Nos",
-                    warehouseId: "",
-                    zoneId: "",
-                    aisleId: "",
-                    rackId: "",
-                    shelfId: "",
-                    binId: "",
-                    palletNumber: "",
-                    generatedBy: "admin",
-                    templateName: "standard",
-                    labelFormat: "PNG",
-                    remarks: "",
-                  });
-                  setFormErrors({});
-                }}
+                onClick={() => setGenerate(!generate)}
+                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
               >
-                Reset
-              </Button>
+                <Plus className="w-4 h-4" />
+                Generate
+              </button>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isLoadingHistory}
+                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
+
+      {generate && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div
+              className="fixed inset-0 bg-black/50"
+              onClick={() => setGenerate(false)}
+            />
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+              <Card className="glass-card">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <QrCode className="size-5" />
+                      Generate QR Code
+                    </CardTitle>
+                    <CardDescription>
+                      Fill in the details below to generate a QR code for
+                      warehouse labeling.
+                    </CardDescription>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground cursor-pointer hover:bg-gray-100 hover:text-gray-600"
+                    onClick={() => setGenerate(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="qrType">QR Type</Label>
+                        <select
+                          id="qrType"
+                          name="qrType"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.qrType}
+                          onChange={handleInputChange}
+                        >
+                          {QR_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {type.replace("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="labelLevel">Label Level</Label>
+                        <select
+                          id="labelLevel"
+                          name="labelLevel"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.labelLevel}
+                          onChange={handleInputChange}
+                        >
+                          {LABEL_LEVELS.map((level) => (
+                            <option key={level} value={level}>
+                              {level.charAt(0) + level.slice(1).toLowerCase()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="labelType">Label Type</Label>
+                        <select
+                          id="labelType"
+                          name="labelType"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.labelType}
+                          onChange={handleInputChange}
+                        >
+                          {LABEL_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {type.charAt(0) + type.slice(1).toLowerCase()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="labelFormat">Label Format</Label>
+                        <select
+                          id="labelFormat"
+                          name="labelFormat"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.labelFormat}
+                          onChange={handleInputChange}
+                        >
+                          {LABEL_FORMATS.map((format) => (
+                            <option key={format} value={format}>
+                              {format}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="grnNumber">GRN Number *</Label>
+                        <Input
+                          id="grnNumber"
+                          name="grnNumber"
+                          placeholder="e.g. GRN-INB-20260717-0003"
+                          value={formData.grnNumber}
+                          onChange={handleInputChange}
+                          className={
+                            formErrors.grnNumber ? "border-red-500" : ""
+                          }
+                        />
+                        {formErrors.grnNumber && (
+                          <p className="text-xs text-red-500">
+                            {formErrors.grnNumber}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="palletNumber">Pallet Number</Label>
+                        <Input
+                          id="palletNumber"
+                          name="palletNumber"
+                          placeholder="e.g. PAL-001"
+                          value={formData.palletNumber}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="itemCode">Item Code *</Label>
+                        <Input
+                          id="itemCode"
+                          name="itemCode"
+                          placeholder="e.g. mobile_23"
+                          value={formData.itemCode}
+                          onChange={handleInputChange}
+                          className={
+                            formErrors.itemCode ? "border-red-500" : ""
+                          }
+                        />
+                        {formErrors.itemCode && (
+                          <p className="text-xs text-red-500">
+                            {formErrors.itemCode}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="itemName">Item Name</Label>
+                        <Input
+                          id="itemName"
+                          name="itemName"
+                          placeholder="e.g. Barcode Scanner"
+                          value={formData.itemName}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="batchNumber">Batch Number</Label>
+                        <Input
+                          id="batchNumber"
+                          name="batchNumber"
+                          placeholder="e.g. BATCH-2026-001"
+                          value={formData.batchNumber}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="serialNumbers">Serial Numbers</Label>
+                        <Input
+                          id="serialNumbers"
+                          name="serialNumbers"
+                          placeholder="e.g. SN001,SN002,SN003"
+                          value={formData.serialNumbers}
+                          onChange={handleInputChange}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Comma-separated serial numbers
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="quantity">Quantity *</Label>
+                        <Input
+                          id="quantity"
+                          name="quantity"
+                          type="number"
+                          min="1"
+                          placeholder="15"
+                          value={formData.quantity}
+                          onChange={handleInputChange}
+                          className={
+                            formErrors.quantity ? "border-red-500" : ""
+                          }
+                        />
+                        {formErrors.quantity && (
+                          <p className="text-xs text-red-500">
+                            {formErrors.quantity}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="uom">Unit of Measure</Label>
+                        <Input
+                          id="uom"
+                          name="uom"
+                          placeholder="e.g. Nos, KG, PCS"
+                          value={formData.uom}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="warehouseId">Warehouse *</Label>
+                        <select
+                          id="warehouseId"
+                          name="warehouseId"
+                          className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
+                            formErrors.warehouseId ? "border-red-500" : ""
+                          }`}
+                          value={formData.warehouseId}
+                          onChange={handleInputChange}
+                        >
+                          <option value="">Select warehouse</option>
+                          {warehouses.map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.name}{" "}
+                              {w.warehouseId ? `(${w.warehouseId})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.warehouseId && (
+                          <p className="text-xs text-red-500">
+                            {formErrors.warehouseId}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="zoneId">Zone</Label>
+                        <select
+                          id="zoneId"
+                          name="zoneId"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.zoneId}
+                          onChange={handleInputChange}
+                          disabled={!formData.warehouseId}
+                        >
+                          <option value="">Select zone</option>
+                          {filteredZones.map((z) => (
+                            <option key={z.id} value={z.id}>
+                              {z.name} {z.zoneId ? `(${z.zoneId})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="aisleId">Aisle</Label>
+                        <select
+                          id="aisleId"
+                          name="aisleId"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.aisleId}
+                          onChange={handleInputChange}
+                          disabled={!formData.zoneId}
+                        >
+                          <option value="">Select aisle</option>
+                          {filteredAisles.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
+                              {a.name ? ` - ${a.name}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="rackId">Rack</Label>
+                        <select
+                          id="rackId"
+                          name="rackId"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.rackId}
+                          onChange={handleInputChange}
+                          disabled={!formData.aisleId}
+                        >
+                          <option value="">Select rack</option>
+                          {filteredRacks.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+                              {r.name ? ` - ${r.name}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="shelfId">Shelf</Label>
+                        <Input
+                          id="shelfId"
+                          name="shelfId"
+                          placeholder="e.g. S-02"
+                          value={formData.shelfId}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="binId">Bin</Label>
+                        <select
+                          id="binId"
+                          name="binId"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.binId}
+                          onChange={handleInputChange}
+                          disabled={!formData.rackId}
+                        >
+                          <option value="">Select bin</option>
+                          {filteredBins.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.barcode || b.binId || `Bin ${b.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="templateName">Template</Label>
+                        <select
+                          id="templateName"
+                          name="templateName"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.templateName}
+                          onChange={handleInputChange}
+                        >
+                          {TEMPLATES.map((template) => (
+                            <option key={template} value={template}>
+                              {template.charAt(0).toUpperCase() +
+                                template.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="inboundId">Inbound ID</Label>
+                        <Input
+                          id="inboundId"
+                          name="inboundId"
+                          type="number"
+                          placeholder="1"
+                          value={formData.inboundId}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="inboundLineId">Inbound Line ID</Label>
+                        <Input
+                          id="inboundLineId"
+                          name="inboundLineId"
+                          type="number"
+                          placeholder="1"
+                          value={formData.inboundLineId}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="remarks">Remarks</Label>
+                        <Input
+                          id="remarks"
+                          name="remarks"
+                          placeholder="Additional notes"
+                          value={formData.remarks}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        type="submit"
+                        disabled={isGenerating}
+                        className="flex-1 cursor-pointer"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <RefreshCw className="mr-1.5 size-3.5 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <QrCode className="mr-1.5 size-3.5" />
+                            Generate QR Code
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => setGenerate(false)}
+                        className="flex-1 cursor-pointer"
+                      >
+                        Close
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 cursor-pointer"
+                        onClick={() => {
+                          setFormData({
+                            qrType: "QR_CODE",
+                            labelLevel: "PALLET",
+                            labelType: "GRN",
+                            grnNumber: "",
+                            inboundId: "",
+                            inboundLineId: "",
+                            itemCode: "",
+                            itemName: "",
+                            batchNumber: "",
+                            serialNumbers: "",
+                            quantity: "",
+                            uom: "Nos",
+                            warehouseId: "",
+                            zoneId: "",
+                            aisleId: "",
+                            rackId: "",
+                            shelfId: "",
+                            binId: "",
+                            palletNumber: "",
+                            generatedBy: "admin",
+                            templateName: "standard",
+                            labelFormat: "PNG",
+                            remarks: "",
+                          });
+                          setFormErrors({});
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* QR Code Generator Form */}
 
       {/* QR Code Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
@@ -862,12 +1098,35 @@ export default function QRCodeGeneratorPage() {
                   )}
                 </div>
                 <div className="w-full space-y-1 text-sm">
-                  <p><strong>QR ID:</strong> {previewQr.qrId || "-"}</p>
-                  <p><strong>GRN:</strong> {previewQr.grnNumber}</p>
-                  <p><strong>Item:</strong> {previewQr.itemCode} - {previewQr.itemName}</p>
-                  <p><strong>Quantity:</strong> {previewQr.quantity} {previewQr.uom}</p>
-                  <p><strong>Status:</strong> {previewQr.status || "GENERATED"}</p>
-                  <p><strong>Location:</strong> {[previewQr.displayWarehouse, previewQr.displayZone, previewQr.displayAisle, previewQr.displayRack, previewQr.displayBin].filter(Boolean).join(" → ")}</p>
+                  <p>
+                    <strong>QR ID:</strong> {previewQr.qrId || "-"}
+                  </p>
+                  <p>
+                    <strong>GRN:</strong> {previewQr.grnNumber}
+                  </p>
+                  <p>
+                    <strong>Item:</strong> {previewQr.itemCode} -{" "}
+                    {previewQr.itemName}
+                  </p>
+                  <p>
+                    <strong>Quantity:</strong> {previewQr.quantity}{" "}
+                    {previewQr.uom}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {previewQr.status || "GENERATED"}
+                  </p>
+                  <p>
+                    <strong>Location:</strong>{" "}
+                    {[
+                      previewQr.displayWarehouse,
+                      previewQr.displayZone,
+                      previewQr.displayAisle,
+                      previewQr.displayRack,
+                      previewQr.displayBin,
+                    ]
+                      .filter(Boolean)
+                      .join(" → ")}
+                  </p>
                 </div>
                 <div className="flex gap-2 w-full">
                   <Button
@@ -894,143 +1153,61 @@ export default function QRCodeGeneratorPage() {
 
       {/* Search and History */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-80">
+        <form onSubmit={handleSearch} className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-8 pr-8"
+            className="h-9 pl-8 pr-16"
             placeholder="Search GRN, item, QR ID..."
           />
-          {search ? (
+          <button
+            type="submit"
+            className="absolute right-0 top-0 h-full px-3 text-sm text-primary hover:text-primary/80"
+          >
+            Search
+          </button>
+          {search && (
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => setSearch("")}
+              className="absolute right-14 top-1/2 -translate-y-1/2"
+              onClick={() => {
+                setSearch("");
+                fetchQRCodesList(0, "");
+              }}
             >
               <X className="size-3.5 text-muted-foreground hover:text-foreground" />
             </button>
-          ) : null}
-        </div>
+          )}
+        </form>
         <p className="text-xs text-muted-foreground">
-          {qrHistory.length} QR codes generated
+          {isLoadingHistory
+            ? "Loading..."
+            : `${pagination.totalElements} QR codes found`}
         </p>
       </div>
 
-      {/* QR Code History */}
-      <Card className="glass-card overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-lg">Generation History</CardTitle>
-          <CardDescription>
-            Recently generated QR codes and their details
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {!filteredHistory.length ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-              <QrCode className="size-12 opacity-30" />
-              <p className="text-sm">
-                {qrHistory.length
-                  ? "No QR codes match your search."
-                  : "No QR codes generated yet. Create your first QR code."}
-              </p>
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>#</TableHead>
-                    <TableHead>QR ID</TableHead>
-                    <TableHead>GRN Number</TableHead>
-                    <TableHead>Item Code</TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleHistory.map((h, idx) => (
-                    <TableRow key={h.id} className="table-row-hover">
-                      <TableCell className="text-xs text-muted-foreground">
-                        {idx + 1}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {h.qrId || "-"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs font-medium">
-                        {h.grnNumber || "-"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {h.itemCode || "-"}
-                      </TableCell>
-                      <TableCell>{h.itemName || "-"}</TableCell>
-                      <TableCell className="text-center">
-                        {h.quantity} {h.uom}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          h.status === "GENERATED" 
-                            ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
-                            : "bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
-                        }`}>
-                          {h.status || "GENERATED"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {[h.displayWarehouse || h.warehouseId, h.displayZone || h.zone, h.displayAisle || h.aisle, h.displayRack || h.rack, h.displayBin || h.binId]
-                          .filter(Boolean)
-                          .join(" → ") || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setPreviewQr(h);
-                              setPreviewDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownload(h)}
-                          >
-                            <Download className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePrint(h)}
-                          >
-                            <Printer className="size-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <TablePagination
-                page={page}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                startItem={startItem}
-                endItem={endItem}
-                onPrev={() => setPage((v) => Math.max(1, v - 1))}
-                onNext={() => setPage((v) => Math.min(totalPages, v + 1))}
-                onFirst={() => setPage(1)}
-                onLast={() => setPage(totalPages)}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {/* QR Code History Table */}
+      <QRCodeHistoryTable
+        qrHistory={qrHistory}
+        isLoading={isLoadingHistory}
+        onView={(qr) => {
+          setPreviewQr(qr);
+          setPreviewDialogOpen(true);
+        }}
+        onDownload={handleDownload}
+        handleDownloadbarcode={handleDownloadbarcode}
+        onPrint={handlePrint}
+        page={pagination.currentPage + 1}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalElements}
+        startItem={pagination.currentPage * pagination.pageSize + 1}
+        endItem={Math.min(
+          (pagination.currentPage + 1) * pagination.pageSize,
+          pagination.totalElements,
+        )}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

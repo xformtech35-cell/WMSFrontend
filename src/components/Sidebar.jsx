@@ -155,6 +155,13 @@ const ALL_MENU_ITEMS = [
     permission: P.INBOUND_VIEW,
   },
   {
+    href: "/barcodescan",
+    label: "Barcode Scanner",
+    icon: Package,
+    group: "QR/Barcode",
+    permission: P.INBOUND_VIEW,
+  },
+  {
     href: "/putaway",
     label: "Putaway",
     icon: Warehouse,
@@ -242,6 +249,13 @@ const ALL_MENU_ITEMS = [
   {
     href: "/master/racks",
     label: "Rack Master",
+    icon: Database,
+    group: "Admin",
+    permission: P.MASTER_VIEW,
+  },
+  {
+    href: "/master/levels",
+    label: "Level Master",
     icon: Database,
     group: "Admin",
     permission: P.MASTER_VIEW,
