@@ -17,6 +17,7 @@ import {
   Trash2,
   Edit,
   Eye,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -54,7 +55,10 @@ import {
 } from "@/components/ui/tooltip";
 
 async function fetchApprovedGRNs(params = {}) {
-  const response = await api.get("/inbound/grn-status/APPROVED", { params });
+  const response = await api.get(
+    "/inbound/grn-status/APPROVED?barcodeGenerate=true",
+    { params },
+  );
   return response.data;
 }
 
@@ -79,9 +83,7 @@ export default function PutawayPage() {
   const [search, setSearch] = useState("");
 
   // State for master data (for dropdowns)
-  const [warehouses, setWarehouses] = useState([]);
   const [users, setUsers] = useState([]);
-  const [receivingAreas, setReceivingAreas] = useState([]);
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -89,6 +91,7 @@ export default function PutawayPage() {
     warehouseId: "",
     assignedTo: "",
     receivingArea: "",
+    rockId: "",
     createdBy: "admin",
     lines: [],
   });
@@ -113,31 +116,16 @@ export default function PutawayPage() {
 
   const fetchMasterData = async () => {
     try {
-      const [warehousesRes, usersRes] = await Promise.all([
-        api.get("/warehouses").catch(() => ({ data: [] })),
+      const [usersRes] = await Promise.all([
         api.get("/users").catch(() => ({ data: [] })),
       ]);
 
-      setWarehouses(
-        warehousesRes.data?.data?.content ||
-          warehousesRes.data?.content ||
-          warehousesRes.data ||
-          [],
-      );
       setUsers(
         usersRes.data?.data?.content ||
           usersRes.data?.content ||
           usersRes.data ||
           [],
       );
-
-      setReceivingAreas([
-        { id: "dock-a", name: "Receiving Dock A" },
-        { id: "dock-b", name: "Receiving Dock B" },
-        { id: "dock-c", name: "Receiving Dock C" },
-        { id: "bay-1", name: "Bay 1" },
-        { id: "bay-2", name: "Bay 2" },
-      ]);
     } catch (error) {
       console.error("Error fetching master data:", error);
     }
@@ -163,7 +151,11 @@ export default function PutawayPage() {
     try {
       setIsLoadingHistory(true);
       const response = await api.get("/putaway");
-      const content = response.data?.data?.content || response.data?.content || response.data || [];
+      const content =
+        response.data?.data?.content ||
+        response.data?.content ||
+        response.data ||
+        [];
       setPutawayHistory(content);
     } catch (error) {
       console.error("Error fetching putaway history:", error);
@@ -182,6 +174,7 @@ export default function PutawayPage() {
       warehouseId: "",
       assignedTo: "",
       receivingArea: "",
+      rockId: "",
       createdBy: "admin",
       lines: [],
     });
@@ -194,6 +187,7 @@ export default function PutawayPage() {
     const grn = grns.find((g) => g.grnNumber === grnNumber);
     if (grn) {
       setSelectedGrn(grn);
+
       // Initialize items from GRN lines
       const items = (grn.lines || []).map((line) => ({
         id: line.id,
@@ -210,19 +204,21 @@ export default function PutawayPage() {
       }));
       setGrnItems(items);
 
-      // Auto-fill warehouse if available
-      if (grn.warehouseId) {
-        setFormData((prev) => ({
-          ...prev,
-          grnNumber: grn.grnNumber,
-          warehouseId: grn.warehouseId,
-        }));
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          grnNumber: grn.grnNumber,
-        }));
-      }
+      // Get rock and warehouse from GRN
+      const rock = grn.rock;
+      const warehouse = rock?.warehouse;
+
+      // Set form data with rock and warehouse info
+      setFormData((prev) => ({
+        ...prev,
+        grnNumber: grn.grnNumber,
+        // Use warehouse from the rock's warehouse
+        warehouseId:
+          warehouse?.warehouseId || warehouse?.id || grn.warehouseId || "",
+        // Use rock name or rockId as receiving area
+        receivingArea: rock?.name || rock?.rockId || "",
+        rockId: rock?.rockId || grn.rockId || "",
+      }));
     }
   };
 
@@ -336,6 +332,7 @@ export default function PutawayPage() {
       warehouseId: formData.warehouseId.trim(),
       assignedTo: formData.assignedTo.trim(),
       receivingArea: formData.receivingArea.trim(),
+      rockId: formData.rockId || null,
       createdBy: formData.createdBy || "admin",
       lines: formData.lines.map((line) => ({
         itemCode: line.itemCode,
@@ -365,6 +362,7 @@ export default function PutawayPage() {
         warehouseId: "",
         assignedTo: "",
         receivingArea: "",
+        rockId: "",
         createdBy: "admin",
         lines: [],
       });
@@ -466,11 +464,8 @@ export default function PutawayPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
             {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black/50"
-              onClick={handleClose}
-            />
-            
+            <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
+
             {/* Modal Content */}
             <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[95vw] max-w-[95vw] lg:max-w-7xl xl:max-w-[1200px] max-h-[90vh] overflow-hidden">
               {/* Header */}
@@ -520,7 +515,7 @@ export default function PutawayPage() {
                       <option value="">Select GRN</option>
                       {grns.map((grn) => (
                         <option key={grn.id} value={grn.grnNumber}>
-                          {grn.grnNumber} - {grn.inboundNumber} ({grn.supplierName})
+                          {grn.grnNumber}
                         </option>
                       ))}
                     </select>
@@ -534,22 +529,14 @@ export default function PutawayPage() {
                       <Warehouse className="size-3.5" />
                       Warehouse *
                     </Label>
-                    <select
+                    <Input
                       id="warehouseId"
                       name="warehouseId"
-                      className={`h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                        formErrors.warehouseId ? "border-red-500" : ""
-                      }`}
                       value={formData.warehouseId}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">Select warehouse</option>
-                      {warehouses.map((w) => (
-                        <option key={w.id} value={w.warehouseId || w.id}>
-                          {w.name} {w.warehouseId ? `(${w.warehouseId})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                      disabled
+                      className="bg-gray-100 dark:bg-gray-800"
+                      placeholder="Warehouse from rock"
+                    />
                     {formErrors.warehouseId && (
                       <p className="text-xs text-red-500">
                         {formErrors.warehouseId}
@@ -596,22 +583,14 @@ export default function PutawayPage() {
                       <MapPin className="size-3.5" />
                       Receiving Area *
                     </Label>
-                    <select
+                    <Input
                       id="receivingArea"
                       name="receivingArea"
-                      className={`h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                        formErrors.receivingArea ? "border-red-500" : ""
-                      }`}
                       value={formData.receivingArea}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">Select receiving area</option>
-                      {receivingAreas.map((area) => (
-                        <option key={area.id} value={area.name}>
-                          {area.name}
-                        </option>
-                      ))}
-                    </select>
+                      disabled
+                      className="bg-gray-100 dark:bg-gray-800"
+                      placeholder="Rock name/ID"
+                    />
                     {formErrors.receivingArea && (
                       <p className="text-xs text-red-500">
                         {formErrors.receivingArea}
@@ -619,6 +598,66 @@ export default function PutawayPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Rock Info Display */}
+                {selectedGrnForPutaway && formData.rockId && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
+                    <div className="flex items-center gap-3">
+                      <Package className="size-5 text-blue-600" />
+                      <div>
+                        <Label className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                          Assigned Rock
+                        </Label>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-100 dark:bg-blue-900/30"
+                          >
+                            {formData.rockId}
+                          </Badge>
+                          {selectedGrn?.rock && (
+                            <>
+                              <span className="text-sm text-blue-700 dark:text-blue-300">
+                                {selectedGrn.rock.name}
+                              </span>
+                              {selectedGrn.rock.rockType && (
+                                <span className="text-xs text-blue-500 dark:text-blue-400">
+                                  ({selectedGrn.rock.rockType})
+                                </span>
+                              )}
+                              {selectedGrn.rock.warehouse && (
+                                <span className="text-xs text-blue-500 dark:text-blue-400">
+                                  • Warehouse: {selectedGrn.rock.warehouse.name}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          This rock is assigned to this GRN. Warehouse and
+                          receiving area are auto-filled.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedGrnForPutaway && !formData.rockId && (
+                  <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="size-5 text-yellow-600" />
+                      <div>
+                        <Label className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                          No Rock Assigned
+                        </Label>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          This GRN does not have a rock assigned. Please
+                          manually enter warehouse and receiving area.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* GRN Items Selection */}
                 {selectedGrnForPutaway && grnItems.length > 0 && (
@@ -651,13 +690,17 @@ export default function PutawayPage() {
                                   }));
                                   setGrnItems(updatedItems);
                                 }}
-                                checked={grnItems.every((item) => item.isSelected)}
+                                checked={grnItems.every(
+                                  (item) => item.isSelected,
+                                )}
                               />
                             </TableHead>
                             <TableHead>Item Code</TableHead>
                             <TableHead>Item Name</TableHead>
                             <TableHead>UOM</TableHead>
-                            <TableHead className="text-right">Quantity</TableHead>
+                            <TableHead className="text-right">
+                              Quantity
+                            </TableHead>
                             <TableHead>Batch No.</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -693,8 +736,8 @@ export default function PutawayPage() {
                       </Table>
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground">
-                      Selected: {grnItems.filter((item) => item.isSelected).length}{" "}
-                      items
+                      Selected:{" "}
+                      {grnItems.filter((item) => item.isSelected).length} items
                     </div>
                   </div>
                 )}
@@ -712,7 +755,9 @@ export default function PutawayPage() {
                   </p>
 
                   {formErrors.lines && (
-                    <p className="text-xs text-red-500 mb-2">{formErrors.lines}</p>
+                    <p className="text-xs text-red-500 mb-2">
+                      {formErrors.lines}
+                    </p>
                   )}
 
                   {formData.lines.length === 0 ? (
@@ -730,7 +775,9 @@ export default function PutawayPage() {
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted/50">
-                              <TableHead className="w-12 text-center">#</TableHead>
+                              <TableHead className="w-12 text-center">
+                                #
+                              </TableHead>
                               <TableHead className="min-w-[100px]">
                                 Item Code
                               </TableHead>
@@ -756,7 +803,10 @@ export default function PutawayPage() {
                           </TableHeader>
                           <TableBody>
                             {formData.lines.map((line, index) => (
-                              <TableRow key={index} className="hover:bg-muted/30">
+                              <TableRow
+                                key={index}
+                                className="hover:bg-muted/30"
+                              >
                                 <TableCell className="text-xs text-muted-foreground text-center">
                                   {index + 1}
                                 </TableCell>
@@ -907,7 +957,7 @@ export default function PutawayPage() {
               className="fixed inset-0 bg-black/50"
               onClick={closeViewDetails}
             />
-            
+
             {/* Modal Content */}
             <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden">
               {/* Header */}
@@ -937,42 +987,77 @@ export default function PutawayPage() {
               <div className="overflow-y-auto px-6 py-4 space-y-6 max-h-[calc(90vh-180px)]">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-xs text-muted-foreground">GRN Number</Label>
-                    <p className="font-medium">{selectedPutaway.grnNumber || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">
+                      GRN Number
+                    </Label>
+                    <p className="font-medium">
+                      {selectedPutaway.grnNumber || "-"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Task Number</Label>
-                    <p className="font-medium">{selectedPutaway.taskNumber || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">
+                      Task Number
+                    </Label>
+                    <p className="font-medium">
+                      {selectedPutaway.taskNumber || "-"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Status</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Status
+                    </Label>
                     <StatusBadge status={selectedPutaway.status || "PENDING"} />
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Assigned To</Label>
-                    <p className="font-medium">{selectedPutaway.assignedTo || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">
+                      Assigned To
+                    </Label>
+                    <p className="font-medium">
+                      {selectedPutaway.assignedTo || "-"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Receiving Area</Label>
-                    <p className="font-medium">{selectedPutaway.receivingArea || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">
+                      Receiving Area
+                    </Label>
+                    <p className="font-medium">
+                      {selectedPutaway.receivingArea || "-"}
+                    </p>
+                  </div>
+                  {/* <div>
+                      <Label className="text-xs text-muted-foreground">Rock ID</Label>
+                      <p className="font-medium">{selectedPutaway.rockId || "-"}</p>
+                    </div> */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Warehouse
+                    </Label>
+                    <p className="font-medium">
+                      {selectedPutaway.warehouseId || "-"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Warehouse</Label>
-                    <p className="font-medium">{selectedPutaway.warehouseId || "-"}</p>
+                    <Label className="text-xs text-muted-foreground">
+                      Total Quantity
+                    </Label>
+                    <p className="font-medium">
+                      {selectedPutaway.totalQuantity || 0}
+                    </p>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Total Quantity</Label>
-                    <p className="font-medium">{selectedPutaway.totalQuantity || 0}</p>
-                  </div>
-                  <div>
+                  {/* <div>
                     <Label className="text-xs text-muted-foreground">Pending Quantity</Label>
                     <p className="font-medium">{selectedPutaway.pendingQuantity || 0}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Created At</Label>
+                  </div> */}
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Created At
+                    </Label>
                     <p className="font-medium text-sm">
                       {selectedPutaway.createdAt
-                        ? format(new Date(selectedPutaway.createdAt), "dd MMM yyyy HH:mm")
+                        ? format(
+                            new Date(selectedPutaway.createdAt),
+                            "dd MMM yyyy HH:mm",
+                          )
                         : "-"}
                     </p>
                   </div>
@@ -989,9 +1074,13 @@ export default function PutawayPage() {
                             <TableHead>Item Code</TableHead>
                             <TableHead>Item Name</TableHead>
                             <TableHead>UOM</TableHead>
-                            <TableHead className="text-right">Quantity</TableHead>
-                            <TableHead className="text-right">Putaway Qty</TableHead>
-                            <TableHead className="text-right">Remaining</TableHead>
+                            <TableHead className="text-right">
+                              Quantity
+                            </TableHead>
+                            {/* <TableHead className="text-right">Putaway Qty</TableHead> */}
+                            <TableHead className="text-right">
+                              Remaining
+                            </TableHead>
                             <TableHead>Batch No.</TableHead>
                             <TableHead>Status</TableHead>
                           </TableRow>
@@ -1010,9 +1099,9 @@ export default function PutawayPage() {
                               <TableCell className="text-right">
                                 {line.quantity || 0}
                               </TableCell>
-                              <TableCell className="text-right">
+                              {/* <TableCell className="text-right">
                                 {line.putawayQuantity || 0}
-                              </TableCell>
+                              </TableCell> */}
                               <TableCell className="text-right">
                                 {line.remainingQuantity || 0}
                               </TableCell>
@@ -1020,7 +1109,9 @@ export default function PutawayPage() {
                                 {line.batchNumber || "-"}
                               </TableCell>
                               <TableCell>
-                                <StatusBadge status={line.status || "PENDING"} />
+                                <StatusBadge
+                                  status={line.status || "PENDING"}
+                                />
                               </TableCell>
                             </TableRow>
                           ))}
@@ -1096,6 +1187,7 @@ export default function PutawayPage() {
                     <TableHead>GRN Number</TableHead>
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Receiving Area</TableHead>
+                    <TableHead>Rock ID</TableHead>
                     <TableHead className="text-center">Items</TableHead>
                     <TableHead className="text-center">Total Qty</TableHead>
                     <TableHead className="text-center">Pending Qty</TableHead>
@@ -1119,6 +1211,9 @@ export default function PutawayPage() {
                       <TableCell>{item.assignedTo || "-"}</TableCell>
                       <TableCell className="text-xs">
                         {item.receivingArea || "-"}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {item.rockId || "-"}
                       </TableCell>
                       <TableCell className="text-center text-xs">
                         <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">

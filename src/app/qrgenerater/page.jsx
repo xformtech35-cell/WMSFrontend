@@ -10,6 +10,7 @@ import {
   X,
   Eye,
   Plus,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -41,6 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import QRCodeHistoryTable from "./component/QRCodeHistoryTable";
+import GRNSelector from "./component/grnSelector";
 
 // QR Code Types
 const QR_TYPES = ["QR_CODE", "BARCODE", "DATA_MATRIX"];
@@ -80,8 +82,10 @@ export default function QRCodeGeneratorPage() {
   const [zones, setZones] = useState([]);
   const [aisles, setAisles] = useState([]);
   const [racks, setRacks] = useState([]);
+  const [levels, setLevels] = useState([]); // Add levels state
   const [bins, setBins] = useState([]);
   const [isLoadingMaster, setIsLoadingMaster] = useState(true);
+  const [grnSelectorOpen, setGrnSelectorOpen] = useState(false);
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -101,6 +105,7 @@ export default function QRCodeGeneratorPage() {
     zoneId: "",
     aisleId: "",
     rackId: "",
+    levelId: "", // Add levelId
     shelfId: "",
     binId: "",
     palletNumber: "",
@@ -139,16 +144,35 @@ export default function QRCodeGeneratorPage() {
     fetchQRCodesList(0);
   }, []);
 
+  const handleGRNSelect = (selection) => {
+    if (selection) {
+      setFormData((prev) => ({
+        ...prev,
+        grnNumber: selection.grnNumber,
+        inboundId: selection.inboundId,
+        inboundLineId: selection.inboundLineId,
+        itemCode: selection.itemCode,
+        itemName: selection.itemName,
+        uom: selection.uom,
+        quantity: selection.quantity || 1,
+      }));
+      toast.success(
+        `Selected: ${selection.itemCode} from ${selection.grnNumber}`,
+      );
+    }
+  };
+
   const fetchMasterData = async () => {
     try {
       setIsLoadingMaster(true);
 
-      const [warehousesRes, zonesRes, aislesRes, racksRes, binsRes] =
+      const [warehousesRes, zonesRes, aislesRes, racksRes, levelsRes, binsRes] =
         await Promise.all([
           api.get("/warehouses").catch(() => ({ data: [] })),
           api.get("/zones").catch(() => ({ data: [] })),
           api.get("/aisles").catch(() => ({ data: [] })),
           api.get("/racks").catch(() => ({ data: [] })),
+          api.get("/levels").catch(() => ({ data: [] })),
           api.get("/bins").catch(() => ({ data: [] })),
         ]);
 
@@ -174,6 +198,12 @@ export default function QRCodeGeneratorPage() {
         racksRes.data?.data?.content ||
           racksRes.data?.content ||
           racksRes.data ||
+          [],
+      );
+      setLevels(
+        levelsRes.data?.data?.content ||
+          levelsRes.data?.content ||
+          levelsRes.data ||
           [],
       );
       setBins(
@@ -234,6 +264,7 @@ export default function QRCodeGeneratorPage() {
         zone: item.zone,
         aisle: item.aisle,
         rack: item.rack,
+        level: item.level, // Add level
         shelf: item.shelf,
         binId: item.binId,
         palletNumber: item.palletNumber,
@@ -247,6 +278,7 @@ export default function QRCodeGeneratorPage() {
         displayZone: item.zone,
         displayAisle: item.aisle,
         displayRack: item.rack,
+        displayLevel: item.level, // Add display level
         displayBin: item.binId,
       }));
 
@@ -302,6 +334,15 @@ export default function QRCodeGeneratorPage() {
     );
   }, [racks, formData.aisleId]);
 
+  const filteredLevels = useMemo(() => {
+    if (!formData.rackId) return levels;
+    return levels.filter(
+      (l) =>
+        l.rack?.id === parseInt(formData.rackId) ||
+        l.rackId === parseInt(formData.rackId),
+    );
+  }, [levels, formData.rackId]);
+
   const filteredBins = useMemo(() => {
     if (!formData.rackId) return bins;
     return bins.filter(
@@ -330,14 +371,35 @@ export default function QRCodeGeneratorPage() {
         zoneId: "",
         aisleId: "",
         rackId: "",
+        levelId: "",
         binId: "",
       }));
     } else if (name === "zoneId") {
-      setFormData((prev) => ({ ...prev, aisleId: "", rackId: "", binId: "" }));
+      setFormData((prev) => ({
+        ...prev,
+        aisleId: "",
+        rackId: "",
+        levelId: "",
+        binId: "",
+      }));
     } else if (name === "aisleId") {
-      setFormData((prev) => ({ ...prev, rackId: "", binId: "" }));
+      setFormData((prev) => ({
+        ...prev,
+        rackId: "",
+        levelId: "",
+        binId: "",
+      }));
     } else if (name === "rackId") {
-      setFormData((prev) => ({ ...prev, binId: "" }));
+      setFormData((prev) => ({
+        ...prev,
+        levelId: "",
+        binId: "",
+      }));
+    } else if (name === "levelId") {
+      setFormData((prev) => ({
+        ...prev,
+        binId: "",
+      }));
     }
   };
 
@@ -376,6 +438,9 @@ export default function QRCodeGeneratorPage() {
       (a) => a.id === parseInt(formData.aisleId),
     );
     const selectedRack = racks.find((r) => r.id === parseInt(formData.rackId));
+    const selectedLevel = levels.find(
+      (l) => l.id === parseInt(formData.levelId),
+    );
     const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
 
     const payload = {
@@ -400,6 +465,8 @@ export default function QRCodeGeneratorPage() {
       zone: selectedZone?.zoneId || selectedZone?.name || "",
       aisle: selectedAisle?.aisleId || selectedAisle?.aisleNumber || "",
       rack: selectedRack?.rackId || selectedRack?.name || "",
+      level: selectedLevel?.levelId || selectedLevel?.name || "",
+      levelId: formData.levelId ? parseInt(formData.levelId) : null,
       shelf: formData.shelfId || "",
       binId: selectedBin?.barcode || selectedBin?.binId || "",
       palletNumber: formData.palletNumber.trim(),
@@ -439,6 +506,7 @@ export default function QRCodeGeneratorPage() {
         zone: qrData.zone || payload.zone,
         aisle: qrData.aisle || payload.aisle,
         rack: qrData.rack || payload.rack,
+        level: qrData.level || payload.level,
         shelf: qrData.shelf || payload.shelf,
         binId: qrData.binId || payload.binId,
         palletNumber: qrData.palletNumber || payload.palletNumber,
@@ -452,6 +520,7 @@ export default function QRCodeGeneratorPage() {
         displayZone: selectedZone?.name || qrData.zone,
         displayAisle: selectedAisle?.aisleNumber || qrData.aisle,
         displayRack: selectedRack?.name || qrData.rack,
+        displayLevel: selectedLevel?.name || qrData.level,
         displayBin: selectedBin?.barcode || qrData.binId,
       };
 
@@ -465,6 +534,8 @@ export default function QRCodeGeneratorPage() {
         batchNumber: "",
         serialNumbers: "",
         remarks: "",
+        inboundId: "",
+        inboundLineId: "",
       }));
     } catch (error) {
       console.error("Error generating QR code:", error);
@@ -510,7 +581,8 @@ export default function QRCodeGeneratorPage() {
       toast.error("No QR image available to download");
     }
   };
-   const handleDownloadbarcode = (qrData) => {
+
+  const handleDownloadbarcode = (qrData) => {
     if (qrData.barcodeImage) {
       // Convert base64 to blob and download
       const byteCharacters = atob(qrData.barcodeImage);
@@ -613,7 +685,36 @@ export default function QRCodeGeneratorPage() {
           <div className="flex items-center justify-center min-h-screen p-4">
             <div
               className="fixed inset-0 bg-black/50"
-              onClick={() => setGenerate(false)}
+              onClick={() => {
+                setGenerate(false);
+                setFormData({
+                  qrType: "QR_CODE",
+                  labelLevel: "PALLET",
+                  labelType: "GRN",
+                  grnNumber: "",
+                  inboundId: "",
+                  inboundLineId: "",
+                  itemCode: "",
+                  itemName: "",
+                  batchNumber: "",
+                  serialNumbers: "",
+                  quantity: "",
+                  uom: "Nos",
+                  warehouseId: "",
+                  zoneId: "",
+                  aisleId: "",
+                  rackId: "",
+                  levelId: "",
+                  shelfId: "",
+                  binId: "",
+                  palletNumber: "",
+                  generatedBy: "admin",
+                  templateName: "standard",
+                  labelFormat: "PNG",
+                  remarks: "",
+                });
+                setFormErrors({});
+              }}
             />
             <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
               <Card className="glass-card">
@@ -633,7 +734,36 @@ export default function QRCodeGeneratorPage() {
                     variant="ghost"
                     size="icon"
                     className="text-muted-foreground cursor-pointer hover:bg-gray-100 hover:text-gray-600"
-                    onClick={() => setGenerate(false)}
+                    onClick={() => {
+                      setGenerate(false);
+                      setFormData({
+                        qrType: "QR_CODE",
+                        labelLevel: "PALLET",
+                        labelType: "GRN",
+                        grnNumber: "",
+                        inboundId: "",
+                        inboundLineId: "",
+                        itemCode: "",
+                        itemName: "",
+                        batchNumber: "",
+                        serialNumbers: "",
+                        quantity: "",
+                        uom: "Nos",
+                        warehouseId: "",
+                        zoneId: "",
+                        aisleId: "",
+                        rackId: "",
+                        levelId: "",
+                        shelfId: "",
+                        binId: "",
+                        palletNumber: "",
+                        generatedBy: "admin",
+                        templateName: "standard",
+                        labelFormat: "PNG",
+                        remarks: "",
+                      });
+                      setFormErrors({});
+                    }}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -714,16 +844,26 @@ export default function QRCodeGeneratorPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label htmlFor="grnNumber">GRN Number *</Label>
-                        <Input
-                          id="grnNumber"
-                          name="grnNumber"
-                          placeholder="e.g. GRN-INB-20260717-0003"
-                          value={formData.grnNumber}
-                          onChange={handleInputChange}
-                          className={
-                            formErrors.grnNumber ? "border-red-500" : ""
-                          }
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="grnNumber"
+                            name="grnNumber"
+                            placeholder="e.g. GRN-INB-20260717-0003"
+                            value={formData.grnNumber}
+                            onChange={handleInputChange}
+                            className={
+                              formErrors.grnNumber ? "border-red-500" : ""
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setGrnSelectorOpen(true)}
+                            className="shrink-0"
+                          >
+                            <Package className="size-4" />
+                          </Button>
+                        </div>
                         {formErrors.grnNumber && (
                           <p className="text-xs text-red-500">
                             {formErrors.grnNumber}
@@ -917,6 +1057,27 @@ export default function QRCodeGeneratorPage() {
                       </div>
 
                       <div className="space-y-1.5">
+                        <Label htmlFor="levelId">Level</Label>
+                        <select
+                          id="levelId"
+                          name="levelId"
+                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={formData.levelId}
+                          onChange={handleInputChange}
+                          disabled={!formData.rackId}
+                        >
+                          <option value="">Select level</option>
+                          {filteredLevels.map((l) => (
+                            <option key={l.id} value={l.id}>
+                              {l.levelId || `Level ${l.id}`}
+                              {l.name ? ` - ${l.name}` : ""}
+                              {l.levelNumber ? ` (Level ${l.levelNumber})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
                         <Label htmlFor="shelfId">Shelf</Label>
                         <Input
                           id="shelfId"
@@ -1021,7 +1182,36 @@ export default function QRCodeGeneratorPage() {
                         )}
                       </Button>
                       <Button
-                        onClick={() => setGenerate(false)}
+                        onClick={() => {
+                          setGenerate(false);
+                          setFormData({
+                            qrType: "QR_CODE",
+                            labelLevel: "PALLET",
+                            labelType: "GRN",
+                            grnNumber: "",
+                            inboundId: "",
+                            inboundLineId: "",
+                            itemCode: "",
+                            itemName: "",
+                            batchNumber: "",
+                            serialNumbers: "",
+                            quantity: "",
+                            uom: "Nos",
+                            warehouseId: "",
+                            zoneId: "",
+                            aisleId: "",
+                            rackId: "",
+                            levelId: "",
+                            shelfId: "",
+                            binId: "",
+                            palletNumber: "",
+                            generatedBy: "admin",
+                            templateName: "standard",
+                            labelFormat: "PNG",
+                            remarks: "",
+                          });
+                          setFormErrors({});
+                        }}
                         className="flex-1 cursor-pointer"
                       >
                         Close
@@ -1048,6 +1238,7 @@ export default function QRCodeGeneratorPage() {
                             zoneId: "",
                             aisleId: "",
                             rackId: "",
+                            levelId: "",
                             shelfId: "",
                             binId: "",
                             palletNumber: "",
@@ -1122,6 +1313,7 @@ export default function QRCodeGeneratorPage() {
                       previewQr.displayZone,
                       previewQr.displayAisle,
                       previewQr.displayRack,
+                      previewQr.displayLevel,
                       previewQr.displayBin,
                     ]
                       .filter(Boolean)
@@ -1186,6 +1378,12 @@ export default function QRCodeGeneratorPage() {
             : `${pagination.totalElements} QR codes found`}
         </p>
       </div>
+
+      <GRNSelector
+        open={grnSelectorOpen}
+        onOpenChange={setGrnSelectorOpen}
+        onSelect={handleGRNSelect}
+      />
 
       {/* QR Code History Table */}
       <QRCodeHistoryTable

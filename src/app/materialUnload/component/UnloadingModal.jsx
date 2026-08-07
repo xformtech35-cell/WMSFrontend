@@ -1,20 +1,18 @@
 // components/inbound/UnloadingModal.jsx
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   AlertCircle,
   CheckCircle,
-  Send,
   Clock,
   User,
   Package,
   Box,
   Loader,
-  Truck,
-  UserCheck,
   FileText,
-  Calendar,
+  Warehouse,
+  ChevronDown,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -22,26 +20,51 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [rocks, setRocks] = useState([]);
+  const [loadingRocks, setLoadingRocks] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
     boxesUnloadedQuantity: "",
     unloadedBy: "",
     remarks: "",
+    rockId: "", // Single rockId for the entire unloading
   });
 
+  // Fetch rocks based on warehouse
+  useEffect(() => {
+    // if (isOpen && inbound?.warehouseId) {
+      fetchRocksByWarehouse();
+    // }
+  }, [isOpen, inbound]);
+
   // Reset form when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen && inbound) {
       setFormData({
         boxesUnloadedQuantity: "",
         unloadedBy: "",
         remarks: `Unloading for ${inbound.inboundNumber}`,
+        rockId: "",
       });
       setError("");
-      setSuccess(false);
+      setSuccess("");
     }
   }, [isOpen, inbound]);
+
+  const fetchRocksByWarehouse = async (warehouseId) => {
+    try {
+      setLoadingRocks(true);
+      const response = await api.get(`/rocks`);
+      const data = response.data?.data?.content || response.data || [];
+      setRocks(data);
+    } catch (error) {
+      console.error("Error fetching rocks:", error);
+      setRocks([]);
+    } finally {
+      setLoadingRocks(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,6 +95,7 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
         boxesUnloadedQuantity: parseInt(formData.boxesUnloadedQuantity),
         unloadedBy: formData.unloadedBy,
         remarks: formData.remarks || null,
+        rockId: formData.rockId || null, // Send rockId if selected
       };
 
       const response = await api.post(
@@ -112,7 +136,7 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop with blur */}
       <div
-        className="fixed inset-0   transition-opacity"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
         onClick={handleClose}
       />
 
@@ -120,11 +144,14 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-up">
           {/* Decorative gradient header */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 rounded-t-2xl"></div>
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-t-2xl"></div>
 
           {/* Header */}
           <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-6 pt-7 border-b border-gray-100">
             <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-50 rounded-xl">
+                <Box className="w-6 h-6 text-blue-600" />
+              </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
                   Record Unloading
@@ -174,7 +201,7 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
           {/* Body */}
           <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-6">
             {/* Inbound Summary */}
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-200">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500">Inbound Number</p>
@@ -195,10 +222,22 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                   </p>
                 </div>
                 <div>
+                  <p className="text-xs text-gray-500">Warehouse</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.warehouse?.name || inbound?.warehouseId || "N/A"}
+                  </p>
+                </div>
+                <div>
                   <p className="text-xs text-gray-500">Current Stage</p>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
                     {inbound?.stage?.replace(/_/g, " ")}
                   </span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Total Items</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.lines?.length || 0}
+                  </p>
                 </div>
               </div>
             </div>
@@ -210,17 +249,19 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                 Items to Unload
               </h4>
               <div className="space-y-2">
-                {inbound?.lines?.slice(0, 3).map((item, index) => (
+                {inbound?.lines?.slice(0, 5).map((item, index) => (
                   <div key={index} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{item.itemName}</span>
+                    <span className="text-gray-600">
+                      {item.itemCode} - {item.itemName}
+                    </span>
                     <span className="font-medium text-gray-800">
                       {item.orderedQuantity} {item.uom}
                     </span>
                   </div>
                 ))}
-                {inbound?.lines?.length > 3 && (
+                {inbound?.lines?.length > 5 && (
                   <p className="text-xs text-gray-400">
-                    + {inbound.lines.length - 3} more items
+                    + {inbound.lines.length - 5} more items
                   </p>
                 )}
               </div>
@@ -242,7 +283,7 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     onChange={handleChange}
                     placeholder="Number of boxes"
                     min="1"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                   />
                 </div>
@@ -264,44 +305,54 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     value={formData.unloadedBy}
                     onChange={handleChange}
                     placeholder="Name of person who unloaded"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all"
+                    className="w-full  pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                   />
                 </div>
               </div>
             </div>
 
-            {/* Unloading Start/End Time - Optional */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Unloading Start Time
-                  <span className="text-gray-400 text-xs ml-2">(optional)</span>
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="datetime-local"
-                    name="unloadingStartTime"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all"
-                  />
-                </div>
+            {/* Rock Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Assign Rock
+                <span className="text-gray-400 text-xs ml-2">(optional)</span>
+              </label>
+              <div className="relative">
+                <select
+                  name="rockId"
+                  value={formData.rockId}
+                  onChange={handleChange}
+                  className="w-full  pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all appearance-none bg-white"
+                  disabled={loadingRocks}
+                >
+                  <option value="">Select a rock</option>
+                  {rocks.map((rock) => (
+                    <option key={rock.id} value={rock.id || rock.id}>
+                      {rock.rockId} - {rock.name} ({rock.warehouse?.name || "N/A"})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Unloading End Time
-                  <span className="text-gray-400 text-xs ml-2">(optional)</span>
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="datetime-local"
-                    name="unloadingEndTime"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all"
-                  />
-                </div>
-              </div>
-            </div> */}
+              {loadingRocks && (
+                <p className="mt-1 text-xs text-gray-400 flex items-center gap-1">
+                  <Loader className="w-3 h-3 animate-spin" />
+                  Loading rocks...
+                </p>
+              )}
+              {!loadingRocks && rocks.length === 0 && (
+                <p className="mt-1 text-xs text-amber-600">
+                  No rocks available for this warehouse. You can skip this step.
+                </p>
+              )}
+              {formData.rockId && rocks.length > 0 && (
+                <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Rock assigned to this unloading
+                </p>
+              )}
+            </div>
 
             {/* Remarks */}
             <div>
@@ -314,7 +365,7 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                 value={formData.remarks}
                 onChange={handleChange}
                 rows="2"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none"
                 placeholder="Add any additional notes about the unloading process..."
               />
             </div>

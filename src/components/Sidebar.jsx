@@ -232,6 +232,13 @@ const ALL_MENU_ITEMS = [
     group: "Admin",
     permission: P.MASTER_VIEW,
   },
+   {
+    href: "/master/rocks",
+    label: "Rocks Master",
+    icon: Database,
+    group: "Admin",
+    permission: P.MASTER_VIEW,
+  },
   {
     href: "/master/zones",
     label: "Zone Master",

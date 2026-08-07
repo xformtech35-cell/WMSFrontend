@@ -88,6 +88,24 @@ const getSuppliersAPI = async () => {
   }
 };
 
+// Get all warehouses
+const getWarehousesAPI = async () => {
+  try {
+    const response = await api.get("/warehouses");
+    const data = response.data?.data?.content || response.data?.content || response.data || [];
+    return data;
+  } catch (error) {
+    console.warn("Failed to fetch warehouses, using fallback data");
+    return [
+      { id: 1, warehouseId: "WH-001", name: "Mumbai WH", location: "Mumbai" },
+      { id: 2, warehouseId: "WH-002", name: "Pune WH", location: "Pune" },
+      { id: 3, warehouseId: "WH-003", name: "Delhi WH", location: "Delhi" },
+      { id: 4, warehouseId: "WH-004", name: "Bangalore WH", location: "Bangalore" },
+      { id: 5, warehouseId: "WH-005", name: "Chennai WH", location: "Chennai" },
+    ];
+  }
+};
+
 const createPurchaseRequestAPI = async (data) => {
   return apiRequest("/purchase-requests", "POST", data);
 };
@@ -143,18 +161,21 @@ export default function PurchaseRequestForm({
   ]);
 
   const [suppliers, setSuppliers] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savedPRId, setSavedPRId] = useState(null);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
+  const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showItemSelector, setShowItemSelector] = useState(false);
 
-  // Load suppliers on mount
+  // Load suppliers and warehouses on mount
   useEffect(() => {
     loadSuppliers();
+    loadWarehouses();
   }, []);
 
   // Load initial data for edit mode
@@ -174,6 +195,19 @@ export default function PurchaseRequestForm({
       setErrorMessage("Failed to load suppliers.");
     } finally {
       setIsLoadingSuppliers(false);
+    }
+  };
+
+  const loadWarehouses = async () => {
+    try {
+      setIsLoadingWarehouses(true);
+      const warehouseList = await getWarehousesAPI();
+      setWarehouses(warehouseList || []);
+    } catch (error) {
+      console.error("Error loading warehouses:", error);
+      setErrorMessage("Failed to load warehouses.");
+    } finally {
+      setIsLoadingWarehouses(false);
     }
   };
 
@@ -569,16 +603,20 @@ export default function PurchaseRequestForm({
                       name="warehouse"
                       value={prData.warehouse}
                       onChange={handleInputChange}
-                      className="w-full  pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                      className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                       required
+                      disabled={isLoadingWarehouses}
                     >
                       <option value="">Select Warehouse</option>
-                      <option value="Mumbai WH">Mumbai WH</option>
-                      <option value="Pune WH">Pune WH</option>
-                      <option value="Delhi WH">Delhi WH</option>
-                      <option value="Bangalore WH">Bangalore WH</option>
-                      <option value="Chennai WH">Chennai WH</option>
+                      {warehouses.map((warehouse) => (
+                        <option key={warehouse.id} value={warehouse.name || warehouse.warehouseId}>
+                          {warehouse.name} ({warehouse.warehouseId}) - {warehouse.location || ""}
+                        </option>
+                      ))}
                     </select>
+                    {isLoadingWarehouses && (
+                      <p className="text-xs text-gray-400 mt-1">Loading warehouses...</p>
+                    )}
                   </div>
                 </div>
 
@@ -591,7 +629,7 @@ export default function PurchaseRequestForm({
                       name="priority"
                       value={prData.priority}
                       onChange={handleInputChange}
-                      className="w-full   pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                      className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                       required
                     >
                       <option value="LOW">Low - Standard Processing</option>
@@ -888,28 +926,6 @@ export default function PurchaseRequestForm({
             >
               Cancel
             </button>
-            {/* {mode === "edit" && prData.status === "DRAFT" && (
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={savingDraft}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" />
-                {savingDraft ? "Saving..." : "Update Draft"}
-              </button>
-            )} */}
-            {/* {mode === "create" && (
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={savingDraft}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" />
-                {savingDraft ? "Saving..." : "Save as Draft"}
-              </button>
-            )} */}
             <button
               type="submit"
               disabled={submitting}

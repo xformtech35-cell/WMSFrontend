@@ -180,6 +180,16 @@ const InboundViewModal = ({
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">
+                      Arrival Rock
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                     {inbound.rock
+                        ? `${inbound?.rock.name} -${inbound?.rock?.warehouse?.name} `
+                        : "Not Arrived"}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-xs text-gray-500 mb-1">Invoice Number</p>
                     <p className="text-sm font-medium text-gray-900">
                       {inbound.invoiceNumber || "N/A"}

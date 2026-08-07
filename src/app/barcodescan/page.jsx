@@ -13,6 +13,12 @@ import {
   Printer,
   Eye,
   QrCode,
+  Package,
+  MapPin,
+  Hash,
+  Calendar,
+  User,
+  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -34,15 +40,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CREATE } from "@/components/apiRequest";
 
 async function getBarcodeData(value) {
-  const response = await api.get("/qr-codes/scan", {
-    params: {
-      qrCode: value,
-      scannedBy: "admin", // Replace with actual user if needed
-    },
-  });
-  return response.data;
+  const response = await CREATE(
+    `/qr-codes/barcode/scan?barCode=${value}&scannedBy=${"admin"}`,
+    {},
+  );
+  return response;
 }
 
 export default function BarcodeScanPage() {
@@ -55,6 +60,7 @@ export default function BarcodeScanPage() {
   const [scanHistory, setScanHistory] = useState([]);
   const [previewQr, setPreviewQr] = useState(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [resultView, setResultView] = useState("simple"); // "simple" | "detailed"
   const inputRef = useRef(null);
 
   // Focus input when scanning starts
@@ -92,6 +98,16 @@ export default function BarcodeScanPage() {
           }
         }
 
+        // Parse qrData if it's a string
+        if (parsedData.qrData && typeof parsedData.qrData === "string") {
+          try {
+            const qrDataParsed = JSON.parse(parsedData.qrData);
+            parsedData = { ...parsedData, ...qrDataParsed };
+          } catch (e) {
+            console.error("Failed to parse qrData:", e);
+          }
+        }
+
         setScanResult(parsedData);
 
         // Add to history
@@ -105,43 +121,46 @@ export default function BarcodeScanPage() {
 
         toast.success("Barcode scanned successfully!");
 
-        // If the scanned data contains QR code info, show it in preview
-        if (parsedData.qrId || parsedData.grnNumber) {
-          const qrData = {
-            id: parsedData.id || Date.now(),
-            qrId: parsedData.qrId,
-            qrCode: parsedData.qrCode,
-            qrImage: parsedData.qrImage,
-            barcode: parsedData.barcode || value,
-            barcodeImage: parsedData.barcodeImage,
-            grnNumber: parsedData.grnNumber,
-            itemCode: parsedData.itemCode,
-            itemName: parsedData.itemName,
-            batchNumber: parsedData.batchNumber,
-            quantity: parsedData.quantity,
-            uom: parsedData.uom,
-            warehouseId: parsedData.warehouseId,
-            zone: parsedData.zone,
-            aisle: parsedData.aisle,
-            rack: parsedData.rack,
-            shelf: parsedData.shelf,
-            binId: parsedData.binId,
-            palletNumber: parsedData.palletNumber,
-            labelType: parsedData.labelType,
-            labelLevel: parsedData.labelLevel,
-            qrType: parsedData.qrType,
-            status: parsedData.status || "GENERATED",
-            generatedAt: parsedData.createdAt || parsedData.generatedAt,
-            generatedBy: parsedData.generatedBy || "admin",
-            displayWarehouse: parsedData.warehouseId,
-            displayZone: parsedData.zone,
-            displayAisle: parsedData.aisle,
-            displayRack: parsedData.rack,
-            displayBin: parsedData.binId,
-          };
-          setPreviewQr(qrData);
-          setPreviewDialogOpen(true);
-        }
+        // Prepare QR preview data
+        const qrData = {
+          id: parsedData.id || Date.now(),
+          qrId: parsedData.qrId,
+          qrCode: parsedData.qrCode,
+          qrImage: parsedData.qrImage,
+          barcode: parsedData.barcode || value,
+          barcodeImage: parsedData.barcodeImage,
+          grnNumber: parsedData.grnNumber || parsedData.grNumber,
+          itemCode: parsedData.itemCode,
+          itemName: parsedData.itemName,
+          batchNumber: parsedData.batchNumber,
+          quantity: parsedData.quantity,
+          uom: parsedData.uom,
+          warehouseId: parsedData.warehouseId,
+          zone: parsedData.zone,
+          aisle: parsedData.aisle,
+          rack: parsedData.rack,
+          shelf: parsedData.shelf,
+          binId: parsedData.binId,
+          palletNumber: parsedData.palletNumber,
+          labelType: parsedData.labelType,
+          labelLevel: parsedData.labelLevel,
+          qrType: parsedData.qrType,
+          status: parsedData.status || "GENERATED",
+          generatedAt: parsedData.generatedAt || parsedData.createdAt,
+          generatedBy: parsedData.generatedBy || "admin",
+          scannedBy: parsedData.scannedBy,
+          scannedAt: parsedData.scannedAt,
+          scanCount: parsedData.scanCount,
+          putawayTaskId: parsedData.putawayTaskId,
+          putawayLineId: parsedData.putawayLineId,
+          displayWarehouse: parsedData.warehouseId,
+          displayZone: parsedData.zone,
+          displayAisle: parsedData.aisle,
+          displayRack: parsedData.rack,
+          displayBin: parsedData.binId,
+        };
+        setPreviewQr(qrData);
+        setPreviewDialogOpen(true);
 
         setScanInput("");
       } else {
@@ -198,7 +217,13 @@ export default function BarcodeScanPage() {
     }
 
     try {
-      const byteCharacters = atob(base64Data);
+      // Handle base64 with or without data URL prefix
+      let base64String = base64Data;
+      if (base64Data.startsWith("data:image")) {
+        base64String = base64Data.split(",")[1];
+      }
+
+      const byteCharacters = atob(base64String);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -248,27 +273,64 @@ export default function BarcodeScanPage() {
       if (printWindow) {
         printWindow.document.write(`
           <html>
-            <head><title>Print QR Code</title></head>
-            <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:Arial;">
-              <img src="data:image/png;base64,${qrData.qrImage}" style="max-width:300px;height:auto;" />
-              <p style="margin-top:20px;font-size:14px;color:#666;">
-                <strong>${qrData.grnNumber}</strong> - ${qrData.itemCode}
-              </p>
-              <p style="font-size:12px;color:#999;">
-                ${qrData.quantity} ${qrData.uom} • ${qrData.warehouseId}
-              </p>
+            <head>
+              <title>Print QR Code</title>
+              <style>
+                body { display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; font-family:Arial, sans-serif; margin:0; padding:20px; }
+                .container { text-align:center; }
+                img { max-width:300px; height:auto; }
+                h3 { margin:15px 0 5px; color:#333; }
+                p { margin:3px 0; color:#666; font-size:14px; }
+                .details { margin-top:10px; padding-top:10px; border-top:1px solid #eee; font-size:12px; color:#999; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <img src="data:image/png;base64,${qrData.qrImage}" />
+                <h3>${qrData.grnNumber || "QR Code"}</h3>
+                <p><strong>${qrData.itemCode || ""}</strong> ${qrData.itemName || ""}</p>
+                <p>${qrData.quantity || ""} ${qrData.uom || ""} • ${qrData.warehouseId || ""}</p>
+                <div class="details">
+                  Location: ${[qrData.displayZone, qrData.displayAisle, qrData.displayRack, qrData.displayBin].filter(Boolean).join(" → ")}
+                </div>
+              </div>
             </body>
           </html>
         `);
         printWindow.document.close();
         printWindow.focus();
-        printWindow.print();
-        printWindow.close();
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
       }
       toast.success("Print dialog opened");
     } else {
       toast.error("No QR image available to print");
     }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleString();
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusMap = {
+      GENERATED: "bg-blue-100 text-blue-800",
+      SCANNED: "bg-green-100 text-green-800",
+      PICKED: "bg-yellow-100 text-yellow-800",
+      PACKED: "bg-purple-100 text-purple-800",
+      SHIPPED: "bg-indigo-100 text-indigo-800",
+      DELIVERED: "bg-emerald-100 text-emerald-800",
+      CANCELLED: "bg-red-100 text-red-800",
+    };
+    return statusMap[status?.toUpperCase()] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -391,7 +453,8 @@ export default function BarcodeScanPage() {
                             value !== undefined &&
                             value !== "" &&
                             !key.includes("Image") &&
-                            !key.includes("image"),
+                            !key.includes("image") &&
+                            key !== "qrData",
                         )
                         .slice(0, 10)
                         .map(([key, value]) => (
@@ -408,7 +471,7 @@ export default function BarcodeScanPage() {
                         ))}
                     </div>
                     {scanResult.qrImage && (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                           size="sm"
                           onClick={() => {
@@ -417,7 +480,7 @@ export default function BarcodeScanPage() {
                           }}
                         >
                           <Eye className="mr-1.5 size-3.5" />
-                          View QR
+                          View Details
                         </Button>
                         <Button
                           size="sm"
@@ -556,93 +619,202 @@ export default function BarcodeScanPage() {
         </Card>
       )}
 
-      {/* QR Code Preview Dialog */}
+      {/* QR Code Preview Dialog - Enhanced */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="size-4" />
-              QR Code Preview
+              QR / Barcode Details
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-4">
-            {previewQr && (
-              <>
-                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed">
-                  {previewQr.qrImage ? (
-                    <img
-                      src={`data:image/png;base64,${previewQr.qrImage}`}
-                      alt="QR Code"
-                      className="max-w-[200px] h-auto"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <QrCode className="size-16" />
-                      <p className="text-sm">QR Code Preview</p>
-                    </div>
+          {previewQr && (
+            <div className="flex flex-col gap-4 py-2">
+              {/* Status Badge */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge className={getStatusColor(previewQr.status)}>
+                    {previewQr.status || "GENERATED"}
+                  </Badge>
+                  {previewQr.scanCount > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      Scanned {previewQr.scanCount} times
+                    </Badge>
                   )}
                 </div>
-                <div className="w-full space-y-1 text-sm">
-                  <p>
-                    <strong>QR ID:</strong> {previewQr.qrId || "-"}
+                <span className="text-xs text-muted-foreground">
+                  {previewQr.labelType} • {previewQr.labelLevel}
+                </span>
+              </div>
+
+              {/* QR and Barcode Images */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-center p-4 bg-white rounded-lg border-2 border-dashed w-full min-h-[200px]">
+                    {previewQr.qrImage ? (
+                      <img
+                        src={`data:image/png;base64,${previewQr.qrImage}`}
+                        alt="QR Code"
+                        className="max-w-[180px] h-auto"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <QrCode className="size-12" />
+                        <p className="text-sm">No QR Image</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    QR Code: {previewQr.qrId || "N/A"}
                   </p>
-                  <p>
-                    <strong>GRN:</strong> {previewQr.grnNumber}
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-center p-4 bg-white rounded-lg border-2 border-dashed w-full min-h-[200px]">
+                    {previewQr.barcodeImage ? (
+                      <img
+                        src={`data:image/png;base64,${previewQr.barcodeImage}`}
+                        alt="Barcode"
+                        className="max-w-[180px] h-auto"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Barcode className="size-12" />
+                        <p className="text-sm">No Barcode Image</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Barcode: {previewQr.barcode || "N/A"}
                   </p>
-                  <p>
-                    <strong>Item:</strong> {previewQr.itemCode} -{" "}
-                    {previewQr.itemName}
-                  </p>
-                  <p>
-                    <strong>Quantity:</strong> {previewQr.quantity}{" "}
-                    {previewQr.uom}
-                  </p>
-                  <p>
-                    <strong>Status:</strong> {previewQr.status || "GENERATED"}
-                  </p>
-                  <p>
-                    <strong>Location:</strong>{" "}
-                    {[
-                      previewQr.displayWarehouse,
-                      previewQr.displayZone,
-                      previewQr.displayAisle,
-                      previewQr.displayRack,
-                      previewQr.displayBin,
-                    ]
+                </div>
+              </div>
+
+              {/* Item Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+                    Item Information
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <Package className="size-3.5 text-muted-foreground" />
+                    <span>
+                      <strong>Item:</strong> {previewQr.itemCode || "-"}
+                    </span>
+                  </div>
+                  <div className="pl-5.5">
+                    <span className="text-muted-foreground">
+                      {previewQr.itemName || "No item name"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Hash className="size-3.5 text-muted-foreground" />
+                    <span>
+                      <strong>Batch:</strong> {previewQr.batchNumber || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>
+                      <strong>Qty:</strong> {previewQr.quantity || 0}{" "}
+                      {previewQr.uom || ""}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+                    Location Details
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="size-3.5 text-muted-foreground" />
+                    <span>
+                      <strong>WH:</strong> {previewQr.warehouseId || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="size-3.5 text-muted-foreground" />
+                    <span>
+                      <strong>Zone:</strong> {previewQr.zone || "-"}
+                    </span>
+                  </div>
+                  <div className="pl-5.5 text-muted-foreground">
+                    {[previewQr.aisle, previewQr.rack, previewQr.shelf]
                       .filter(Boolean)
-                      .join(" → ")}
-                  </p>
+                      .join(" → ") || "No location details"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>
+                      <strong>Bin:</strong> {previewQr.binId || "-"}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex gap-2 w-full flex-wrap">
+              </div>
+
+              {/* Additional Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div>
+                  <strong>GRN Number:</strong> {previewQr.grnNumber || "-"}
+                </div>
+                <div>
+                  <strong>QR Type:</strong> {previewQr.qrType || "-"}
+                </div>
+                <div>
+                  <strong>Generated:</strong>{" "}
+                  {formatDate(previewQr.generatedAt)}
+                </div>
+                <div>
+                  <strong>Generated By:</strong> {previewQr.generatedBy || "-"}
+                </div>
+                {previewQr.scannedAt && (
+                  <>
+                    <div>
+                      <strong>Scanned At:</strong>{" "}
+                      {formatDate(previewQr.scannedAt)}
+                    </div>
+                    <div>
+                      <strong>Scanned By:</strong> {previewQr.scannedBy || "-"}
+                    </div>
+                  </>
+                )}
+                {previewQr.putawayTaskId && (
+                  <div>
+                    <strong>Task ID:</strong> {previewQr.putawayTaskId}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <Button
+                  size="sm"
+                  onClick={() => handleDownloadQR(previewQr)}
+                  className="flex-1 min-w-[100px]"
+                >
+                  <Download className="mr-1.5 size-3.5" />
+                  Download QR
+                </Button>
+                {previewQr.barcodeImage && (
                   <Button
-                    className="flex-1"
-                    onClick={() => handleDownloadQR(previewQr)}
-                  >
-                    <Download className="mr-1.5 size-3.5" />
-                    Download QR
-                  </Button>
-                  {previewQr.barcodeImage && (
-                    <Button
-                      className="flex-1"
-                      variant="outline"
-                      onClick={() => handleDownloadBarcode(previewQr)}
-                    >
-                      <Barcode className="mr-1.5 size-3.5" />
-                      Download Barcode
-                    </Button>
-                  )}
-                  <Button
+                    size="sm"
                     variant="outline"
-                    className="flex-1"
-                    onClick={() => handlePrint(previewQr)}
+                    onClick={() => handleDownloadBarcode(previewQr)}
+                    className="flex-1 min-w-[100px]"
                   >
-                    <Printer className="mr-1.5 size-3.5" />
-                    Print
+                    <Barcode className="mr-1.5 size-3.5" />
+                    Download Barcode
                   </Button>
-                </div>
-              </>
-            )}
-          </div>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handlePrint(previewQr)}
+                  className="flex-1 min-w-[100px]"
+                >
+                  <Printer className="mr-1.5 size-3.5" />
+                  Print
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
