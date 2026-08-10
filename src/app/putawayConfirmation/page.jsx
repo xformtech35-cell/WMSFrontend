@@ -49,7 +49,7 @@ async function executePutaway(payload) {
 }
 
 async function confirmPutaway(payload) {
-  const response = await api.post("/putaway/confirm", payload);
+  const response = await CREATE("/putaway/confirm", payload);
   return response.data;
 }
 
@@ -620,7 +620,7 @@ export default function PutawayConfirmationPage() {
                   </td>
                 </tr>
               ) : (
-                putawayHistory.slice(0, 10).map((item, idx) => (
+                putawayHistory.slice(0, 100).map((item, idx) => (
                   <tr
                     key={item.id || idx}
                     className="hover:bg-gray-50 transition-colors group"

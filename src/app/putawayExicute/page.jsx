@@ -142,7 +142,7 @@ export default function PutawayExicutePage() {
   const fetchPutawayHistory = async () => {
     try {
       setIsLoadingHistory(true);
-      const response = await api.get("/putaway");
+      const response = await api.get("/putaway?page=0&size=100");
       const content =
         response.data?.data?.content ||
         response.data?.content ||
@@ -624,7 +624,7 @@ export default function PutawayExicutePage() {
                   </td>
                 </tr>
               ) : (
-                putawayHistory.slice(0, 10).map((item, idx) => (
+                putawayHistory.slice(0, 100).map((item, idx) => (
                   <tr
                     key={item.id || idx}
                     className="hover:bg-gray-50 transition-colors group"
