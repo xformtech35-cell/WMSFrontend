@@ -77,57 +77,135 @@ export default function GRNSelector({
     }
   }, [open]);
 
+  // const fetchGRNs = async (page = 0, searchQuery = "") => {
+  //   try {
+  //     setIsLoading(true);
+  //     const params = {
+  //       page: page,
+  //       size: pagination.pageSize,
+  //     };
+
+  //     if (searchQuery) {
+  //       params.search = searchQuery;
+  //     }
+
+  //     const response = await fetchApprovedGRNs(params);
+
+  //     // Extract data from response
+  //     const data = response.data?.data || response.data || response;
+  //     const content = data.content || [];
+  //     const totalElements = data.totalElements || 0;
+  //     const totalPages = data.totalPages || 0;
+  //     const currentPage = data.number || page;
+  //     const pageSize = data.size || pagination.pageSize;
+  //     const first = data.first !== undefined ? data.first : true;
+  //     const last = data.last !== undefined ? data.last : true;
+
+  //     // Filter GRNs that have at least one line with barcodeGenerate === null
+  //     const filteredContent = content.filter((grn) =>
+  //       grn.lines?.some((line) => line.barcodeGenerate === null)
+  //     );
+
+  //     setGrns(filteredContent);
+  //     setPagination({
+  //       currentPage,
+  //       pageSize,
+  //       totalElements: filteredContent.length,
+  //       totalPages: Math.ceil(filteredContent.length / pageSize),
+  //       first,
+  //       last,
+  //     });
+
+  //     // Auto-expand first GRN if available
+  //     if (filteredContent.length > 0 && !expandedGRN) {
+  //       setExpandedGRN(filteredContent[0].id);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching approved GRNs:", error);
+  //     toast.error("Failed to load GRNs. Please try again.");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const fetchGRNs = async (page = 0, searchQuery = "") => {
-    try {
-      setIsLoading(true);
-      const params = {
-        page: page,
-        size: pagination.pageSize,
-      };
+  try {
+    setIsLoading(true);
 
-      if (searchQuery) {
-        params.search = searchQuery;
-      }
+    const params = {
+      page,
+      size: pagination.pageSize,
+    };
 
-      const response = await fetchApprovedGRNs(params);
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
 
-      // Extract data from response
-      const data = response.data?.data || response.data || response;
-      const content = data.content || [];
-      const totalElements = data.totalElements || 0;
-      const totalPages = data.totalPages || 0;
-      const currentPage = data.number || page;
-      const pageSize = data.size || pagination.pageSize;
-      const first = data.first !== undefined ? data.first : true;
-      const last = data.last !== undefined ? data.last : true;
+    const response = await fetchApprovedGRNs(params);
 
-      // Filter GRNs that have at least one line with barcodeGenerate === null
-      const filteredContent = content.filter((grn) =>
-        grn.lines?.some((line) => line.barcodeGenerate === null)
+    const data = response.data?.data || response.data || response;
+    const content = data.content || [];
+
+    const totalElements = data.totalElements || 0;
+    const totalPages = data.totalPages || 0;
+    const currentPage = data.number || page;
+    const pageSize = data.size || pagination.pageSize;
+    const first = data.first !== undefined ? data.first : true;
+    const last = data.last !== undefined ? data.last : true;
+
+    // Only GRNs having at least one pending barcode line
+    const filteredContent = content.filter((grn) =>
+      grn.lines?.some((line) => line.barcodeGenerate === null)
+    );
+
+    setGrns(filteredContent);
+
+    setPagination({
+      currentPage,
+      pageSize,
+      totalElements: totalElements,
+      totalPages,
+      first,
+      last,
+    });
+
+    // Select first GRN + first pending line by default
+    if (filteredContent.length > 0) {
+      const firstGRN = filteredContent[0];
+
+      const firstPendingLine = firstGRN.lines?.find(
+        (line) => line.barcodeGenerate === null
       );
 
-      setGrns(filteredContent);
-      setPagination({
-        currentPage,
-        pageSize,
-        totalElements: filteredContent.length,
-        totalPages: Math.ceil(filteredContent.length / pageSize),
-        first,
-        last,
-      });
+      setExpandedGRN(firstGRN.id);
+      setSelectedGrnId(firstGRN.id);
 
-      // Auto-expand first GRN if available
-      if (filteredContent.length > 0 && !expandedGRN) {
-        setExpandedGRN(filteredContent[0].id);
+      if (firstPendingLine) {
+        setSelectedLineId(firstPendingLine.id);
+      } else {
+        setSelectedLineId(null);
       }
-    } catch (error) {
-      console.error("Error fetching approved GRNs:", error);
-      toast.error("Failed to load GRNs. Please try again.");
-    } finally {
-      setIsLoading(false);
+    } else {
+      setExpandedGRN(null);
+      setSelectedGrnId(null);
+      setSelectedLineId(null);
     }
-  };
 
+    return filteredContent;
+  } catch (error) {
+    console.error("Error fetching approved GRNs:", error);
+    toast.error("Failed to load GRNs. Please try again.");
+
+    setGrns([]);
+    setExpandedGRN(null);
+    setSelectedGrnId(null);
+    setSelectedLineId(null);
+
+    return [];
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handlePageChange = (newPage) => {
     if (newPage >= 0 && newPage < pagination.totalPages) {
       fetchGRNs(newPage, search);

@@ -169,6 +169,20 @@ const ALL_MENU_ITEMS = [
     permission: P.PUTAWAY_VIEW,
   },
   {
+    href: "/putawayExicute",
+    label: "Putaway Execute",
+    icon: Warehouse,
+    group: "Operations",
+    permission: P.PUTAWAY_VIEW,
+  },
+  {
+    href: "/putawayConfirmation",
+    label: "Putaway Confirmation",
+    icon: Warehouse,
+    group: "Operations",
+    permission: P.PUTAWAY_VIEW,
+  },
+  {
     href: "/inventory",
     label: "Inventory",
     icon: Boxes,

@@ -1,29 +1,34 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { 
+import {
+  Package,
+  CheckCircle2,
   Search,
-  X, 
-  User, 
+  X,
+  ArrowRight,
+  Warehouse,
+  User,
+  FileText,
   Boxes,
   RefreshCw,
   MapPin,
-  Plus, 
-  Eye, 
-} from "lucide-react"; 
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  AlertCircle,
+  Play,
+  Check,
+  ClipboardCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
- 
 import { Input } from "@/components/ui/input";
- 
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
-  
 import { CREATE } from "@/components/apiRequest";
- 
-import PutawayFormModal from "./components/PutawayFormModal";
 import PutawayDetailsModal from "./components/PutawayDetailsModal";
-
-// Import the new components
+import PutawayConfirmModal from "./components/PutawayConfirmModal";
 
 async function fetchApprovedGRNs(params = {}) {
   const response = await api.get(
@@ -38,7 +43,17 @@ async function initiatePutaway(payload) {
   return response.data;
 }
 
-export default function PutawayPage() {
+async function executePutaway(payload) {
+  const response = await api.post("/putaway/execute", payload);
+  return response.data;
+}
+
+async function confirmPutaway(payload) {
+  const response = await api.post("/putaway/confirm", payload);
+  return response.data;
+}
+
+export default function PutawayConfirmationPage() {
   // State for GRN data
   const [grns, setGrns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +64,8 @@ export default function PutawayPage() {
   const [selectedGrn, setSelectedGrn] = useState(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [selectedPutaway, setSelectedPutaway] = useState(null);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   // State for search and filter
   const [search, setSearch] = useState("");
@@ -383,6 +400,52 @@ export default function PutawayPage() {
     setSelectedPutaway(null);
   };
 
+  const openConfirmModal = (item) => {
+    setSelectedTask(item);
+    setConfirmModalOpen(true);
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleConfirmPutaway = async (confirmData) => {
+    try {
+      const payload = {
+        taskNumber: selectedTask.taskNumber,
+        confirmedBy: confirmData.confirmedBy,
+        confirmedQuantity: Number(confirmData.confirmedQuantity),
+        binId: confirmData.binId,
+        binBarcode: confirmData.binBarcode,
+        isVerified: confirmData.isVerified,
+        verifiedBy: confirmData.verifiedBy || confirmData.confirmedBy,
+        remarks: confirmData.remarks || "",
+        lines: confirmData.lines.map((line) => ({
+          lineId: Number(line.lineId),
+          confirmedQuantity: Number(line.confirmedQuantity),
+          actualBin: line.actualBin || confirmData.binId,
+          actualBinBarcode: line.actualBinBarcode || confirmData.binBarcode,
+          remarks: line.remarks || "",
+        })),
+      };
+
+      await confirmPutaway(payload);
+      toast.success("Putaway confirmed successfully!");
+      setConfirmModalOpen(false);
+      setSelectedTask(null);
+      await fetchPutawayHistory();
+    } catch (error) {
+      console.error("Error confirming putaway:", error);
+      toast.error(
+        error.response?.data?.message ||
+          error.response?.data?.detail ||
+          "Failed to confirm putaway.",
+      );
+      throw error;
+    }
+  };
+
   const filtered = useMemo(() => {
     let list = grns;
     if (search.trim()) {
@@ -417,6 +480,18 @@ export default function PutawayPage() {
 
   const showInitialLoading = isLoading && !grns?.length;
 
+  // Check if task can be confirmed (not completed/cancelled and has been executed)
+  const canConfirm = (status, stage) => {
+    return (
+      status === "COMPLETED" &&
+      status === "CANCELLED" &&
+      (stage !== "PLACED" ||
+        stage !== "PICKED" ||
+        stage !== "IN_PROGRESS" ||
+        stage === "COMPLETED")
+    );
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
@@ -424,21 +499,13 @@ export default function PutawayPage() {
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white">
-                Putaway Management{" "}
+                Putaway Confirmation Management
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={openCreate}
-                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                Initiate Putaway
-              </button>
-              <button
-                type="button"
-                onClick={() => fetchApprovedGRNsList(search)}
+                onClick={() => fetchPutawayHistory()}
                 disabled={isLoading}
                 className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
               >
@@ -449,25 +516,13 @@ export default function PutawayPage() {
         </div>
       </div>
 
-      {/* Putaway Form - Custom Modal */}
-      <PutawayFormModal
-        open={open}
-        onClose={handleClose}
-        grns={grns}
+      {/* Putaway Confirm Modal */}
+      <PutawayConfirmModal
+        open={confirmModalOpen}
+        onClose={closeConfirmModal}
+        selectedTask={selectedTask}
+        onConfirm={handleConfirmPutaway}
         users={users}
-        selectedGrnForPutaway={selectedGrnForPutaway}
-        selectedGrn={selectedGrn}
-        grnItems={grnItems}
-        formData={formData}
-        formErrors={formErrors}
-        isSubmitting={isSubmitting}
-        onGrnSelect={handleGrnSelect}
-        onToggleItemSelection={toggleItemSelection}
-        onAddSelectedItems={addSelectedItemsToLines}
-        onRemoveLine={removeLine}
-        onInputChange={handleInputChange}
-        onLineChange={handleLineChange}
-        onSubmit={handleSubmit}
       />
 
       {/* Putaway Details View - Custom Modal */}
@@ -522,20 +577,17 @@ export default function PutawayPage() {
                   Assigned To
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Receiving Area
+                  Stage
                 </th>
-
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Items
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total Qty
                 </th>
-
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Action
                 </th>
@@ -598,14 +650,19 @@ export default function PutawayPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {item.receivingArea || "-"}
-                        </span>
-                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                          item.stage === "COMPLETED" || item.stage === "PLACED"
+                            ? "bg-green-100 text-green-700 border-green-200"
+                            : item.stage === "IN_PROGRESS" ||
+                                item.stage === "PICKED"
+                              ? "bg-blue-100 text-blue-700 border-blue-200"
+                              : "bg-yellow-100 text-yellow-700 border-yellow-200"
+                        }`}
+                      >
+                        {item.stage || "PENDING"}
+                      </span>
                     </td>
-
                     <td className="px-4 py-3 text-center">
                       <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                         {item.lines?.length || 0}
@@ -616,7 +673,6 @@ export default function PutawayPage() {
                         {item.totalQuantity || 0}
                       </span>
                     </td>
-
                     <td className="px-4 py-3">
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
@@ -632,9 +688,8 @@ export default function PutawayPage() {
                         {item.status || "PENDING"}
                       </span>
                     </td>
-
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => viewPutawayDetails(item)}
                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -642,6 +697,15 @@ export default function PutawayPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {(item.status === "COMPLETED" && item.stage === "COMPLETED") && (
+                          <button
+                            onClick={() => openConfirmModal(item)}
+                            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Confirm Putaway"
+                          >
+                            <ClipboardCheck className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
