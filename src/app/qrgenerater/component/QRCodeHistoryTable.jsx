@@ -1,5 +1,5 @@
 // components/QRCodeHistoryTable.jsx
-import { Eye, Download, Printer, QrCode, ScanBarcode } from "lucide-react";
+import { Eye, Download, Printer, QrCode, ScanBarcode, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -35,57 +35,73 @@ export default function QRCodeHistoryTable({
 }) {
   if (isLoading) {
     return (
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="text-lg">Generation History</CardTitle>
-          <CardDescription>Loading QR codes...</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="p-6 space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      </div>
     );
   }
 
   if (!qrHistory.length) {
     return (
-      <Card className="glass-card">
-        <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-          <QrCode className="size-12 opacity-30" />
-          <p className="text-sm">No QR codes found. Generate your first QR code.</p>
-        </CardContent>
-      </Card>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+          <QrCode className="w-12 h-12 text-gray-300" />
+          <p className="text-gray-500 font-medium">No QR codes found</p>
+          <p className="text-sm text-gray-400">Generate your first QR code to get started</p>
+        </div>
+      </div>
     );
   }
 
+  // Handle page change - convert between 1-based (TablePagination) and 0-based (API)
+  const handlePageChange = (newPage) => {
+    // TablePagination passes 1-based page numbers
+    // API expects 0-based page numbers
+    if (newPage >= 1 && newPage <= totalPages) {
+      onPageChange(newPage - 1);
+    }
+  };
+
   return (
-    <Card className="glass-card overflow-hidden">
-      <CardHeader>
-        <CardTitle className="text-lg">Generation History</CardTitle>
-        <CardDescription>
-          Recently generated QR codes and their details
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>#</TableHead>
-              <TableHead>QR ID</TableHead>
-              <TableHead>GRN Number</TableHead>
-              <TableHead>Item Code</TableHead>
-              <TableHead>Item Name</TableHead>
-              <TableHead>Qty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                #
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                QR ID
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                GRN Number
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Item Code
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Item Name
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Qty
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Location
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
             {qrHistory.map((h, idx) => {
               const location = [
                 h.displayWarehouse || h.warehouseId,
@@ -98,94 +114,101 @@ export default function QRCodeHistoryTable({
                 .join(" → ");
 
               return (
-                <TableRow key={h.id || idx} className="table-row-hover">
-                  <TableCell className="text-xs text-muted-foreground">
-                    {startItem + idx}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{h.qrId || "-"}</TableCell>
-                  <TableCell className="font-mono text-xs font-medium">
-                    {h.grnNumber || "-"}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{h.itemCode || "-"}</TableCell>
-                  <TableCell>{h.itemName || "-"}</TableCell>
-                  <TableCell className="text-center">
-                    {h.quantity} {h.uom}
-                  </TableCell>
-                  <TableCell>
+                <tr key={h.id || idx} className="hover:bg-gray-50 transition-colors group">
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-500">{startItem + idx}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => onView(h)}
+                      className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline cursor-pointer transition-colors"
+                    >
+                      {h.qrId || "-"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-medium text-blue-600">
+                      {h.grnNumber || "-"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs">{h.itemCode || "-"}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-600">{h.itemName || "-"}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                      {h.quantity} {h.uom}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        h.status === "GENERATED"
-                          ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
-                          : "bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                        h.status === "GENERATED" || h.status === "COMPLETED"
+                          ? "bg-green-100 text-green-700 border-green-200"
+                          : h.status === "IN_PROGRESS"
+                          ? "bg-blue-100 text-blue-700 border-blue-200"
+                          : h.status === "CANCELLED"
+                          ? "bg-red-100 text-red-700 border-red-200"
+                          : "bg-yellow-100 text-yellow-700 border-yellow-200"
                       }`}
                     >
                       {h.status || "GENERATED"}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-xs" title={location}>
-                    {location || "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="inline-flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-600 truncate max-w-[150px]" title={location}>
+                        {location || "-"}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
                         onClick={() => onView(h)}
+                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                         title="Preview"
-                        className="cursor-pointer"
-
                       >
-                        <Eye className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => onDownload(h)}
-                        title="QR"
-                        className="cursor-pointer"
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Download QR"
                         disabled={!h.qrImage}
                       >
-                        <QrCode  className="size-3.5" />
-                      </Button>
-                       <Button
-                        variant="ghost"
-                        size="sm"
+                        <QrCode className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleDownloadbarcode(h)}
-                        title="Barcode"
-                        className="cursor-pointer"
-
+                        className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="Download Barcode"
                         disabled={!h.barcodeImage}
                       >
-                        <ScanBarcode   className="size-3.5" />
-                      </Button>
-                      {/* <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPrint(h)}
-                        title="Print"
-                        disabled={!h.qrImage}
-                      >
-                        <Printer className="size-3.5" />
-                      </Button> */}
+                        <ScanBarcode className="w-4 h-4" />
+                      </button>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               );
             })}
-          </TableBody>
-        </Table>
-        <TablePagination
-          page={page}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          startItem={startItem}
-          endItem={endItem}
-          onPrev={() => onPageChange(Math.max(1, page - 1))}
-          onNext={() => onPageChange(Math.min(totalPages, page + 1))}
-          onFirst={() => onPageChange(1)}
-          onLast={() => onPageChange(totalPages)}
-        />
-      </CardContent>
-    </Card>
+          </tbody>
+        </table>
+      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        startItem={startItem}
+        endItem={endItem}
+        onPrev={() => handlePageChange(page - 1)}
+        onNext={() => handlePageChange(page + 1)}
+        onFirst={() => handlePageChange(1)}
+        onLast={() => handlePageChange(totalPages)}
+      />
+    </div>
   );
 }

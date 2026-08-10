@@ -697,7 +697,7 @@ export default function PutawayConfirmationPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {(item.status === "COMPLETED" && item.stage === "COMPLETED") && (
+                        {(item.status === "CONFIRMED" && item.stage === "CONFIRMED") && (
                           <button
                             onClick={() => openConfirmModal(item)}
                             className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
