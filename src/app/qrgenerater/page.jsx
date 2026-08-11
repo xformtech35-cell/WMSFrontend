@@ -250,6 +250,7 @@ export default function QRCodeGeneratorPage() {
       const transformedData = content.map((item) => ({
         id: item.id,
         qrId: item.qrId,
+        createdAt: item.createdAt,
         qrCode: item.qrCode,
         qrImage: item.qrImage,
         barcode: item.barcode,

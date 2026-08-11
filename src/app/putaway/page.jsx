@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { 
+import { useState, useMemo, useEffect, useCallback } from "react";
+import {
   Search,
-  X, 
-  User, 
+  X,
+  User,
   Boxes,
   RefreshCw,
   MapPin,
-  Plus, 
-  Eye, 
-} from "lucide-react"; 
+  Plus,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+} from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
- 
+
 import { Input } from "@/components/ui/input";
- 
+
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
-  
+
 import { CREATE } from "@/components/apiRequest";
- 
+
 import PutawayFormModal from "./components/PutawayFormModal";
 import PutawayDetailsModal from "./components/PutawayDetailsModal";
 
@@ -52,6 +55,12 @@ export default function PutawayPage() {
 
   // State for search and filter
   const [search, setSearch] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [stageFilter, setStageFilter] = useState("");
+  const [grnNumberFilter, setGrnNumberFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   // State for master data (for dropdowns)
   const [users, setUsers] = useState([]);
@@ -73,6 +82,10 @@ export default function PutawayPage() {
   // State for putaway history
   const [putawayHistory, setPutawayHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyTotalPages, setHistoryTotalPages] = useState(0);
+  const [historyTotalElements, setHistoryTotalElements] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageSize] = useState(10);
 
   // State for selected GRN in form
   const [selectedGrnForPutaway, setSelectedGrnForPutaway] = useState("");
@@ -81,10 +94,8 @@ export default function PutawayPage() {
   // Fetch data on component mount
   useEffect(() => {
     fetchApprovedGRNsList();
-    fetchPutawayHistory();
     fetchMasterData();
   }, []);
-
   const fetchMasterData = async () => {
     try {
       const [usersRes] = await Promise.all([
@@ -118,16 +129,42 @@ export default function PutawayPage() {
     }
   };
 
-  const fetchPutawayHistory = async () => {
+  const fetchPutawayHistory = async (
+    page = 0,
+    filters = {
+      search: debouncedHistorySearch,
+      status: statusFilter,
+      stage: stageFilter,
+      grnNumber: grnNumberFilter,
+    },
+  ) => {
     try {
       setIsLoadingHistory(true);
-      const response = await api.get("/putaway");
-      const content =
-        response.data?.data?.content ||
-        response.data?.content ||
-        response.data ||
-        [];
+      const params = new URLSearchParams();
+      params.append("page", page);
+      params.append("size", historyPageSize);
+      if (filters.search?.trim()) {
+        params.append("search", filters.search.trim());
+      }
+      if (filters.status) {
+        params.append("status", filters.status);
+      }
+      if (filters.stage) {
+        params.append("stage", filters.stage);
+      }
+      if (filters.grnNumber?.trim()) {
+        params.append("grnNumber", filters.grnNumber.trim());
+      }
+      const response = await api.get(`/putaway?${params.toString()}`);
+      const data = response.data?.data || response.data;
+      const content = data?.content || response.data?.content || data || [];
+      const totalPages = data?.totalPages || response.data?.totalPages || 0;
+      const totalElements =
+        data?.totalElements || response.data?.totalElements || 0;
       setPutawayHistory(content);
+      setHistoryTotalPages(totalPages);
+      setHistoryTotalElements(totalElements);
+      setHistoryPage(page);
     } catch (error) {
       console.error("Error fetching putaway history:", error);
       toast.error("Failed to load putaway history.");
@@ -135,6 +172,45 @@ export default function PutawayPage() {
       setIsLoadingHistory(false);
     }
   };
+  useEffect(() => {
+    fetchPutawayHistory(0, {
+      search: debouncedHistorySearch,
+      status: statusFilter,
+      stage: stageFilter,
+      grnNumber: grnNumberFilter,
+    });
+  }, [debouncedHistorySearch, statusFilter, stageFilter, grnNumberFilter]);
+
+  const handleHistoryPageChange = (newPage) => {
+    if (newPage >= 0 && newPage < historyTotalPages) {
+      fetchPutawayHistory(newPage);
+    }
+  };
+
+  // const handleHistorySearch = () => {
+  //   fetchPutawayHistory(0);
+  // };
+
+  // const handleHistorySearchKeyDown = (e) => {
+  //   if (e.key === "Enter") {
+  //     handleHistorySearch();
+  //   }
+  // };
+
+  const clearHistoryFilters = () => {
+    setHistorySearch("");
+    setDebouncedHistorySearch("");
+    setStatusFilter("");
+    setStageFilter("");
+    setGrnNumberFilter("");
+    setHistoryPage(0);
+  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHistorySearch(historySearch.trim());
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [historySearch]);
 
   const openCreate = () => {
     setSelectedGrn(null);
@@ -351,7 +427,7 @@ export default function PutawayPage() {
         lines: [],
       });
 
-      await fetchPutawayHistory();
+      await fetchPutawayHistory(0);
       await fetchApprovedGRNsList(search);
     } catch (error) {
       console.error("Error initiating putaway:", error);
@@ -417,6 +493,18 @@ export default function PutawayPage() {
 
   const showInitialLoading = isLoading && !grns?.length;
 
+  // Status options for filter
+  const statusOptions = ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+  const stageOptions = [
+    "PENDING",
+    "PICKED",
+    "TRANSPORTED",
+    "SCANNED",
+    "PLACED",
+    "CONFIRMED",
+    "COMPLETED",
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
@@ -477,33 +565,123 @@ export default function PutawayPage() {
         selectedPutaway={selectedPutaway}
       />
 
-      {/* Search and Filter */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-8 pr-8"
-            placeholder="Search GRN, inbound, supplier..."
-          />
-          {search && (
+      {/* Putaway History Search and Filters */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              {" "}
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{" "}
+              <Input
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="h-9 pl-8 pr-8"
+                placeholder="Search by task, GRN, assigned to..."
+              />{" "}
+              {historySearch && (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                  onClick={() => {
+                    setHistorySearch("");
+                    setDebouncedHistorySearch("");
+                  }}
+                >
+                  {" "}
+                  <X className="size-3.5 text-muted-foreground hover:text-foreground" />{" "}
+                </button>
+              )}{" "}
+            </div>
+
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => setSearch("")}
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
             >
-              <X className="size-3.5 text-muted-foreground hover:text-foreground" />
+              {" "}
+              <Filter className="w-4 h-4" /> Filters{" "}
+              {(statusFilter || stageFilter || grnNumberFilter) && (
+                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
+                  {" "}
+                  {
+                    [statusFilter, stageFilter, grnNumberFilter].filter(Boolean)
+                      .length
+                  }{" "}
+                </span>
+              )}{" "}
             </button>
+
+            {(historySearch ||
+              statusFilter ||
+              stageFilter ||
+              grnNumberFilter) && (
+              <button
+                type="button"
+                onClick={clearHistoryFilters}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                {" "}
+                Clear All{" "}
+              </button>
+            )}
+          </div>
+
+          {/* Filter dropdown */}
+          {showFilters && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-200">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Status</option>
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Stage
+                </label>
+                <select
+                  value={stageFilter}
+                  onChange={(e) => setStageFilter(e.target.value)}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Stages</option>
+                  {stageOptions.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  GRN Number
+                </label>
+                <Input
+                  value={grnNumberFilter}
+                  onChange={(e) => setGrnNumberFilter(e.target.value)}
+                  className="h-9"
+                  placeholder="Enter GRN number..."
+                />
+              </div>
+            </div>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {grns.length} approved GRNs available
-        </p>
       </div>
 
-      {/* Putaway History */}
-      {/* Table Section - With the same design as GRN page */}
+      {/* Putaway History Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -562,19 +740,26 @@ export default function PutawayPage() {
                         No putaway history found
                       </p>
                       <p className="text-sm text-gray-400">
-                        Initiate a putaway to get started
+                        {historySearch ||
+                        statusFilter ||
+                        stageFilter ||
+                        grnNumberFilter
+                          ? "Try adjusting your search filters"
+                          : "Initiate a putaway to get started"}
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                putawayHistory.slice(0, 10).map((item, idx) => (
+                putawayHistory.map((item, idx) => (
                   <tr
                     key={item.id || idx}
                     className="hover:bg-gray-50 transition-colors group"
                   >
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-500">{idx + 1}</span>
+                      <span className="text-sm text-gray-500">
+                        {historyPage * historyPageSize + idx + 1}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -650,6 +835,51 @@ export default function PutawayPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {!isLoadingHistory && putawayHistory.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 flex-wrap gap-2">
+            <div className="text-sm text-gray-500">
+              Showing {historyPage * historyPageSize + 1} to{" "}
+              {Math.min(
+                (historyPage + 1) * historyPageSize,
+                historyTotalElements,
+              )}{" "}
+              of {historyTotalElements} entries
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleHistoryPageChange(historyPage - 1)}
+                disabled={historyPage === 0}
+                className={`p-2 rounded-lg border border-gray-200 transition-colors ${
+                  historyPage === 0
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {historyPage + 1} of {historyTotalPages || 1}
+              </span>
+              <button
+                onClick={() => handleHistoryPageChange(historyPage + 1)}
+                disabled={
+                  historyPage === historyTotalPages - 1 ||
+                  historyTotalPages === 0
+                }
+                className={`p-2 rounded-lg border border-gray-200 transition-colors ${
+                  historyPage === historyTotalPages - 1 ||
+                  historyTotalPages === 0
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

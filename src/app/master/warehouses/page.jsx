@@ -5,11 +5,15 @@ import {
   Building2,
   CheckCircle2,
   Download,
+  Eye,
   Pencil,
   Plus,
+  Printer,
+  QrCode,
   Search,
   Trash2,
   X,
+  Barcode,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -32,6 +36,12 @@ import {
 import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 async function exportWarehousesExcel(items) {
   await exportWmsWorkbook({
@@ -67,6 +77,7 @@ async function exportWarehousesExcel(items) {
   });
   toast.success("Warehouses exported to Excel");
 }
+
 const apiRequest = async (endpoint, method = "GET", data = null) => {
   try {
     const response = await api.request({
@@ -92,6 +103,7 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
     );
   }
 };
+
 const createAPI = async (data) => {
   return apiRequest("/warehouses", "POST", data);
 };
@@ -106,6 +118,8 @@ export default function WarehousesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewItem, setPreviewItem] = useState(null);
 
   // State for modal
   const [open, setOpen] = useState(false);
@@ -183,12 +197,34 @@ export default function WarehousesPage() {
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field when user types
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
         [name]: undefined,
       }));
+    }
+  };
+
+  const downloadBarcode = (item) => {
+    if (item?.barcodeImage) {
+      const byteCharacters = atob(item.barcodeImage);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `barcode_${item.warehouseId || item.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Barcode downloaded successfully");
+    } else {
+      toast.error("No barcode image available to download");
     }
   };
 
@@ -199,7 +235,6 @@ export default function WarehousesPage() {
       return;
     }
 
-    // Prepare payload with all required fields
     const payload = {
       warehouseId: formData.warehouseId.trim(),
       name: formData.name.trim(),
@@ -211,28 +246,22 @@ export default function WarehousesPage() {
       capacity: formData.capacity ? Number(formData.capacity) : 0,
       remarks: formData.remarks?.trim() || "",
       isActive: true,
-      createdBy: "admin", // Replace with actual user from auth context
+      createdBy: "admin",
     };
 
     try {
       setIsSubmitting(true);
 
       if (editItem) {
-        // Update existing warehouse
         const { createdBy, ...updatePayload } = payload;
         await updateAPI(`${editItem.id}`, updatePayload);
         toast.success("Warehouse updated successfully.");
       } else {
-        // Create new warehouse
-        console.log(JSON.stringify(payload, null, 2));
         await createAPI(payload);
         toast.success("Warehouse created successfully.");
       }
 
-      // Refresh the list
       await fetchWarehouses();
-
-      // Close modal and reset form
       setOpen(false);
       setEditItem(null);
       resetForm();
@@ -307,6 +336,11 @@ export default function WarehousesPage() {
     });
     setFormErrors({});
     setOpen(true);
+  };
+
+  const openPreview = (item) => {
+    setPreviewItem(item);
+    setPreviewDialogOpen(true);
   };
 
   const filtered = useMemo(() => {
@@ -543,6 +577,78 @@ export default function WarehousesPage() {
         </form>
       </SlideOverForm>
 
+      {/* Barcode Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-4" />
+              Warehouse Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {previewItem && (
+              <>
+                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed w-full">
+                  {previewItem.barcodeImage ? (
+                    <img
+                      src={`data:image/png;base64,${previewItem.barcodeImage}`}
+                      alt="Barcode"
+                      className="max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Barcode className="size-16" />
+                      <p className="text-sm">No barcode available</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full space-y-1 text-sm">
+                  <p>
+                    <strong>Warehouse ID:</strong>{" "}
+                    {previewItem.warehouseId || "-"}
+                  </p>
+                  <p>
+                    <strong>Name:</strong> {previewItem.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Location:</strong> {previewItem.location || "-"}
+                  </p>
+                  <p>
+                    <strong>Barcode Data:</strong>{" "}
+                    {previewItem.barcodeData || previewItem.warehouseId || "-"}
+                  </p>
+                  <p>
+                    <strong>Format:</strong>{" "}
+                    {previewItem.barcodeFormat || "CODE128"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span
+                      className={
+                        previewItem.isActive ? "text-green-600" : "text-red-600"
+                      }
+                    >
+                      {previewItem.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    className="flex-1"
+                    onClick={() => downloadBarcode(previewItem)}
+                    disabled={!previewItem.barcodeImage}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Download
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="relative w-full max-w-sm">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -589,6 +695,7 @@ export default function WarehousesPage() {
                   <TableHead>Location</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Capacity</TableHead>
+                  <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -609,12 +716,35 @@ export default function WarehousesPage() {
                         <div className="text-muted-foreground">
                           {w.contactEmail || "-"}
                         </div>
-                         <div className="text-muted-foreground">
+                        <div className="text-muted-foreground">
                           {w.contactPhone || "-"}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{w.capacity|| "-"}</TableCell>
+                    <TableCell>{w.capacity || "-"}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openPreview(w)}
+                        title="View Barcode"
+                        className="
+      inline-flex items-center justify-center
+      h-8 w-8
+      rounded-md
+      bg-blue-50
+      text-blue-600
+      transition-all duration-200
+      hover:bg-blue-600
+      hover:text-white
+      hover:ring-blue-600
+      hover:shadow-sm
+      cursor-pointer
+    "
+                      >
+                        <Barcode className="" />
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">
                         <Button
@@ -639,6 +769,7 @@ export default function WarehousesPage() {
                 ))}
               </TableBody>
             </Table>
+
             <TablePagination
               page={page}
               totalPages={totalPages}

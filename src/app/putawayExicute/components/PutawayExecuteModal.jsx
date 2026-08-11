@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   Play,
@@ -34,6 +34,14 @@ export default function PutawayExecuteModal({
   const [errors, setErrors] = useState({});
   const [availableLines, setAvailableLines] = useState([]);
   // Get available lines for PLACED stage
+  const binBarcodeRef = useRef(null);
+  useEffect(() => {
+    if (formData.stage === "PLACED" && open) {
+      setTimeout(() => {
+        binBarcodeRef.current?.focus();
+      }, 100);
+    }
+  }, [formData.stage, open]);
   useEffect(() => {
     if (selectedTask?.lines) {
       // Filter lines that are not yet placed (you can adjust this logic based on your API)
@@ -235,12 +243,21 @@ export default function PutawayExecuteModal({
                     <Barcode className="size-3.5" />
                     Bin Barcode *
                   </Label>
-                  <Input
+                  {/* <Input
                     id="binBarcode"
                     name="binBarcode"
                     value={formData.binBarcode}
                     onChange={handleInputChange}
                     placeholder="Enter bin barcode"
+                    className={errors.binBarcode ? "border-red-500" : ""}
+                  /> */}
+                  <Input
+                    ref={binBarcodeRef}
+                    id="binBarcode"
+                    name="binBarcode"
+                    value={formData.binBarcode}
+                    onChange={handleInputChange}
+                    placeholder="Scan or enter bin barcode"
                     className={errors.binBarcode ? "border-red-500" : ""}
                   />
                   {errors.binBarcode && (

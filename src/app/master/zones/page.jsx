@@ -10,6 +10,8 @@ import {
   Search,
   Trash2,
   X,
+  Barcode,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -29,6 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
@@ -48,6 +56,7 @@ async function exportZonesExcel(items) {
       { header: "Priority", key: "priority", width: 10, align: "right" },
       { header: "Status", key: "isActive", width: 12 },
       { header: "Warehouse", key: "warehouse", width: 28 },
+      { header: "Barcode Data", key: "barcodeData", width: 20 },
     ],
     rows: items.map((z) => ({
       id: z.id,
@@ -58,6 +67,7 @@ async function exportZonesExcel(items) {
       priority: z.priority ?? "",
       isActive: z.isActive ? "Active" : "Inactive",
       warehouse: z.warehouse?.name ?? "",
+      barcodeData: z.barcodeData ?? "",
     })),
   });
   toast.success("Zones exported to Excel");
@@ -75,11 +85,15 @@ export default function ZonesPage() {
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
 
+  // State for barcode preview
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [selectedZone, setSelectedZone] = useState(null);
+
   // State for search and filter
   const [search, setSearch] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("ALL");
 
-  // State for form data - UPDATED with all fields
+  // State for form data
   const [formData, setFormData] = useState({
     zoneId: "",
     name: "",
@@ -123,6 +137,34 @@ export default function ZonesPage() {
     }
   };
 
+  const downloadBarcode = (item) => {
+    if (item?.barcodeImage) {
+      const byteCharacters = atob(item.barcodeImage);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `barcode_${item.zoneId || item.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Barcode downloaded successfully");
+    } else {
+      toast.error("No barcode image available to download");
+    }
+  };
+
+  const openBarcodePreview = (zone) => {
+    setSelectedZone(zone);
+    setBarcodeDialogOpen(true);
+  };
+
   const validateForm = () => {
     const errors = {};
 
@@ -149,7 +191,6 @@ export default function ZonesPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error for this field when user types
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -165,7 +206,6 @@ export default function ZonesPage() {
       return;
     }
 
-    // Prepare payload with all required fields
     const payload = {
       zoneId: formData.zoneId.trim().toUpperCase(),
       name: formData.name.trim(),
@@ -173,7 +213,7 @@ export default function ZonesPage() {
       zoneType: formData.zoneType,
       isActive: formData.isActive,
       priority: Number(formData.priority) || 1,
-      createdBy: "admin", // You might want to get this from auth context
+      createdBy: "admin",
       remarks: formData.remarks.trim(),
       warehouseId: Number(formData.warehouseId),
     };
@@ -182,21 +222,12 @@ export default function ZonesPage() {
       setIsSubmitting(true);
 
       if (editItem) {
-        // Update existing zone
         await update(`/zones/${editItem?.id}`, payload);
       } else {
-        // Create new zone
-        console.log(
-          "Creating zone with payload:",
-          JSON.stringify(payload, null, 2),
-        );
         await CREATE("/zones", payload);
       }
 
-      // Refresh the list
       await fetchZones();
-
-      // Close modal and reset form
       setOpen(false);
       setEditItem(null);
       resetForm();
@@ -297,6 +328,9 @@ export default function ZonesPage() {
             .includes(q) ||
           String(z.warehouse?.name ?? "")
             .toLowerCase()
+            .includes(q) ||
+          String(z.barcodeData ?? "")
+            .toLowerCase()
             .includes(q),
       );
     }
@@ -339,6 +373,75 @@ export default function ZonesPage() {
         }
       />
 
+      {/* Barcode Preview Dialog */}
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-4" />
+              Zone Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {selectedZone && (
+              <>
+                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed w-full">
+                  {selectedZone.barcodeImage ? (
+                    <img
+                      src={`data:image/png;base64,${selectedZone.barcodeImage}`}
+                      alt="Barcode"
+                      className="max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Barcode className="size-16" />
+                      <p className="text-sm">No barcode available</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full space-y-1 text-sm">
+                  <p>
+                    <strong>Zone ID:</strong> {selectedZone.zoneId || "-"}
+                  </p>
+                  <p>
+                    <strong>Name:</strong> {selectedZone.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Type:</strong> {selectedZone.zoneType || "-"}
+                  </p>
+                  <p>
+                    <strong>Warehouse:</strong> {selectedZone.warehouse?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Barcode Data:</strong> {selectedZone.barcodeData || selectedZone.zoneId || "-"}
+                  </p>
+                  <p>
+                    <strong>Format:</strong> {selectedZone.barcodeFormat || "CODE128"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span className={selectedZone.isActive ? "text-green-600" : "text-red-600"}>
+                      {selectedZone.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    className="flex-1"
+                    onClick={() => downloadBarcode(selectedZone)}
+                    disabled={!selectedZone.barcodeImage}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Download
+                  </Button>
+              
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SlideOverForm
         open={open}
         onOpenChange={(v) => {
@@ -355,7 +458,6 @@ export default function ZonesPage() {
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
         >
-          {/* Zone ID */}
           <div className="space-y-1.5">
             <Label htmlFor="zoneId">Zone ID *</Label>
             <Input
@@ -365,14 +467,13 @@ export default function ZonesPage() {
               value={formData.zoneId}
               onChange={handleInputChange}
               className={formErrors.zoneId ? "border-red-500" : ""}
-              disabled={!!editItem} // Disable editing zone ID if it's part of the key
+              disabled={!!editItem}
             />
             {formErrors.zoneId && (
               <p className="text-xs text-red-500">{formErrors.zoneId}</p>
             )}
           </div>
 
-          {/* Zone Name */}
           <div className="space-y-1.5">
             <Label htmlFor="name">Zone Name *</Label>
             <Input
@@ -388,7 +489,6 @@ export default function ZonesPage() {
             )}
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="description">Description</Label>
             <Input
@@ -400,7 +500,6 @@ export default function ZonesPage() {
             />
           </div>
 
-          {/* Zone Type */}
           <div className="space-y-1.5">
             <Label htmlFor="zoneType">Zone Type</Label>
             <select
@@ -420,7 +519,6 @@ export default function ZonesPage() {
             </select>
           </div>
 
-          {/* Priority */}
           <div className="space-y-1.5">
             <Label htmlFor="priority">Priority</Label>
             <Input
@@ -442,7 +540,6 @@ export default function ZonesPage() {
             </p>
           </div>
 
-          {/* Active Status */}
           <div className="flex items-center space-x-2 pt-1">
             <input
               type="checkbox"
@@ -460,7 +557,6 @@ export default function ZonesPage() {
             </Label>
           </div>
 
-          {/* Remarks */}
           <div className="space-y-1.5">
             <Label htmlFor="remarks">Remarks</Label>
             <Input
@@ -472,7 +568,6 @@ export default function ZonesPage() {
             />
           </div>
 
-          {/* Warehouse */}
           <div className="space-y-1.5">
             <Label htmlFor="warehouseId">Warehouse *</Label>
             <select
@@ -532,7 +627,7 @@ export default function ZonesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 pr-8"
-            placeholder="Search zone or warehouse..."
+            placeholder="Search zone, warehouse, barcode..."
           />
           {search ? (
             <button
@@ -587,6 +682,7 @@ export default function ZonesPage() {
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Warehouse</TableHead>
+                  <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -620,6 +716,30 @@ export default function ZonesPage() {
                       </span>
                     </TableCell>
                     <TableCell>{z.warehouse?.name ?? "-"}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openBarcodePreview(z)}
+                        title="View Barcode"
+                        disabled={!z.barcodeImage}
+                       className="
+      inline-flex items-center justify-center
+      h-8 w-8
+      rounded-md
+      bg-blue-50
+      text-blue-600
+      transition-all duration-200
+      hover:bg-blue-600
+      hover:text-white
+      hover:ring-blue-600
+      hover:shadow-sm
+      cursor-pointer
+    "
+                      >
+                        <Barcode className="" />
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">
                         <Button

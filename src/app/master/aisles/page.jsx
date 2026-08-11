@@ -10,6 +10,8 @@ import {
   Trash2,
   Waypoints,
   X,
+  Barcode,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -29,6 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
@@ -50,6 +58,7 @@ async function exportAislesExcel(items) {
       { header: "Status", key: "isActive", width: 12 },
       { header: "Zone", key: "zone", width: 28 },
       { header: "Warehouse", key: "warehouse", width: 28 },
+      { header: "Barcode Data", key: "barcodeData", width: 20 },
     ],
     rows: items.map((a) => ({
       id: a.id,
@@ -62,6 +71,7 @@ async function exportAislesExcel(items) {
       isActive: a.isActive ? "Active" : "Inactive",
       zone: a.zone?.name ?? "",
       warehouse: a.zone?.warehouse?.name ?? "",
+      barcodeData: a.barcodeData ?? "",
     })),
   });
   toast.success("Aisles exported to Excel");
@@ -78,6 +88,10 @@ export default function AislesPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+
+  // State for barcode preview
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [selectedAisle, setSelectedAisle] = useState(null);
 
   // State for search and filter
   const [search, setSearch] = useState("");
@@ -129,6 +143,34 @@ export default function AislesPage() {
     }
   };
 
+  const downloadBarcode = (item) => {
+    if (item?.barcodeImage) {
+      const byteCharacters = atob(item.barcodeImage);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "image/png" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `barcode_${item.aisleId || item.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Barcode downloaded successfully");
+    } else {
+      toast.error("No barcode image available to download");
+    }
+  };
+
+  const openBarcodePreview = (aisle) => {
+    setSelectedAisle(aisle);
+    setBarcodeDialogOpen(true);
+  };
+
   const validateForm = () => {
     const errors = {};
 
@@ -164,7 +206,6 @@ export default function AislesPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error for this field when user types
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -180,7 +221,6 @@ export default function AislesPage() {
       return;
     }
 
-    // Prepare payload with all required fields
     const payload = {
       aisleId: formData.aisleId.trim().toUpperCase(),
       name: formData.name.trim(),
@@ -198,19 +238,14 @@ export default function AislesPage() {
       setIsSubmitting(true);
 
       if (editItem) {
-        // Update existing aisle
         await update(`/aisles/${editItem?.id}`, payload);
         toast.success("Aisle updated successfully");
       } else {
-        // Create new aisle
         await CREATE("/aisles", payload);
         toast.success("Aisle created successfully");
       }
 
-      // Refresh the list
       await fetchAisles();
-
-      // Close modal and reset form
       setOpen(false);
       setEditItem(null);
       resetForm();
@@ -318,6 +353,9 @@ export default function AislesPage() {
             .includes(q) ||
           String(a.zone?.warehouse?.name ?? "")
             .toLowerCase()
+            .includes(q) ||
+          String(a.barcodeData ?? "")
+            .toLowerCase()
             .includes(q)
       );
     }
@@ -360,6 +398,119 @@ export default function AislesPage() {
         }
       />
 
+      {/* Barcode Preview Dialog */}
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-4" />
+              Aisle Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {selectedAisle && (
+              <>
+                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed w-full">
+                  {selectedAisle.barcodeImage ? (
+                    <img
+                      src={`data:image/png;base64,${selectedAisle.barcodeImage}`}
+                      alt="Barcode"
+                      className="max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Barcode className="size-16" />
+                      <p className="text-sm">No barcode available</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full space-y-1 text-sm">
+                  <p>
+                    <strong>Aisle ID:</strong> {selectedAisle.aisleId || "-"}
+                  </p>
+                  <p>
+                    <strong>Name:</strong> {selectedAisle.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Zone:</strong> {selectedAisle.zone?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Warehouse:</strong> {selectedAisle.zone?.warehouse?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Barcode Data:</strong> {selectedAisle.barcodeData || selectedAisle.aisleId || "-"}
+                  </p>
+                  <p>
+                    <strong>Format:</strong> {selectedAisle.barcodeFormat || "CODE128"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span className={selectedAisle.isActive ? "text-green-600" : "text-red-600"}>
+                      {selectedAisle.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Dimensions:</strong>{" "}
+                    {selectedAisle.width && selectedAisle.length
+                      ? `${selectedAisle.width} × ${selectedAisle.length} ${selectedAisle.unit || "Meter"}`
+                      : selectedAisle.width
+                        ? `${selectedAisle.width} ${selectedAisle.unit || "Meter"}`
+                        : selectedAisle.length
+                          ? `${selectedAisle.length} ${selectedAisle.unit || "Meter"}`
+                          : "-"}
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    className="flex-1"
+                    onClick={() => downloadBarcode(selectedAisle)}
+                    disabled={!selectedAisle.barcodeImage}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      if (!selectedAisle.barcodeImage) {
+                        toast.error("No barcode to print");
+                        return;
+                      }
+                      const printWindow = window.open('', '_blank', 'width=600,height=400');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head><title>Print Barcode</title></head>
+                            <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:Arial;">
+                              <img src="data:image/png;base64,${selectedAisle.barcodeImage}" style="max-width:400px;height:auto;" />
+                              <p style="margin-top:20px;font-size:14px;color:#666;">
+                                <strong>${selectedAisle.name}</strong>
+                              </p>
+                              <p style="font-size:12px;color:#999;">
+                                ${selectedAisle.aisleId}
+                              </p>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.focus();
+                        printWindow.print();
+                        printWindow.close();
+                      }
+                    }}
+                    disabled={!selectedAisle.barcodeImage}
+                  >
+                    <Printer className="mr-1.5 size-3.5" />
+                    Print
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SlideOverForm
         open={open}
         onOpenChange={(v) => {
@@ -376,7 +527,6 @@ export default function AislesPage() {
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
         >
-          {/* Aisle ID */}
           <div className="space-y-1.5">
             <Label htmlFor="aisleId">Aisle ID *</Label>
             <Input
@@ -393,7 +543,6 @@ export default function AislesPage() {
             )}
           </div>
 
-          {/* Aisle Name */}
           <div className="space-y-1.5">
             <Label htmlFor="name">Aisle Name *</Label>
             <Input
@@ -409,7 +558,6 @@ export default function AislesPage() {
             )}
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="description">Description</Label>
             <Input
@@ -421,7 +569,6 @@ export default function AislesPage() {
             />
           </div>
 
-          {/* Width and Length with Unit */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="width">Width</Label>
@@ -460,7 +607,6 @@ export default function AislesPage() {
             </div>
           </div>
 
-          {/* Unit */}
           <div className="space-y-1.5">
             <Label htmlFor="unit">Unit of Measurement</Label>
             <select
@@ -481,7 +627,6 @@ export default function AislesPage() {
             </p>
           </div>
 
-          {/* Active Status */}
           <div className="flex items-center space-x-2 pt-1">
             <input
               type="checkbox"
@@ -499,7 +644,6 @@ export default function AislesPage() {
             </Label>
           </div>
 
-          {/* Remarks */}
           <div className="space-y-1.5">
             <Label htmlFor="remarks">Remarks</Label>
             <Input
@@ -511,7 +655,6 @@ export default function AislesPage() {
             />
           </div>
 
-          {/* Zone */}
           <div className="space-y-1.5">
             <Label htmlFor="zoneId">Zone *</Label>
             <select
@@ -572,7 +715,7 @@ export default function AislesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 pr-8"
-            placeholder="Search aisle, zone, warehouse..."
+            placeholder="Search aisle, zone, barcode..."
           />
           {search ? (
             <button
@@ -628,6 +771,7 @@ export default function AislesPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Zone</TableHead>
                   <TableHead>Warehouse</TableHead>
+                  <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -668,6 +812,30 @@ export default function AislesPage() {
                     </TableCell>
                     <TableCell>{a.zone?.name ?? "-"}</TableCell>
                     <TableCell>{a.zone?.warehouse?.name ?? "-"}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openBarcodePreview(a)}
+                        title="View Barcode"
+                        disabled={!a.barcodeImage}
+                      className="
+      inline-flex items-center justify-center
+      h-8 w-8
+      rounded-md
+      bg-blue-50
+      text-blue-600
+      transition-all duration-200
+      hover:bg-blue-600
+      hover:text-white
+      hover:ring-blue-600
+      hover:shadow-sm
+      cursor-pointer
+    "
+                      >
+                        <Barcode className="" />
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">
                         <Button
