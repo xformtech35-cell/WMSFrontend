@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -11,6 +11,8 @@ import {
   Trash2,
   X,
   Layers,
+  Barcode,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -30,12 +32,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
 import { CREATE, DELETE, update } from "@/components/apiRequest";
 import StatusBadge from "@/components/StatusBadge";
 import { Switch } from "@/components/ui/switch";
+import { downloadImage } from "@/components/downloadImage64";
 
 async function exportLevelsExcel(items) {
   await exportWmsWorkbook({
@@ -50,7 +59,12 @@ async function exportLevelsExcel(items) {
       { header: "Level Number", key: "levelNumber", width: 14, align: "right" },
       { header: "Height", key: "height", width: 18, align: "right" },
       { header: "Unit", key: "unit", width: 10 },
-      { header: "Max Weight (kg)", key: "maxWeightKg", width: 18, align: "right" },
+      {
+        header: "Max Weight (kg)",
+        key: "maxWeightKg",
+        width: 18,
+        align: "right",
+      },
       { header: "Max Items", key: "maxItems", width: 14, align: "right" },
       { header: "Status", key: "status", width: 14 },
       { header: "Rack", key: "rack", width: 20 },
@@ -59,6 +73,7 @@ async function exportLevelsExcel(items) {
       { header: "Warehouse", key: "warehouse", width: 28 },
       { header: "Created By", key: "createdBy", width: 20 },
       { header: "Remarks", key: "remarks", width: 30 },
+      { header: "Barcode Data", key: "barcodeData", width: 20 },
     ],
     rows: items.map((l) => ({
       id: l.id,
@@ -66,7 +81,7 @@ async function exportLevelsExcel(items) {
       name: l.name ?? "",
       description: l.description ?? "",
       levelNumber: l.levelNumber ?? "",
-      height: l.heightCm ? `${l.heightCm} ${l.unit || 'cm'}` : "",
+      height: l.heightCm ? `${l.heightCm} ${l.unit || "cm"}` : "",
       unit: l.unit ?? "cm",
       maxWeightKg: l.maxWeightKg ?? "",
       maxItems: l.maxItems ?? "",
@@ -77,6 +92,7 @@ async function exportLevelsExcel(items) {
       warehouse: l.rack?.aisle?.zone?.warehouse?.name ?? "",
       createdBy: l.createdBy ?? "",
       remarks: l.remarks ?? "",
+      barcodeData: l.barcodeData ?? "",
     })),
   });
   toast.success("Levels exported to Excel");
@@ -93,6 +109,10 @@ export default function LevelsPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+
+  // State for barcode preview
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState(null);
 
   // State for search and filter
   const [search, setSearch] = useState("");
@@ -127,7 +147,12 @@ export default function LevelsPage() {
     try {
       setIsLoading(true);
       const response = await api.get("/levels");
-      setLevels(response.data?.data?.content || response.data?.content || response.data || []);
+      setLevels(
+        response.data?.data?.content ||
+          response.data?.content ||
+          response.data ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching levels:", error);
       toast.error("Failed to load levels.");
@@ -139,11 +164,32 @@ export default function LevelsPage() {
   const fetchRacks = async () => {
     try {
       const response = await api.get("/racks");
-      setRacks(response.data?.data?.content || response.data?.content || response.data || []);
+      setRacks(
+        response.data?.data?.content ||
+          response.data?.content ||
+          response.data ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching racks:", error);
       toast.error("Failed to load racks.");
     }
+  };
+
+  const downloadBarcode = (item) => {
+    if (item?.barcodeImage) {
+      downloadImage(
+        item.barcodeImage,
+        `barcode_${item.levelId || item.id}.png`,
+      );
+    } else {
+      toast.error("No barcode image available to download");
+    }
+  };
+
+  const openBarcodePreview = (level) => {
+    setSelectedLevel(level);
+    setBarcodeDialogOpen(true);
   };
 
   const validateForm = () => {
@@ -181,7 +227,6 @@ export default function LevelsPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error for this field when user types
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -204,7 +249,6 @@ export default function LevelsPage() {
       return;
     }
 
-    // Prepare payload with all required fields
     const payload = {
       levelId: formData.levelId.trim().toUpperCase(),
       name: formData.name.trim(),
@@ -224,19 +268,14 @@ export default function LevelsPage() {
       setIsSubmitting(true);
 
       if (editItem) {
-        // Update existing level
         await update(`/levels/${editItem?.id}`, payload);
         toast.success("Level updated successfully");
       } else {
-        // Create new level
         await CREATE("/levels", payload);
         toast.success("Level created successfully");
       }
 
-      // Refresh the list
       await fetchLevels();
-
-      // Close modal and reset form
       setOpen(false);
       setEditItem(null);
       resetForm();
@@ -245,7 +284,7 @@ export default function LevelsPage() {
       toast.error(
         error.response?.data?.message ||
           error.response?.data?.detail ||
-          "Failed to save level."
+          "Failed to save level.",
       );
     } finally {
       setIsSubmitting(false);
@@ -332,7 +371,7 @@ export default function LevelsPage() {
     let list = levels;
     if (rackFilter !== "ALL") {
       list = list.filter(
-        (l) => String(l.rackId ?? l.rack?.id ?? "") === rackFilter
+        (l) => String(l.rackId ?? l.rack?.id ?? "") === rackFilter,
       );
     }
     if (search.trim()) {
@@ -362,7 +401,10 @@ export default function LevelsPage() {
             .includes(q) ||
           String(l.rack?.aisle?.zone?.warehouse?.name ?? "")
             .toLowerCase()
-            .includes(q)
+            .includes(q) ||
+          String(l.barcodeData ?? "")
+            .toLowerCase()
+            .includes(q),
       );
     }
     return [...list].sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0));
@@ -404,6 +446,111 @@ export default function LevelsPage() {
         }
       />
 
+      {/* Barcode Preview Dialog */}
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-4" />
+              Level Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {selectedLevel && (
+              <>
+                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed w-full">
+                  {selectedLevel.barcodeImage ? (
+                    <img
+                      src={`data:image/png;base64,${selectedLevel.barcodeImage}`}
+                      alt="Barcode"
+                      className="max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Barcode className="size-16" />
+                      <p className="text-sm">No barcode available</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full space-y-1 text-sm">
+                  <p>
+                    <strong>Level ID:</strong> {selectedLevel.levelId || "-"}
+                  </p>
+                  <p>
+                    <strong>Name:</strong> {selectedLevel.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Level Number:</strong>{" "}
+                    {selectedLevel.levelNumber || "-"}
+                  </p>
+                  <p>
+                    <strong>Rack:</strong>{" "}
+                    {selectedLevel.rack?.rackId ||
+                      selectedLevel.rack?.name ||
+                      "-"}
+                  </p>
+                  <p>
+                    <strong>Aisle:</strong>{" "}
+                    {selectedLevel.rack?.aisle?.aisleNumber ||
+                      selectedLevel.rack?.aisle?.aisleId ||
+                      "-"}
+                  </p>
+                  <p>
+                    <strong>Zone:</strong>{" "}
+                    {selectedLevel.rack?.aisle?.zone?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Warehouse:</strong>{" "}
+                    {selectedLevel.rack?.aisle?.zone?.warehouse?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Barcode Data:</strong>{" "}
+                    {selectedLevel.barcodeData || selectedLevel.levelId || "-"}
+                  </p>
+                  <p>
+                    <strong>Format:</strong>{" "}
+                    {selectedLevel.barcodeFormat || "CODE128"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span
+                      className={
+                        selectedLevel.isActive
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
+                      {selectedLevel.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Height:</strong> {selectedLevel.heightCm || 0}{" "}
+                    {selectedLevel.unit || "cm"}
+                  </p>
+                  <p>
+                    <strong>Max Weight:</strong>{" "}
+                    {selectedLevel.maxWeightKg || 0} kg
+                  </p>
+                  <p>
+                    <strong>Max Items:</strong> {selectedLevel.maxItems || 0}
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    className="flex-1"
+                    onClick={() => downloadBarcode(selectedLevel)}
+                    disabled={!selectedLevel.barcodeImage}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Download
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SlideOverForm
         open={open}
         onOpenChange={(v) => {
@@ -420,7 +567,6 @@ export default function LevelsPage() {
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
         >
-          {/* Level ID */}
           <div className="space-y-1.5">
             <Label htmlFor="levelId">Level ID *</Label>
             <Input
@@ -439,7 +585,6 @@ export default function LevelsPage() {
             </p>
           </div>
 
-          {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="name">Name *</Label>
             <Input
@@ -455,7 +600,6 @@ export default function LevelsPage() {
             )}
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="description">Description</Label>
             <Input
@@ -467,7 +611,6 @@ export default function LevelsPage() {
             />
           </div>
 
-          {/* Level Number */}
           <div className="space-y-1.5">
             <Label htmlFor="levelNumber">Level Number *</Label>
             <Input
@@ -484,11 +627,11 @@ export default function LevelsPage() {
               <p className="text-xs text-red-500">{formErrors.levelNumber}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Sequential number representing the level position (1 = bottom, 2 = next, etc.)
+              Sequential number representing the level position (1 = bottom, 2 =
+              next, etc.)
             </p>
           </div>
 
-          {/* Height */}
           <div className="space-y-1.5">
             <Label htmlFor="heightCm">Height *</Label>
             <div className="flex gap-2">
@@ -525,7 +668,6 @@ export default function LevelsPage() {
             </p>
           </div>
 
-          {/* Max Weight */}
           <div className="space-y-1.5">
             <Label htmlFor="maxWeightKg">Max Weight (kg) *</Label>
             <Input
@@ -547,7 +689,6 @@ export default function LevelsPage() {
             </p>
           </div>
 
-          {/* Max Items */}
           <div className="space-y-1.5">
             <Label htmlFor="maxItems">Max Items *</Label>
             <Input
@@ -568,7 +709,6 @@ export default function LevelsPage() {
             </p>
           </div>
 
-          {/* Status / Active */}
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">Active Status</Label>
@@ -582,7 +722,6 @@ export default function LevelsPage() {
             />
           </div>
 
-          {/* Rack */}
           <div className="space-y-1.5">
             <Label htmlFor="rackId">Rack *</Label>
             <select
@@ -599,7 +738,9 @@ export default function LevelsPage() {
                 <option key={r.id} value={r.id}>
                   {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
                   {r.name ? ` - ${r.name}` : ""}
-                  {r.aisle?.aisleNumber ? ` (Aisle: ${r.aisle.aisleNumber})` : ""}
+                  {r.aisle?.aisleNumber
+                    ? ` (Aisle: ${r.aisle.aisleNumber})`
+                    : ""}
                   {r.aisle?.zone?.name ? ` @ ${r.aisle.zone.name}` : ""}
                 </option>
               ))}
@@ -609,7 +750,6 @@ export default function LevelsPage() {
             )}
           </div>
 
-          {/* Created By */}
           <div className="space-y-1.5">
             <Label htmlFor="createdBy">Created By</Label>
             <Input
@@ -624,7 +764,6 @@ export default function LevelsPage() {
             </p>
           </div>
 
-          {/* Remarks */}
           <div className="space-y-1.5">
             <Label htmlFor="remarks">Remarks</Label>
             <Input
@@ -672,7 +811,7 @@ export default function LevelsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 pr-8"
-            placeholder="Search level ID, name, rack..."
+            placeholder="Search level ID, name, rack, barcode..."
           />
           {search ? (
             <button
@@ -732,6 +871,7 @@ export default function LevelsPage() {
                   <TableHead>Rack</TableHead>
                   <TableHead>Aisle</TableHead>
                   <TableHead>Zone</TableHead>
+                  <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -744,9 +884,7 @@ export default function LevelsPage() {
                     <TableCell className="font-mono text-xs font-medium">
                       {l.levelId || "-"}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {l.name || "-"}
-                    </TableCell>
+                    <TableCell className="text-sm">{l.name || "-"}</TableCell>
                     <TableCell className="text-xs text-center">
                       {l.levelNumber || "-"}
                     </TableCell>
@@ -765,19 +903,48 @@ export default function LevelsPage() {
                       {l.maxItems || "-"}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge 
-                        status={l.isActive ? "Active" : "Inactive"} 
+                      <StatusBadge
+                        status={l.isActive ? "Active" : "Inactive"}
                         variant={l.isActive ? "success" : "secondary"}
                       />
                     </TableCell>
                     <TableCell className="text-xs">
-                      {l.rack?.rackId || l.rack?.rackIdentifier || l.rackName || "-"}
+                      {l.rack?.rackId ||
+                        l.rack?.rackIdentifier ||
+                        l.rackName ||
+                        "-"}
                     </TableCell>
                     <TableCell className="text-xs">
-                      {l.rack?.aisle?.aisleNumber || l.rack?.aisle?.aisleId || "-"}
+                      {l.rack?.aisle?.aisleNumber ||
+                        l.rack?.aisle?.aisleId ||
+                        "-"}
                     </TableCell>
                     <TableCell className="text-xs">
                       {l.rack?.aisle?.zone?.name || "-"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openBarcodePreview(l)}
+                        title="View Barcode"
+                        disabled={!l.barcodeImage}
+                        className="
+      inline-flex items-center justify-center
+      h-8 w-8
+      rounded-md
+      bg-blue-50
+      text-blue-600
+      transition-all duration-200
+      hover:bg-blue-600
+      hover:text-white
+      hover:ring-blue-600
+      hover:shadow-sm
+      cursor-pointer
+    "
+                      >
+                        <Barcode className="" />{" "}
+                      </Button>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">

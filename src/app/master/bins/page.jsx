@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -10,6 +10,8 @@ import {
   Search,
   Trash2,
   X,
+  Barcode,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -29,12 +31,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
 import { CREATE, DELETE, update } from "@/components/apiRequest";
 import StatusBadge from "@/components/StatusBadge";
 import { Progress } from "@/components/ui/progress";
+import { downloadImage } from "@/components/downloadImage64";
 
 async function exportBinsExcel(items) {
   await exportWmsWorkbook({
@@ -49,37 +58,54 @@ async function exportBinsExcel(items) {
       { header: "Width", key: "widthCm", width: 12, align: "right" },
       { header: "Height", key: "heightCm", width: 12, align: "right" },
       { header: "Unit", key: "unit", width: 10 },
-      { header: "Max Weight (g)", key: "maxWeightG", width: 16, align: "right" },
+      {
+        header: "Max Weight (g)",
+        key: "maxWeightG",
+        width: 16,
+        align: "right",
+      },
       { header: "Volume", key: "volume", width: 14, align: "right" },
-      { header: "Utilization %", key: "utilization", width: 14, align: "right" },
+      {
+        header: "Utilization %",
+        key: "utilization",
+        width: 14,
+        align: "right",
+      },
       { header: "Status", key: "status", width: 14 },
       { header: "Level", key: "level", width: 20 },
       { header: "Rack", key: "rack", width: 20 },
       { header: "Aisle", key: "aisle", width: 20 },
       { header: "Zone", key: "zone", width: 24 },
       { header: "Warehouse", key: "warehouse", width: 28 },
+      { header: "Barcode Data", key: "barcodeData", width: 20 },
     ],
     rows: items.map((b) => ({
       id: b.id,
       barcode: b.barcode ?? "",
-      dimensions: b.lengthCm && b.widthCm && b.heightCm 
-        ? `${b.lengthCm} × ${b.widthCm} × ${b.heightCm}`
-        : "",
+      dimensions:
+        b.lengthCm && b.widthCm && b.heightCm
+          ? `${b.lengthCm} × ${b.widthCm} × ${b.heightCm}`
+          : "",
       lengthCm: b.lengthCm ?? "",
       widthCm: b.widthCm ?? "",
       heightCm: b.heightCm ?? "",
       unit: b.unit ?? "cm",
       maxWeightG: b.maxWeightG ?? "",
-      volume: b.lengthCm && b.widthCm && b.heightCm 
-        ? (b.lengthCm * b.widthCm * b.heightCm).toLocaleString()
-        : "",
+      volume:
+        b.lengthCm && b.widthCm && b.heightCm
+          ? (b.lengthCm * b.widthCm * b.heightCm).toLocaleString()
+          : "",
       utilization: b.utilization ?? b.utilizationPct ?? 0,
       status: b.status ?? "AVAILABLE",
       level: b.level?.levelId || b.level?.name || "",
-      rack: b.rack?.rackId || b.rack?.name || "",
-      aisle: b.rack?.aisle?.aisleNumber || b.rack?.aisle?.aisleId || "",
-      zone: b.rack?.aisle?.zone?.name ?? "",
-      warehouse: b.rack?.aisle?.zone?.warehouse?.name ?? "",
+      rack: b.level?.rack?.rackId || b.level?.rack?.name || "",
+      aisle:
+        b.level?.rack?.aisle?.aisleNumber ||
+        b.level?.rack?.aisle?.aisleId ||
+        "",
+      zone: b.level?.rack?.aisle?.zone?.name ?? "",
+      warehouse: b.level?.rack?.aisle?.zone?.warehouse?.name ?? "",
+      barcodeData: b.barcodeData ?? "",
     })),
   });
   toast.success("Bins exported to Excel");
@@ -97,6 +123,10 @@ export default function BinsPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+
+  // State for barcode preview
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [selectedBin, setSelectedBin] = useState(null);
 
   // State for search and filter
   const [search, setSearch] = useState("");
@@ -138,7 +168,12 @@ export default function BinsPage() {
     try {
       setIsLoading(true);
       const response = await api.get("/bins");
-      setBins(response.data?.data?.content || response.data?.content || response.data || []);
+      setBins(
+        response.data?.data?.content ||
+          response.data?.content ||
+          response.data ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching bins:", error);
       toast.error("Failed to load bins.");
@@ -150,7 +185,12 @@ export default function BinsPage() {
   const fetchRacks = async () => {
     try {
       const response = await api.get("/racks");
-      setRacks(response.data?.data?.content || response.data?.content || response.data || []);
+      setRacks(
+        response.data?.data?.content ||
+          response.data?.content ||
+          response.data ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching racks:", error);
       toast.error("Failed to load racks.");
@@ -160,11 +200,32 @@ export default function BinsPage() {
   const fetchLevels = async () => {
     try {
       const response = await api.get("/levels");
-      setLevels(response.data?.data?.content || response.data?.content || response.data || []);
+      setLevels(
+        response.data?.data?.content ||
+          response.data?.content ||
+          response.data ||
+          [],
+      );
     } catch (error) {
       console.error("Error fetching levels:", error);
       toast.error("Failed to load levels.");
     }
+  };
+
+  const downloadBarcode = (item) => {
+    if (item?.barcodeImage) {
+      downloadImage(
+        item.barcodeImage,
+        `barcode_${item.barcode || item.id}.png`,
+      );
+    } else {
+      toast.error("No barcode image available to download");
+    }
+  };
+
+  const openBarcodePreview = (bin) => {
+    setSelectedBin(bin);
+    setBarcodeDialogOpen(true);
   };
 
   const validateForm = () => {
@@ -202,7 +263,6 @@ export default function BinsPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error for this field when user types
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -218,7 +278,6 @@ export default function BinsPage() {
       return;
     }
 
-    // Prepare payload with all required fields
     const payload = {
       barcode: formData.barcode.trim().toUpperCase(),
       lengthCm: parseFloat(formData.lengthCm),
@@ -235,19 +294,14 @@ export default function BinsPage() {
       setIsSubmitting(true);
 
       if (editItem) {
-        // Update existing bin
         await update(`/bins/${editItem?.id}`, payload);
         toast.success("Bin updated successfully");
       } else {
-        // Create new bin
         await CREATE("/bins", payload);
         toast.success("Bin created successfully");
       }
 
-      // Refresh the list
       await fetchBins();
-
-      // Close modal and reset form
       setOpen(false);
       setEditItem(null);
       resetForm();
@@ -256,7 +310,7 @@ export default function BinsPage() {
       toast.error(
         error.response?.data?.message ||
           error.response?.data?.detail ||
-          "Failed to save bin."
+          "Failed to save bin.",
       );
     } finally {
       setIsSubmitting(false);
@@ -321,7 +375,8 @@ export default function BinsPage() {
       widthCm: item.widthCm?.toString() || item.width_cm?.toString() || "",
       heightCm: item.heightCm?.toString() || item.height_cm?.toString() || "",
       unit: item.unit || "cm",
-      maxWeightG: item.maxWeightG?.toString() || item.max_weight_g?.toString() || "",
+      maxWeightG:
+        item.maxWeightG?.toString() || item.max_weight_g?.toString() || "",
       status: item.status || "AVAILABLE",
       rackId: item.rackId || item.rack?.id || "",
       levelId: item.levelId || item.level?.id || "",
@@ -334,12 +389,12 @@ export default function BinsPage() {
     let list = bins;
     if (rackFilter !== "ALL") {
       list = list.filter(
-        (b) => String(b.rackId ?? b.rack?.id ?? "") === rackFilter
+        (b) => String(b.rackId ?? b.rack?.id ?? "") === rackFilter,
       );
     }
     if (levelFilter !== "ALL") {
       list = list.filter(
-        (b) => String(b.levelId ?? b.level?.id ?? "") === levelFilter
+        (b) => String(b.levelId ?? b.level?.id ?? "") === levelFilter,
       );
     }
     if (search.trim()) {
@@ -372,7 +427,10 @@ export default function BinsPage() {
             .includes(q) ||
           String(b.rack?.aisle?.zone?.warehouse?.name ?? "")
             .toLowerCase()
-            .includes(q)
+            .includes(q) ||
+          String(b.barcodeData ?? "")
+            .toLowerCase()
+            .includes(q),
       );
     }
     return [...list].sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0));
@@ -414,6 +472,130 @@ export default function BinsPage() {
         }
       />
 
+      {/* Barcode Preview Dialog */}
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-md h-[95vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-4" />
+              Bin Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {selectedBin && (
+              <>
+                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed w-full">
+                  {selectedBin.barcodeImage ? (
+                    <img
+                      src={`data:image/png;base64,${selectedBin.barcodeImage}`}
+                      alt="Barcode"
+                      className="max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Barcode className="size-16" />
+                      <p className="text-sm">No barcode available</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full space-y-1 text-sm">
+                  <p>
+                    <strong>Barcode:</strong> {selectedBin.barcode || "-"}
+                  </p>
+                  <p>
+                    <strong>Full Location:</strong>{" "}
+                    {selectedBin.fullLocation || "-"}
+                  </p>
+                  <p>
+                    <strong>Level:</strong>{" "}
+                    {selectedBin.level?.levelId ||
+                      selectedBin.level?.name ||
+                      "-"}
+                  </p>
+                  <p>
+                    <strong>Rack:</strong>{" "}
+                    {selectedBin.level?.rack?.rackId ||
+                      selectedBin.level?.rack?.name ||
+                      "-"}
+                  </p>
+                  <p>
+                    <strong>Aisle:</strong>{" "}
+                    {selectedBin.level?.rack?.aisle?.aisleNumber ||
+                      selectedBin.level?.rack?.aisle?.aisleId ||
+                      "-"}
+                  </p>
+                  <p>
+                    <strong>Zone:</strong>{" "}
+                    {selectedBin.level?.rack?.aisle?.zone?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Warehouse:</strong>{" "}
+                    {selectedBin.level?.rack?.aisle?.zone?.warehouse?.name ||
+                      "-"}
+                  </p>
+                  <p>
+                    <strong>Barcode Data:</strong>{" "}
+                    {selectedBin.barcodeData || selectedBin.barcode || "-"}
+                  </p>
+                  <p>
+                    <strong>Format:</strong>{" "}
+                    {selectedBin.barcodeFormat || "CODE128"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span
+                      className={
+                        selectedBin.status === "AVAILABLE"
+                          ? "text-green-600"
+                          : selectedBin.status === "FULL"
+                            ? "text-yellow-600"
+                            : "text-red-600"
+                      }
+                    >
+                      {selectedBin.status || "AVAILABLE"}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Dimensions:</strong>{" "}
+                    {selectedBin.lengthCm &&
+                    selectedBin.widthCm &&
+                    selectedBin.heightCm
+                      ? `${selectedBin.lengthCm} × ${selectedBin.widthCm} × ${selectedBin.heightCm} ${selectedBin.unit || "cm"}`
+                      : "-"}
+                  </p>
+                  <p>
+                    <strong>Volume:</strong>{" "}
+                    {selectedBin.volumeCm3
+                      ? `${selectedBin.volumeCm3} ${selectedBin.unit || "cm"}³`
+                      : "-"}
+                  </p>
+                  <p>
+                    <strong>Max Weight:</strong>{" "}
+                    {selectedBin.maxWeightG
+                      ? `${selectedBin.maxWeightG} g`
+                      : "-"}
+                  </p>
+                  <p>
+                    <strong>Utilization:</strong>{" "}
+                    {selectedBin.utilizationPercentage || 0}%
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    className="flex-1"
+                    onClick={() => downloadBarcode(selectedBin)}
+                    disabled={!selectedBin.barcodeImage}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Download
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SlideOverForm
         open={open}
         onOpenChange={(v) => {
@@ -430,7 +612,6 @@ export default function BinsPage() {
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
         >
-          {/* Barcode */}
           <div className="space-y-1.5">
             <Label htmlFor="barcode">Barcode *</Label>
             <Input
@@ -446,7 +627,6 @@ export default function BinsPage() {
             )}
           </div>
 
-          {/* Dimensions */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="lengthCm">Length *</Label>
@@ -503,7 +683,6 @@ export default function BinsPage() {
             </div>
           </div>
 
-          {/* Unit */}
           <div className="space-y-1.5">
             <Label htmlFor="unit">Unit of Measurement</Label>
             <select
@@ -524,21 +703,24 @@ export default function BinsPage() {
             </p>
           </div>
 
-          {/* Volume display */}
           {volume > 0 && (
             <div className="rounded-md bg-blue-50 dark:bg-blue-950/50 p-2 text-center">
               <p className="text-xs text-muted-foreground">
-                Volume: <span className="font-medium text-foreground">{volume.toLocaleString()} {formData.unit}³</span>
+                Volume:{" "}
+                <span className="font-medium text-foreground">
+                  {volume.toLocaleString()} {formData.unit}³
+                </span>
                 {" • "}
                 Max Weight:{" "}
                 <span className="font-medium text-foreground">
-                  {formData.maxWeightG ? `${(parseFloat(formData.maxWeightG) / 1000).toFixed(2)} kg` : "-"}
+                  {formData.maxWeightG
+                    ? `${(parseFloat(formData.maxWeightG) / 1000).toFixed(2)} kg`
+                    : "-"}
                 </span>
               </p>
             </div>
           )}
 
-          {/* Max Weight */}
           <div className="space-y-1.5">
             <Label htmlFor="maxWeightG">Max Weight (g) *</Label>
             <Input
@@ -560,7 +742,6 @@ export default function BinsPage() {
             </p>
           </div>
 
-          {/* Status */}
           <div className="space-y-1.5">
             <Label htmlFor="status">Status</Label>
             <select
@@ -576,7 +757,6 @@ export default function BinsPage() {
             </select>
           </div>
 
-          {/* Rack */}
           <div className="space-y-1.5">
             <Label htmlFor="rackId">Rack *</Label>
             <select
@@ -593,7 +773,9 @@ export default function BinsPage() {
                 <option key={r.id} value={r.id}>
                   {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
                   {r.name ? ` - ${r.name}` : ""}
-                  {r.aisle?.aisleNumber ? ` (Aisle: ${r.aisle.aisleNumber})` : ""}
+                  {r.aisle?.aisleNumber
+                    ? ` (Aisle: ${r.aisle.aisleNumber})`
+                    : ""}
                   {r.aisle?.zone?.name ? ` @ ${r.aisle.zone.name}` : ""}
                 </option>
               ))}
@@ -603,7 +785,6 @@ export default function BinsPage() {
             )}
           </div>
 
-          {/* Level */}
           <div className="space-y-1.5">
             <Label htmlFor="levelId">Level *</Label>
             <select
@@ -741,6 +922,7 @@ export default function BinsPage() {
                   <TableHead>Rack</TableHead>
                   <TableHead>Aisle</TableHead>
                   <TableHead>Zone</TableHead>
+                  <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -751,9 +933,10 @@ export default function BinsPage() {
                   const height = b.heightCm ?? b.height_cm;
                   const maxWeight = b.maxWeightG ?? b.max_weight_g;
                   const utilization = b.utilization ?? b.utilizationPct ?? 0;
-                  const volume = length && width && height 
-                    ? (length * width * height).toLocaleString()
-                    : "-";
+                  const volume =
+                    length && width && height
+                      ? (length * width * height).toLocaleString()
+                      : "-";
                   const unit = b.unit || "cm";
 
                   return (
@@ -775,14 +958,19 @@ export default function BinsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-xs">
-                        {maxWeight ? `${(maxWeight / 1000).toFixed(1)} kg` : "-"}
+                        {maxWeight
+                          ? `${(maxWeight / 1000).toFixed(1)} kg`
+                          : "-"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {volume}
                       </TableCell>
                       <TableCell className="min-w-44">
                         <div className="flex items-center gap-2">
-                          <Progress value={utilization} className="h-1.5 flex-1" />
+                          <Progress
+                            value={utilization}
+                            className="h-1.5 flex-1"
+                          />
                           <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
                             {utilization}%
                           </span>
@@ -795,13 +983,39 @@ export default function BinsPage() {
                         {b.level?.levelId || b.level?.name || "-"}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {b.level?.rack.name || "-"}
+                        {b.level?.rack?.rackId || b.level?.rack?.name || "-"}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {b.level?.rack?.aisle?.name || b.rack?.aisle?.aisleId || "-"}
+                        {b.level?.rack?.aisle?.aisleNumber ||
+                          b.level?.rack?.aisle?.aisleId ||
+                          "-"}
                       </TableCell>
                       <TableCell className="text-xs">
                         {b.level?.rack?.aisle?.zone?.name || "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openBarcodePreview(b)}
+                          title="View Barcode"
+                          disabled={!b.barcodeImage}
+                          className="
+                              inline-flex items-center justify-center
+                              h-8 w-8
+                              rounded-md
+                              bg-blue-50
+                              text-blue-600
+                              transition-all duration-200
+                              hover:bg-blue-600
+                              hover:text-white
+                              hover:ring-blue-600
+                              hover:shadow-sm
+                              cursor-pointer
+                            "
+                        >
+                          <Barcode className="" />
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-1">

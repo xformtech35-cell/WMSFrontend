@@ -10,6 +10,8 @@ import {
   Search,
   Trash2,
   X,
+  Barcode,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -29,10 +31,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
 import { CREATE, DELETE, update } from "@/components/apiRequest";
+import { downloadImage } from "@/components/downloadImage64";
 
 async function exportRacksExcel(items) {
   await exportWmsWorkbook({
@@ -53,6 +62,7 @@ async function exportRacksExcel(items) {
       { header: "Aisle", key: "aisle", width: 20 },
       { header: "Zone", key: "zone", width: 24 },
       { header: "Warehouse", key: "warehouse", width: 28 },
+      { header: "Barcode Data", key: "barcodeData", width: 20 },
     ],
     rows: items.map((r) => ({
       id: r.id,
@@ -67,9 +77,10 @@ async function exportRacksExcel(items) {
       depth: r.depth ?? "",
       unit: r.unit ?? "Meter",
       isActive: r.isActive ? "Active" : "Inactive",
-      aisle: r.aisle?.aisleNumber ?? "",
+      aisle: r.aisle?.aisleId || r.aisle?.aisleNumber || "",
       zone: r.aisle?.zone?.name ?? "",
       warehouse: r.aisle?.zone?.warehouse?.name ?? "",
+      barcodeData: r.barcodeData ?? "",
     })),
   });
   toast.success("Racks exported to Excel");
@@ -86,6 +97,10 @@ export default function RacksPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+
+  // State for barcode preview
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [selectedRack, setSelectedRack] = useState(null);
 
   // State for search and filter
   const [search, setSearch] = useState("");
@@ -138,6 +153,22 @@ export default function RacksPage() {
     }
   };
 
+  const downloadBarcode = (item) => {
+    if (item?.barcodeImage) {
+      downloadImage(
+             item.barcodeImage,
+             `barcode_${item.rackId || item.id}.png`,
+           );
+    } else {
+      toast.error("No barcode image available to download");
+    }
+  };
+
+  const openBarcodePreview = (rack) => {
+    setSelectedRack(rack);
+    setBarcodeDialogOpen(true);
+  };
+
   const validateForm = () => {
     const errors = {};
 
@@ -179,7 +210,6 @@ export default function RacksPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error for this field when user types
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -195,7 +225,6 @@ export default function RacksPage() {
       return;
     }
 
-    // Prepare payload with all required fields
     const payload = {
       rackId: formData.rackId.trim().toUpperCase(),
       name: formData.name.trim(),
@@ -214,19 +243,14 @@ export default function RacksPage() {
       setIsSubmitting(true);
 
       if (editItem) {
-        // Update existing rack
         await update(`/racks/${editItem?.id}`, payload);
         toast.success("Rack updated successfully");
       } else {
-        // Create new rack
         await CREATE("/racks", payload);
         toast.success("Rack created successfully");
       }
 
-      // Refresh the list
       await fetchRacks();
-
-      // Close modal and reset form
       setOpen(false);
       setEditItem(null);
       resetForm();
@@ -332,6 +356,9 @@ export default function RacksPage() {
           String(r.rackId ?? "")
             .toLowerCase()
             .includes(q) ||
+          String(r.aisle?.aisleId ?? "")
+            .toLowerCase()
+            .includes(q) ||
           String(r.aisle?.aisleNumber ?? "")
             .toLowerCase()
             .includes(q) ||
@@ -339,6 +366,9 @@ export default function RacksPage() {
             .toLowerCase()
             .includes(q) ||
           String(r.aisle?.zone?.warehouse?.name ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(r.barcodeData ?? "")
             .toLowerCase()
             .includes(q)
       );
@@ -382,6 +412,95 @@ export default function RacksPage() {
         }
       />
 
+      {/* Barcode Preview Dialog */}
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-4" />
+              Rack Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {selectedRack && (
+              <>
+                <div className="flex items-center justify-center p-8 bg-white rounded-lg border-2 border-dashed w-full">
+                  {selectedRack.barcodeImage ? (
+                    <img
+                      src={`data:image/png;base64,${selectedRack.barcodeImage}`}
+                      alt="Barcode"
+                      className="max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Barcode className="size-16" />
+                      <p className="text-sm">No barcode available</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full space-y-1 text-sm">
+                  <p>
+                    <strong>Rack ID:</strong> {selectedRack.rackId || "-"}
+                  </p>
+                  <p>
+                    <strong>Name:</strong> {selectedRack.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Aisle:</strong> {selectedRack.aisle?.aisleId || selectedRack.aisle?.aisleNumber || "-"}
+                  </p>
+                  <p>
+                    <strong>Zone:</strong> {selectedRack.aisle?.zone?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Warehouse:</strong> {selectedRack.aisle?.zone?.warehouse?.name || "-"}
+                  </p>
+                  <p>
+                    <strong>Barcode Data:</strong> {selectedRack.barcodeData || selectedRack.rackId || "-"}
+                  </p>
+                  <p>
+                    <strong>Format:</strong> {selectedRack.barcodeFormat || "CODE128"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span className={selectedRack.isActive ? "text-green-600" : "text-red-600"}>
+                      {selectedRack.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Dimensions:</strong>{" "}
+                    {selectedRack.height && selectedRack.width && selectedRack.depth
+                      ? `${selectedRack.height} × ${selectedRack.width} × ${selectedRack.depth} ${selectedRack.unit || "Meter"}`
+                      : selectedRack.height && selectedRack.width
+                        ? `${selectedRack.height} × ${selectedRack.width} ${selectedRack.unit || "Meter"}`
+                        : selectedRack.height
+                          ? `${selectedRack.height} ${selectedRack.unit || "Meter"}`
+                          : selectedRack.width
+                            ? `${selectedRack.width} ${selectedRack.unit || "Meter"}`
+                            : selectedRack.depth
+                              ? `${selectedRack.depth} ${selectedRack.unit || "Meter"}`
+                              : "-"}
+                  </p>
+                  <p>
+                    <strong>Levels:</strong> {selectedRack.levels?.length || 0}
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Button
+                    className="flex-1"
+                    onClick={() => downloadBarcode(selectedRack)}
+                    disabled={!selectedRack.barcodeImage}
+                  >
+                    <Download className="mr-1.5 size-3.5" />
+                    Download
+                  </Button>
+                
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SlideOverForm
         open={open}
         onOpenChange={(v) => {
@@ -398,7 +517,6 @@ export default function RacksPage() {
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
         >
-          {/* Rack ID */}
           <div className="space-y-1.5">
             <Label htmlFor="rackId">Rack ID *</Label>
             <Input
@@ -415,7 +533,6 @@ export default function RacksPage() {
             )}
           </div>
 
-          {/* Rack Name */}
           <div className="space-y-1.5">
             <Label htmlFor="name">Rack Name *</Label>
             <Input
@@ -431,7 +548,6 @@ export default function RacksPage() {
             )}
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="description">Description</Label>
             <Input
@@ -443,7 +559,6 @@ export default function RacksPage() {
             />
           </div>
 
-          {/* Height, Width, Depth with Unit */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="height">Height</Label>
@@ -500,7 +615,6 @@ export default function RacksPage() {
             </div>
           </div>
 
-          {/* Unit */}
           <div className="space-y-1.5">
             <Label htmlFor="unit">Unit of Measurement</Label>
             <select
@@ -521,7 +635,6 @@ export default function RacksPage() {
             </p>
           </div>
 
-          {/* Active Status */}
           <div className="flex items-center space-x-2 pt-1">
             <input
               type="checkbox"
@@ -539,7 +652,6 @@ export default function RacksPage() {
             </Label>
           </div>
 
-          {/* Remarks */}
           <div className="space-y-1.5">
             <Label htmlFor="remarks">Remarks</Label>
             <Input
@@ -551,7 +663,6 @@ export default function RacksPage() {
             />
           </div>
 
-          {/* Aisle */}
           <div className="space-y-1.5">
             <Label htmlFor="aisleId">Aisle *</Label>
             <select
@@ -614,7 +725,7 @@ export default function RacksPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 pr-8"
-            placeholder="Search rack, aisle, zone, warehouse..."
+            placeholder="Search rack, aisle, zone, barcode..."
           />
           {search ? (
             <button
@@ -671,6 +782,7 @@ export default function RacksPage() {
                   <TableHead>Aisle</TableHead>
                   <TableHead>Zone</TableHead>
                   <TableHead>Warehouse</TableHead>
+                  <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -713,9 +825,33 @@ export default function RacksPage() {
                         {r.isActive ? "Active" : "Inactive"}
                       </span>
                     </TableCell>
-                    <TableCell>{r.aisle?.aisleNumber || r.aisle?.aisleId || "-"}</TableCell>
+                    <TableCell>{r.aisle?.aisleId || r.aisle?.aisleNumber || "-"}</TableCell>
                     <TableCell>{r.aisle?.zone?.name ?? "-"}</TableCell>
                     <TableCell>{r.aisle?.zone?.warehouse?.name ?? "-"}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openBarcodePreview(r)}
+                        title="View Barcode"
+                        disabled={!r.barcodeImage}
+                        className="
+      inline-flex items-center justify-center
+      h-8 w-8
+      rounded-md
+      bg-blue-50
+      text-blue-600
+      transition-all duration-200
+      hover:bg-blue-600
+      hover:text-white
+      hover:ring-blue-600
+      hover:shadow-sm
+      cursor-pointer
+    "
+                      >
+                        <Barcode  />
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">
                         <Button

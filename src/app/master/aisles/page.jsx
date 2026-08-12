@@ -41,6 +41,7 @@ import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
 import { CREATE, DELETE, update } from "@/components/apiRequest";
+import { downloadImage } from "@/components/downloadImage64";
 
 async function exportAislesExcel(items) {
   await exportWmsWorkbook({
@@ -145,22 +146,10 @@ export default function AislesPage() {
 
   const downloadBarcode = (item) => {
     if (item?.barcodeImage) {
-      const byteCharacters = atob(item.barcodeImage);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "image/png" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `barcode_${item.aisleId || item.id}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Barcode downloaded successfully");
+       downloadImage(
+              item.barcodeImage,
+              `barcode_${item.aisleId || item.id}.png`,
+            );
     } else {
       toast.error("No barcode image available to download");
     }
@@ -469,41 +458,7 @@ export default function AislesPage() {
                     <Download className="mr-1.5 size-3.5" />
                     Download
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      if (!selectedAisle.barcodeImage) {
-                        toast.error("No barcode to print");
-                        return;
-                      }
-                      const printWindow = window.open('', '_blank', 'width=600,height=400');
-                      if (printWindow) {
-                        printWindow.document.write(`
-                          <html>
-                            <head><title>Print Barcode</title></head>
-                            <body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:Arial;">
-                              <img src="data:image/png;base64,${selectedAisle.barcodeImage}" style="max-width:400px;height:auto;" />
-                              <p style="margin-top:20px;font-size:14px;color:#666;">
-                                <strong>${selectedAisle.name}</strong>
-                              </p>
-                              <p style="font-size:12px;color:#999;">
-                                ${selectedAisle.aisleId}
-                              </p>
-                            </body>
-                          </html>
-                        `);
-                        printWindow.document.close();
-                        printWindow.focus();
-                        printWindow.print();
-                        printWindow.close();
-                      }
-                    }}
-                    disabled={!selectedAisle.barcodeImage}
-                  >
-                    <Printer className="mr-1.5 size-3.5" />
-                    Print
-                  </Button>
+                 
                 </div>
               </>
             )}

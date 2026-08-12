@@ -41,6 +41,7 @@ import { exportWmsWorkbook } from "@/lib/exportExcel";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import TablePagination from "@/components/TablePagination";
 import { CREATE, DELETE, update } from "@/components/apiRequest";
+import { downloadImage } from "@/components/downloadImage64";
 
 async function exportZonesExcel(items) {
   await exportWmsWorkbook({
@@ -139,22 +140,8 @@ export default function ZonesPage() {
 
   const downloadBarcode = (item) => {
     if (item?.barcodeImage) {
-      const byteCharacters = atob(item.barcodeImage);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "image/png" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `barcode_${item.zoneId || item.id}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Barcode downloaded successfully");
+      downloadImage(item.barcodeImage, `barcode_${item.zoneId || item.id}.png`);
+      // toast.success("Barcode downloaded successfully");
     } else {
       toast.error("No barcode image available to download");
     }
@@ -410,17 +397,26 @@ export default function ZonesPage() {
                     <strong>Type:</strong> {selectedZone.zoneType || "-"}
                   </p>
                   <p>
-                    <strong>Warehouse:</strong> {selectedZone.warehouse?.name || "-"}
+                    <strong>Warehouse:</strong>{" "}
+                    {selectedZone.warehouse?.name || "-"}
                   </p>
                   <p>
-                    <strong>Barcode Data:</strong> {selectedZone.barcodeData || selectedZone.zoneId || "-"}
+                    <strong>Barcode Data:</strong>{" "}
+                    {selectedZone.barcodeData || selectedZone.zoneId || "-"}
                   </p>
                   <p>
-                    <strong>Format:</strong> {selectedZone.barcodeFormat || "CODE128"}
+                    <strong>Format:</strong>{" "}
+                    {selectedZone.barcodeFormat || "CODE128"}
                   </p>
                   <p>
                     <strong>Status:</strong>{" "}
-                    <span className={selectedZone.isActive ? "text-green-600" : "text-red-600"}>
+                    <span
+                      className={
+                        selectedZone.isActive
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
                       {selectedZone.isActive ? "Active" : "Inactive"}
                     </span>
                   </p>
@@ -434,7 +430,6 @@ export default function ZonesPage() {
                     <Download className="mr-1.5 size-3.5" />
                     Download
                   </Button>
-              
                 </div>
               </>
             )}
@@ -723,7 +718,7 @@ export default function ZonesPage() {
                         onClick={() => openBarcodePreview(z)}
                         title="View Barcode"
                         disabled={!z.barcodeImage}
-                       className="
+                        className="
       inline-flex items-center justify-center
       h-8 w-8
       rounded-md

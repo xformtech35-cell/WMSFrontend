@@ -42,6 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { downloadImage } from "@/components/downloadImage64";
 
 async function exportWarehousesExcel(items) {
   await exportWmsWorkbook({
@@ -207,22 +208,10 @@ export default function WarehousesPage() {
 
   const downloadBarcode = (item) => {
     if (item?.barcodeImage) {
-      const byteCharacters = atob(item.barcodeImage);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "image/png" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `barcode_${item.warehouseId || item.id}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Barcode downloaded successfully");
+      downloadImage(
+        item.barcodeImage,
+        `barcode_${item.warehouseId || item.id}.png`,
+      );
     } else {
       toast.error("No barcode image available to download");
     }
