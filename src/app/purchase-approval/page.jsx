@@ -527,8 +527,7 @@ export default function PurchaseRequestPage() {
                             </button>
                             {/* RFQ Button - Show for SUBMITTED, APPROVED, or PENDING statuses */}
                             {(pr.status === "SUBMITTED" || 
-                              pr.status === "APPROVED" || 
-                              pr.status === "PENDING") && (
+                              pr.status === "APPROVED") && (
                               <button
                                 type="button"
                                 onClick={() => handleCreateRFQ(pr)}
@@ -633,7 +632,6 @@ export default function PurchaseRequestPage() {
                         <option value="PENDING">Pending</option>
                         <option value="APPROVED">Approved</option>
                         <option value="REJECTED">Rejected</option>
-                        <option value="PARTIAL">Partial</option>
                         <option value="COMPLETED">Completed</option>
                         <option value="IN_PROGRESS">In Progress</option>
                       </select>

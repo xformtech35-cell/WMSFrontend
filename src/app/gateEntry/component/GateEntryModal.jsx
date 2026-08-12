@@ -1,6 +1,6 @@
 // components/inbound/GateEntryModal.jsx
 "use client";
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   X,
   AlertCircle,
@@ -18,90 +18,90 @@ import {
   Shield,
   UserCheck,
   Clock as ClockIcon,
-} from 'lucide-react';
-import api from '@/lib/api';
+} from "lucide-react";
+import api from "@/lib/api";
 
-const GateEntryModal = ({
-  isOpen,
-  onClose,
-  inbound,
-  onSuccess,
-}) => {
+const GateEntryModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    driverName: '',
-    driverContact: '',
-    driverId: '',
-    trackNumber: '',
-    gateNumber: '',
+    driverName: "",
+    driverContact: "",
+    driverId: "",
+    trackNumber: "",
+    gateNumber: "",
     approvedBy: 1, // Default to current user
     gateEntryDateTime: new Date().toISOString().slice(0, 16),
-    remarks: '',
+    remarks: "",
   });
 
   // Reset form when modal opens
   React.useEffect(() => {
     if (isOpen && inbound) {
       setFormData({
-        driverName: '',
-        driverContact: '',
-        driverId: '',
-        trackNumber: '',
-        gateNumber: '',
+        driverName: "",
+        driverContact: "",
+        driverId: "",
+        trackNumber: "",
+        gateNumber: "",
         approvedBy: 1,
         gateEntryDateTime: new Date().toISOString().slice(0, 16),
         remarks: `Gate entry for ${inbound.inboundNumber}`,
       });
-      setError('');
+      setError("");
       setSuccess(false);
     }
   }, [isOpen, inbound]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       // Validate required fields
       if (!formData.driverName) {
-        throw new Error('Driver name is required');
+        throw new Error("Driver name is required");
       }
       if (!formData.driverContact) {
-        throw new Error('Driver contact is required');
+        throw new Error("Driver contact is required");
       }
       if (!formData.gateNumber) {
-        throw new Error('Gate number is required');
+        throw new Error("Gate number is required");
       }
       if (!formData.gateEntryDateTime) {
-        throw new Error('Gate entry date/time is required');
+        throw new Error("Gate entry date/time is required");
       }
 
       const gateEntryData = {
         driverName: formData.driverName,
         driverContact: formData.driverContact,
         driverId: formData.driverId || null,
-        trackNumber: formData.trackNumber || null,
+        trackNumber: formData.trackNumber
+          ? formData.trackNumber.toUpperCase()
+          : null,
         gateNumber: formData.gateNumber,
         approvedBy: formData.approvedBy,
         gateEntryDateTime: formData.gateEntryDateTime,
         remarks: formData.remarks || null,
       };
 
-      const response = await api.post(`/inbound/${inbound.id}/gate-entry`, gateEntryData);
-      
+      const response = await api.post(
+        `/inbound/${inbound.id}/gate-entry`,
+        gateEntryData,
+      );
+
       if (response.data.success) {
         setSuccess(true);
         onSuccess?.(response.data.data);
@@ -109,11 +109,15 @@ const GateEntryModal = ({
           onClose();
         }, 1500);
       } else {
-        throw new Error(response.data.message || 'Failed to create gate entry');
+        throw new Error(response.data.message || "Failed to create gate entry");
       }
     } catch (err) {
-      console.error('Gate entry error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to create gate entry');
+      console.error("Gate entry error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to create gate entry",
+      );
     } finally {
       setLoading(false);
     }
@@ -130,10 +134,7 @@ const GateEntryModal = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop with blur */}
-      <div 
-        className="fixed inset-0 transition-opacity"
-        onClick={handleClose}
-      />
+      <div className="fixed inset-0 transition-opacity" onClick={handleClose} />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -148,9 +149,7 @@ const GateEntryModal = ({
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  Gate Entry
-                </h3>
+                <h3 className="text-xl font-bold text-gray-900">Gate Entry</h3>
                 <p className="text-sm text-gray-500">
                   {inbound?.inboundNumber} • {inbound?.poNumber}
                 </p>
@@ -172,7 +171,9 @@ const GateEntryModal = ({
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-green-800">Gate Entry Created Successfully!</p>
+                <p className="text-sm font-semibold text-green-800">
+                  Gate Entry Created Successfully!
+                </p>
                 <p className="text-xs text-green-600">Redirecting...</p>
               </div>
             </div>
@@ -198,15 +199,21 @@ const GateEntryModal = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500">Inbound Number</p>
-                  <p className="text-sm font-semibold text-gray-900">{inbound?.inboundNumber}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.inboundNumber}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">PO Number</p>
-                  <p className="text-sm font-semibold text-gray-900">{inbound?.poNumber}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.poNumber}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Supplier</p>
-                  <p className="text-sm font-semibold text-gray-900">{inbound?.supplierName}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {inbound?.supplierName}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Current Status</p>
@@ -253,7 +260,7 @@ const GateEntryModal = ({
                     placeholder="9876543210"
                     className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
-                      maxLength={10}
+                    maxLength={10}
                   />
                 </div>
               </div>
@@ -287,7 +294,12 @@ const GateEntryModal = ({
                     type="text"
                     name="trackNumber"
                     value={formData.trackNumber}
-                    onChange={handleChange}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        trackNumber: e.target.value.toUpperCase(),
+                      }))
+                    }
                     placeholder="MH12AB1234"
                     className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />

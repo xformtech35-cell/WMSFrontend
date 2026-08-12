@@ -71,41 +71,98 @@ const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
     }
   }, [isOpen, inbound]);
 
-  const handleItemChange = (index, field, value) => {
-    const updatedItems = [...formData.items];
-    const item = updatedItems[index];
+  // const handleItemChange = (index, field, value) => {
+  //   const updatedItems = [...formData.items];
+  //   const item = updatedItems[index];
 
-    if (field === "acceptedQuantity" || field === "rejectedQuantity") {
-      const newValue = parseInt(value) || 0;
-      item[field] = newValue;
+  //   if (field === "acceptedQuantity" || field === "rejectedQuantity") {
+  //     const newValue = parseInt(value) || 0;
+  //     item[field] = newValue;
 
-      // Auto-calculate quality status based on quantities
-      const totalIssues = item.rejectedQuantity;
-      if (
-        totalIssues === 0 &&
-        item.acceptedQuantity === item.receivedQuantity
-      ) {
-        item.qualityStatus = "ACCEPTED";
-      } else if (
-        item.acceptedQuantity === 0 &&
-        totalIssues === item.receivedQuantity
-      ) {
-        item.qualityStatus = "REJECTED";
-      } else if (item.acceptedQuantity > 0 && totalIssues > 0) {
-        item.qualityStatus = "PARTIAL";
-      } else {
-        item.qualityStatus = "PENDING";
-      }
-    } else {
-      item[field] = value;
+  //     // Auto-calculate quality status based on quantities
+  //     const totalIssues = item.rejectedQuantity;
+  //     if (
+  //       totalIssues === 0 &&
+  //       item.acceptedQuantity === item.receivedQuantity
+  //     ) {
+  //       item.qualityStatus = "ACCEPTED";
+  //     } else if (
+  //       item.acceptedQuantity === 0 &&
+  //       totalIssues === item.receivedQuantity
+  //     ) {
+  //       item.qualityStatus = "REJECTED";
+  //     } else if (item.acceptedQuantity > 0 && totalIssues > 0) {
+  //       item.qualityStatus = "PARTIAL";
+  //     } else {
+  //       item.qualityStatus = "PENDING";
+  //     }
+  //   } else {
+  //     item[field] = value;
+  //   }
+
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     items: updatedItems,
+  //   }));
+  // };
+const handleItemChange = (index, field, value) => {
+  const updatedItems = [...formData.items];
+  const item = updatedItems[index];
+
+  if (field === "acceptedQuantity" || field === "rejectedQuantity") {
+    let newValue = parseInt(value, 10);
+
+    // Empty input should be treated as 0
+    if (isNaN(newValue)) {
+      newValue = 0;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      items: updatedItems,
-    }));
-  };
+    // Don't allow negative values
+    newValue = Math.max(0, newValue);
 
+    // Don't allow value greater than received quantity
+    newValue = Math.min(newValue, item.receivedQuantity);
+
+    if (field === "acceptedQuantity") {
+      item.acceptedQuantity = newValue;
+
+      // Automatically calculate rejected quantity
+      item.rejectedQuantity = item.receivedQuantity - newValue;
+    } else {
+      item.rejectedQuantity = newValue;
+
+      // Automatically calculate accepted quantity
+      item.acceptedQuantity = item.receivedQuantity - newValue;
+    }
+
+    // Automatically determine quality status
+    if (
+      item.acceptedQuantity === item.receivedQuantity &&
+      item.rejectedQuantity === 0
+    ) {
+      item.qualityStatus = "ACCEPTED";
+    } else if (
+      item.acceptedQuantity === 0 &&
+      item.rejectedQuantity === item.receivedQuantity
+    ) {
+      item.qualityStatus = "REJECTED";
+    } else if (
+      item.acceptedQuantity > 0 &&
+      item.rejectedQuantity > 0
+    ) {
+      item.qualityStatus = "PARTIAL";
+    } else {
+      item.qualityStatus = "PENDING";
+    }
+  } else {
+    item[field] = value;
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    items: updatedItems,
+  }));
+};
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({

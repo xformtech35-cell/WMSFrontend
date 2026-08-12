@@ -145,7 +145,7 @@ export default function GRNSelector({
 
     const data = response.data?.data || response.data || response;
     const content = data.content || [];
-
+console.log("Fetched GRNs:", content); // Debugging log
     const totalElements = data.totalElements || 0;
     const totalPages = data.totalPages || 0;
     const currentPage = data.number || page;

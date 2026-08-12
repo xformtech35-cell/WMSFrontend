@@ -44,7 +44,7 @@ import { CREATE } from "@/components/apiRequest";
 
 async function getBarcodeData(value) {
   const response = await CREATE(
-    `/qr-codes/barcode/scan?barCode=${value}&scannedBy=${"admin"}`,
+    `/qr-codes/scan?qrCode=${value}&scannedBy=${"admin"}`,
     {},
   );
   return response;
@@ -182,16 +182,32 @@ export default function BarcodeScanPage() {
       }
     }
   };
-
-  const toggleScanner = () => {
-    setIsScanning(!isScanning);
-    setScanResult(null);
-    setScanError(null);
-    setScanInput("");
-    if (!isScanning && inputRef.current) {
-      setTimeout(() => inputRef.current.focus(), 100);
+useEffect(() => {
+  const keepScannerFocused = () => {
+    if (
+      !isLoadingScan &&
+      inputRef.current &&
+      document.activeElement !== inputRef.current
+    ) {
+      inputRef.current.focus();
     }
   };
+
+  window.addEventListener("click", keepScannerFocused);
+
+  return () => {
+    window.removeEventListener("click", keepScannerFocused);
+  };
+}, [isLoadingScan]);
+  // const toggleScanner = () => {
+  //   setIsScanning(!isScanning);
+  //   setScanResult(null);
+  //   setScanError(null);
+  //   setScanInput("");
+  //   if (!isScanning && inputRef.current) {
+  //     setTimeout(() => inputRef.current.focus(), 100);
+  //   }
+  // };
 
   const clearScanResult = () => {
     setScanResult(null);
@@ -346,7 +362,7 @@ export default function BarcodeScanPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button
+              {/* <button
                 type="button"
                 onClick={toggleScanner}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium ${
@@ -357,7 +373,7 @@ export default function BarcodeScanPage() {
               >
                 <Camera className="w-4 h-4" />
                 {isScanning ? "Stop Scanning" : "Start Scanner"}
-              </button>
+              </button> */}
               {scanHistory.length > 0 && (
                 <button
                   type="button"
@@ -388,7 +404,7 @@ export default function BarcodeScanPage() {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
+                {/* <Input
                   ref={inputRef}
                   value={scanInput}
                   onChange={(e) => setScanInput(e.target.value)}
@@ -400,6 +416,15 @@ export default function BarcodeScanPage() {
                   className="pl-9 h-11 text-base"
                   disabled={isLoadingScan}
                   autoFocus={isScanning}
+                /> */}
+                <Input
+                  ref={inputRef}
+                  value={scanInput}
+                  onChange={(e) => setScanInput(e.target.value)}
+                  placeholder="Scan QR / barcode or enter manually"
+                  className="pl-9 h-11 text-base"
+                  disabled={isLoadingScan}
+                  autoFocus
                 />
                 {isScanning && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -415,12 +440,12 @@ export default function BarcodeScanPage() {
                 {isLoadingScan ? (
                   <>
                     <RefreshCw className="mr-2 size-4 animate-spin" />
-                    Scanning...
+                       Fetching...
                   </>
                 ) : (
                   <>
                     <Search className="mr-2 size-4" />
-                    Scan
+                    Fetch Data
                   </>
                 )}
               </Button>
