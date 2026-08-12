@@ -717,6 +717,8 @@ export default function WarehousesPage() {
                         size="sm"
                         onClick={() => openPreview(w)}
                         title="View Barcode"
+                        disabled={!w.barcodeImage}
+
                         className="
       inline-flex items-center justify-center
       h-8 w-8
