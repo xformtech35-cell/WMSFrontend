@@ -554,9 +554,7 @@ export default function PutawayConfirmationPage() {
     return (
       status === "IN_PROGRESS" &&
       status !== "CANCELLED" &&
-      (stage === "PLACED" ||
-        stage === "PICKED" ||
-        stage === "IN_PROGRESS")
+      (stage === "PLACED" || stage === "PICKED" || stage === "IN_PROGRESS")
     );
   };
 
@@ -611,8 +609,6 @@ export default function PutawayConfirmationPage() {
         onClose={closeViewDetails}
         selectedPutaway={selectedPutaway}
       />
-
-     
 
       {/* Putaway History Search and Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
@@ -872,9 +868,7 @@ export default function PutawayConfirmationPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {item.status === "IN_PROGRESS" && 
-                         item.stage !== "COMPLETED" && 
-                         item.stage !== "CANCELLED" && (
+                        {item.status === "CONFIRMED" && (
                           <button
                             onClick={() => openConfirmModal(item)}
                             className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

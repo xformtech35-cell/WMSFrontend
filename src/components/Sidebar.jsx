@@ -1637,7 +1637,6 @@ const Sidebar = () => {
       {!isCollapsed && (
         <div className="px-2.5 py-1.5">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-sidebar-foreground/40 pointer-events-none" />
             <input
               type="text"
               placeholder="Search menu..."
@@ -1756,10 +1755,10 @@ const Sidebar = () => {
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[0.72rem] font-semibold text-sidebar-foreground">
+              <p className="truncate text-[14px] font-semibold text-sidebar-foreground">
                 {displayName}
               </p>
-              <p className="truncate text-[0.6rem] text-sidebar-foreground/40 mt-0.5">
+              <p className="truncate text-[12px] text-sidebar-foreground/40 mt-0.5">
                 {displayRole}
               </p>
             </div>
@@ -1769,10 +1768,10 @@ const Sidebar = () => {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className="rounded-lg p-1 text-sidebar-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-all duration-200"
+                  className="rounded-lg p-1 !text-[12px] cursor-pointer text-sidebar-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-all duration-200"
                   aria-label="Sign out"
                 >
-                  <LogOut className="size-3" />
+                  <LogOut  />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">

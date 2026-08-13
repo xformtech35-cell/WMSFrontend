@@ -509,7 +509,7 @@ export default function PurchaseOrderPage() {
                           </button>
                           {/* {po.status === "PENDING" && ( */}
                             {/* <> */}
-                              <button
+                              {/* <button
                                 type="button"
                                 className="text-green-600 hover:text-green-800 transition-colors"
                                 title="Submit PO"
@@ -522,7 +522,7 @@ export default function PurchaseOrderPage() {
                                 title="Edit PO"
                               >
                                 <Edit className="w-4 h-4" />
-                              </button>
+                              </button> */}
                             {/* </> */}
                           {/* )} */}
                         </div>

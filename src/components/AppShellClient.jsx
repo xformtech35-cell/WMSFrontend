@@ -236,7 +236,7 @@ export default function AppShellClient({ children }) {
       <main className="flex-1 overflow-x-hidden">
         <header
           className={cn(
-            "sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75",
+            "!sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75",
           )}
         >
           <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 md:px-8">

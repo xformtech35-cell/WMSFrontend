@@ -505,13 +505,13 @@ export default function PurchaseOrderPage() {
                               >
                                 <RotateCw className="w-4 h-4" />
                               </button>
-                              <button
+                              {/* <button
                                 type="button"
                                 className="text-green-600 hover:text-green-800 transition-colors"
                                 title="Submit PO"
                               >
                                 <Send className="w-4 h-4" />
-                              </button>
+                              </button> */}
                             </>
                           )}
                           {po.status === "PENDING" && (
