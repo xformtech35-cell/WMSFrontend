@@ -805,11 +805,11 @@ export default function InventoryStockPage() {
                         >
                           {item.status || "ACTIVE"}
                         </span>
-                        {item.isAvailable && (
+                        {/* {item.isAvailable && (
                           <span className="ml-1 inline-flex items-center">
                             <CheckCircle className="w-3 h-3 text-green-500" />
                           </span>
-                        )}
+                        )} */}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center">

@@ -89,15 +89,23 @@
   --chart-5:              oklch(0.58  0.14  228);
 
   /* ── Sidebar ── */
-  --sidebar:                      oklch(0.122 0.014 264);
+  /* --sidebar:                      oklch(0.122 0.014 264);
   --sidebar-foreground:           oklch(0.94  0.01  264);
   --sidebar-primary:              oklch(0.56  0.19  264);
   --sidebar-primary-foreground:   oklch(0.98  0     0);
   --sidebar-accent:               oklch(0.22  0.018 264);
   --sidebar-accent-foreground:    oklch(0.94  0.01  264);
   --sidebar-border:               oklch(1 0 0 / 7%);
-  --sidebar-ring:                 oklch(0.56  0.19  264);
-
+  --sidebar-ring:                 oklch(0.56  0.19  264); */
+/* ── Sidebar ── */
+ --sidebar:                      oklch(1 0 0);  /* White background */
+  --sidebar-foreground:           oklch(0.2 0 0);  /* Dark text for readability */
+  --sidebar-primary:              oklch(0.488 0.243 264);  /* Primary blue */
+  --sidebar-primary-foreground:   oklch(0.98 0 0);
+  --sidebar-accent:               oklch(0.94 0.02 264);  /* Light accent */
+  --sidebar-accent-foreground:    oklch(0.36 0.1 264);
+  --sidebar-border:               oklch(0.914 0.008 264);  /* Light border */
+  --sidebar-ring:                 oklch(0.488 0.243 264);
   /* ── WMS Brand (HSL strings for backwards compat with hsl(var(--wms-*))) ── */
   --wms-primary:  244 77% 48%;
   --wms-dock:     37  92% 56%;
