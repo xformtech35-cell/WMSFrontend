@@ -665,17 +665,6 @@ export default function PutawayPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  GRN Number
-                </label>
-                <Input
-                  value={grnNumberFilter}
-                  onChange={(e) => setGrnNumberFilter(e.target.value)}
-                  className="h-9"
-                  placeholder="Enter GRN number..."
-                />
-              </div>
             </div>
           )}
         </div>

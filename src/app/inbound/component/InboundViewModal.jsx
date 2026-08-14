@@ -455,7 +455,7 @@ const InboundViewModal = ({
           </div>
 
           {/* Footer Actions - Fixed */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3 flex-shrink-0 rounded-b-2xl">
+          {/* <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -471,7 +471,7 @@ const InboundViewModal = ({
                 Process Inbound
               </button>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
 

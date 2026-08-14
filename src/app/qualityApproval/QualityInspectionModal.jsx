@@ -81,10 +81,16 @@ const QualityApprovalInspectionModal = ({
       if (response.data.success) {
         setSuccess(true);
         onSuccess?.(response.data.data);
-        await api.post(`/inbound/${inbound.id}/generate-grn`);
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+        if (approvalStatus === "REJECTED") {
+          setTimeout(() => {
+            onClose();
+          }, 1500);
+        } else {
+          await api.post(`/inbound/${inbound.id}/generate-grn`);
+          setTimeout(() => {
+            onClose();
+          }, 1500);
+        }
       } else {
         throw new Error(
           response.data.message ||

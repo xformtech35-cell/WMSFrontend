@@ -12,6 +12,10 @@ import {
   X,
   Barcode,
   Printer,
+  Warehouse,
+  Layers,
+  MapPin,
+  Boxes,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -44,6 +48,7 @@ import { CREATE, DELETE, update } from "@/components/apiRequest";
 import StatusBadge from "@/components/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { downloadImage } from "@/components/downloadImage64";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 async function exportBinsExcel(items) {
   await exportWmsWorkbook({
@@ -64,10 +69,13 @@ async function exportBinsExcel(items) {
         width: 16,
         align: "right",
       },
-      { header: "Volume", key: "volume", width: 14, align: "right" },
+      { header: "Min Capacity", key: "minCapacity", width: 16, align: "right" },
+      { header: "Max Capacity", key: "maxCapacity", width: 16, align: "right" },
+      { header: "Capacity Unit", key: "capacityUnit", width: 14 },
+      { header: "Volume (cm³)", key: "volumeCm3", width: 16, align: "right" },
       {
         header: "Utilization %",
-        key: "utilization",
+        key: "utilizationPercentage",
         width: 14,
         align: "right",
       },
@@ -77,7 +85,9 @@ async function exportBinsExcel(items) {
       { header: "Aisle", key: "aisle", width: 20 },
       { header: "Zone", key: "zone", width: 24 },
       { header: "Warehouse", key: "warehouse", width: 28 },
-      { header: "Barcode Data", key: "barcodeData", width: 20 },
+      { header: "Full Location", key: "fullLocation", width: 40 },
+      { header: "Stock Quantity", key: "stockQuantity", width: 16, align: "right" },
+      { header: "Item Types", key: "itemTypes", width: 16, align: "right" },
     ],
     rows: items.map((b) => ({
       id: b.id,
@@ -91,21 +101,20 @@ async function exportBinsExcel(items) {
       heightCm: b.heightCm ?? "",
       unit: b.unit ?? "cm",
       maxWeightG: b.maxWeightG ?? "",
-      volume:
-        b.lengthCm && b.widthCm && b.heightCm
-          ? (b.lengthCm * b.widthCm * b.heightCm).toLocaleString()
-          : "",
-      utilization: b.utilization ?? b.utilizationPct ?? 0,
+      minCapacity: b.minCapacity ?? "",
+      maxCapacity: b.maxCapacity ?? "",
+      capacityUnit: b.capacityUnit ?? "pic",
+      volumeCm3: b.volumeCm3 ?? "",
+      utilizationPercentage: b.utilizationPercentage ?? b.utilizationPct ?? 0,
       status: b.status ?? "AVAILABLE",
-      level: b.level?.levelId || b.level?.name || "",
-      rack: b.level?.rack?.rackId || b.level?.rack?.name || "",
-      aisle:
-        b.level?.rack?.aisle?.aisleNumber ||
-        b.level?.rack?.aisle?.aisleId ||
-        "",
+      level: b.levelName || b.level?.levelId || b.level?.name || "",
+      rack: b.rackName || b.level?.rack?.rackId || b.level?.rack?.name || "",
+      aisle: b.level?.rack?.aisle?.aisleNumber || b.level?.rack?.aisle?.aisleId || "",
       zone: b.level?.rack?.aisle?.zone?.name ?? "",
       warehouse: b.level?.rack?.aisle?.zone?.warehouse?.name ?? "",
-      barcodeData: b.barcodeData ?? "",
+      fullLocation: b.fullLocation || "",
+      stockQuantity: b.stockSummary?.totalQuantity ?? 0,
+      itemTypes: b.stockSummary?.uniqueItemsCount ?? 0,
     })),
   });
   toast.success("Bins exported to Excel");
@@ -141,6 +150,9 @@ export default function BinsPage() {
     heightCm: "",
     unit: "cm",
     maxWeightG: "",
+    minCapacity: "",
+    maxCapacity: "",
+    capacityUnit: "pic",
     status: "AVAILABLE",
     rackId: "",
     levelId: "",
@@ -252,6 +264,16 @@ export default function BinsPage() {
     if (!formData.maxWeightG || parseFloat(formData.maxWeightG) <= 0) {
       errors.maxWeightG = "Valid max weight is required";
     }
+    if (!formData.maxCapacity || parseFloat(formData.maxCapacity) <= 0) {
+      errors.maxCapacity = "Valid max capacity is required";
+    }
+    if (formData.minCapacity && parseFloat(formData.minCapacity) < 0) {
+      errors.minCapacity = "Min capacity cannot be negative";
+    }
+    if (formData.minCapacity && formData.maxCapacity && 
+        parseFloat(formData.minCapacity) > parseFloat(formData.maxCapacity)) {
+      errors.minCapacity = "Min capacity cannot exceed max capacity";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -285,6 +307,9 @@ export default function BinsPage() {
       heightCm: parseFloat(formData.heightCm),
       unit: formData.unit || "cm",
       maxWeightG: parseFloat(formData.maxWeightG),
+      minCapacity: formData.minCapacity ? parseFloat(formData.minCapacity) : null,
+      maxCapacity: parseFloat(formData.maxCapacity),
+      capacityUnit: formData.capacityUnit || "pic",
       status: formData.status,
       rackId: Number(formData.rackId),
       levelId: Number(formData.levelId),
@@ -343,6 +368,9 @@ export default function BinsPage() {
       heightCm: "",
       unit: "cm",
       maxWeightG: "",
+      minCapacity: "",
+      maxCapacity: "",
+      capacityUnit: "pic",
       status: "AVAILABLE",
       rackId: "",
       levelId: "",
@@ -359,6 +387,9 @@ export default function BinsPage() {
       heightCm: "",
       unit: "cm",
       maxWeightG: "",
+      minCapacity: "",
+      maxCapacity: "",
+      capacityUnit: "pic",
       status: "AVAILABLE",
       rackId: racks[0]?.id || "",
       levelId: levels[0]?.id || "",
@@ -377,6 +408,9 @@ export default function BinsPage() {
       unit: item.unit || "cm",
       maxWeightG:
         item.maxWeightG?.toString() || item.max_weight_g?.toString() || "",
+      minCapacity: item.minCapacity?.toString() || "",
+      maxCapacity: item.maxCapacity?.toString() || "",
+      capacityUnit: item.capacityUnit || "pic",
       status: item.status || "AVAILABLE",
       rackId: item.rackId || item.rack?.id || "",
       levelId: item.levelId || item.level?.id || "",
@@ -407,28 +441,34 @@ export default function BinsPage() {
           String(b.status ?? "")
             .toLowerCase()
             .includes(q) ||
+          String(b.rackName ?? "")
+            .toLowerCase()
+            .includes(q) ||
+          String(b.levelName ?? "")
+            .toLowerCase()
+            .includes(q) ||
           String(b.level?.levelId ?? "")
             .toLowerCase()
             .includes(q) ||
           String(b.level?.name ?? "")
             .toLowerCase()
             .includes(q) ||
-          String(b.rack?.rackId ?? "")
+          String(b.level?.rack?.rackId ?? "")
             .toLowerCase()
             .includes(q) ||
-          String(b.rack?.name ?? "")
+          String(b.level?.rack?.name ?? "")
             .toLowerCase()
             .includes(q) ||
-          String(b.rack?.aisle?.aisleNumber ?? "")
+          String(b.level?.rack?.aisle?.aisleNumber ?? "")
             .toLowerCase()
             .includes(q) ||
-          String(b.rack?.aisle?.zone?.name ?? "")
+          String(b.level?.rack?.aisle?.zone?.name ?? "")
             .toLowerCase()
             .includes(q) ||
-          String(b.rack?.aisle?.zone?.warehouse?.name ?? "")
+          String(b.level?.rack?.aisle?.zone?.warehouse?.name ?? "")
             .toLowerCase()
             .includes(q) ||
-          String(b.barcodeData ?? "")
+          String(b.fullLocation ?? "")
             .toLowerCase()
             .includes(q),
       );
@@ -449,6 +489,24 @@ export default function BinsPage() {
   });
 
   const showInitialLoading = isLoading && !bins?.length;
+
+  // Helper function to get utilization color
+  const getUtilizationColor = (value) => {
+    if (value >= 90) return "bg-red-500";
+    if (value >= 70) return "bg-yellow-500";
+    if (value >= 30) return "bg-blue-500";
+    return "bg-green-500";
+  };
+
+  // Helper function to get status color for text
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "AVAILABLE": return "text-green-600";
+      case "FULL": return "text-yellow-600";
+      case "BLOCKED": return "text-red-600";
+      default: return "text-gray-600";
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -507,15 +565,15 @@ export default function BinsPage() {
                     {selectedBin.fullLocation || "-"}
                   </p>
                   <p>
-                    <strong>Level:</strong>{" "}
-                    {selectedBin.level?.levelId ||
-                      selectedBin.level?.name ||
+                    <strong>Warehouse:</strong>{" "}
+                    {selectedBin.level?.rack?.aisle?.zone?.warehouse?.name ||
+                      selectedBin.level?.rack?.aisle?.zone?.warehouse?.warehouseId ||
                       "-"}
                   </p>
                   <p>
-                    <strong>Rack:</strong>{" "}
-                    {selectedBin.level?.rack?.rackId ||
-                      selectedBin.level?.rack?.name ||
+                    <strong>Zone:</strong>{" "}
+                    {selectedBin.level?.rack?.aisle?.zone?.name ||
+                      selectedBin.level?.rack?.aisle?.zone?.zoneId ||
                       "-"}
                   </p>
                   <p>
@@ -525,33 +583,23 @@ export default function BinsPage() {
                       "-"}
                   </p>
                   <p>
-                    <strong>Zone:</strong>{" "}
-                    {selectedBin.level?.rack?.aisle?.zone?.name || "-"}
-                  </p>
-                  <p>
-                    <strong>Warehouse:</strong>{" "}
-                    {selectedBin.level?.rack?.aisle?.zone?.warehouse?.name ||
+                    <strong>Rack:</strong>{" "}
+                    {selectedBin.rackName ||
+                      selectedBin.level?.rack?.rackId ||
+                      selectedBin.level?.rack?.name ||
                       "-"}
                   </p>
                   <p>
-                    <strong>Barcode Data:</strong>{" "}
-                    {selectedBin.barcodeData || selectedBin.barcode || "-"}
-                  </p>
-                  <p>
-                    <strong>Format:</strong>{" "}
-                    {selectedBin.barcodeFormat || "CODE128"}
+                    <strong>Level:</strong>{" "}
+                    {selectedBin.levelName ||
+                      selectedBin.level?.levelId ||
+                      selectedBin.level?.name ||
+                      "-"}
+                    {selectedBin.level?.levelNumber && ` (#${selectedBin.level.levelNumber})`}
                   </p>
                   <p>
                     <strong>Status:</strong>{" "}
-                    <span
-                      className={
-                        selectedBin.status === "AVAILABLE"
-                          ? "text-green-600"
-                          : selectedBin.status === "FULL"
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                      }
-                    >
+                    <span className={getStatusColor(selectedBin.status)}>
                       {selectedBin.status || "AVAILABLE"}
                     </span>
                   </p>
@@ -566,19 +614,61 @@ export default function BinsPage() {
                   <p>
                     <strong>Volume:</strong>{" "}
                     {selectedBin.volumeCm3
-                      ? `${selectedBin.volumeCm3} ${selectedBin.unit || "cm"}³`
+                      ? `${selectedBin.volumeCm3.toLocaleString()} ${selectedBin.unit || "cm"}³`
                       : "-"}
                   </p>
                   <p>
                     <strong>Max Weight:</strong>{" "}
                     {selectedBin.maxWeightG
-                      ? `${selectedBin.maxWeightG} g`
+                      ? `${selectedBin.maxWeightG.toLocaleString()} g (${(selectedBin.maxWeightG / 1000).toFixed(2)} kg)`
+                      : "-"}
+                  </p>
+                  <p>
+                    <strong>Min Capacity:</strong>{" "}
+                    {selectedBin.minCapacity
+                      ? `${selectedBin.minCapacity} ${selectedBin.capacityUnit || "pic"}`
+                      : "-"}
+                  </p>
+                  <p>
+                    <strong>Max Capacity:</strong>{" "}
+                    {selectedBin.maxCapacity
+                      ? `${selectedBin.maxCapacity} ${selectedBin.capacityUnit || "pic"}`
                       : "-"}
                   </p>
                   <p>
                     <strong>Utilization:</strong>{" "}
                     {selectedBin.utilizationPercentage || 0}%
                   </p>
+                  {selectedBin.stockSummary && (
+                    <>
+                      <hr className="my-2" />
+                      <p className="font-medium">Stock Summary</p>
+                      <p>
+                        <strong>Total Quantity:</strong>{" "}
+                        {selectedBin.stockSummary.totalQuantity || 0}
+                      </p>
+                      <p>
+                        <strong>Available:</strong>{" "}
+                        {selectedBin.stockSummary.availableQuantity || 0}
+                      </p>
+                      <p>
+                        <strong>Reserved:</strong>{" "}
+                        {selectedBin.stockSummary.reservedQuantity || 0}
+                      </p>
+                      <p>
+                        <strong>In Transit:</strong>{" "}
+                        {selectedBin.stockSummary.inTransitQuantity || 0}
+                      </p>
+                      <p>
+                        <strong>Unique Items:</strong>{" "}
+                        {selectedBin.stockSummary.uniqueItemsCount || 0}
+                      </p>
+                      <p>
+                        <strong>Has Stock:</strong>{" "}
+                        {selectedBin.stockSummary.hasStock ? "Yes" : "No"}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-2 w-full">
                   <Button
@@ -742,6 +832,70 @@ export default function BinsPage() {
             </p>
           </div>
 
+          {/* Capacity Fields */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="minCapacity">Min Capacity</Label>
+              <Input
+                id="minCapacity"
+                name="minCapacity"
+                type="number"
+                step="1"
+                min="0"
+                placeholder="500"
+                value={formData.minCapacity}
+                onChange={handleInputChange}
+                className={formErrors.minCapacity ? "border-red-500" : ""}
+              />
+              {formErrors.minCapacity && (
+                <p className="text-xs text-red-500">{formErrors.minCapacity}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="maxCapacity">Max Capacity *</Label>
+              <Input
+                id="maxCapacity"
+                name="maxCapacity"
+                type="number"
+                step="1"
+                min="1"
+                placeholder="1000"
+                value={formData.maxCapacity}
+                onChange={handleInputChange}
+                className={formErrors.maxCapacity ? "border-red-500" : ""}
+              />
+              {formErrors.maxCapacity && (
+                <p className="text-xs text-red-500">{formErrors.maxCapacity}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="capacityUnit">Capacity Unit</Label>
+            <select
+              id="capacityUnit"
+              name="capacityUnit"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={formData.capacityUnit}
+              onChange={handleInputChange}
+            >
+              <option value="pic">Pieces (pic)</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="g">Grams (g)</option>
+              <option value="lb">Pounds (lb)</option>
+              <option value="oz">Ounces (oz)</option>
+              <option value="l">Liters (l)</option>
+              <option value="ml">Milliliters (ml)</option>
+              <option value="gal">Gallons (gal)</option>
+              <option value="ctn">Cartons (ctn)</option>
+              <option value="pal">Pallets (pal)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Unit for capacity measurements (min/max capacity)
+            </p>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="status">Status</Label>
             <select
@@ -846,7 +1000,7 @@ export default function BinsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 pl-8 pr-8"
-            placeholder="Search barcode, rack, level, zone..."
+            placeholder="Search barcode, rack, level, zone, location..."
           />
           {search ? (
             <button
@@ -912,16 +1066,14 @@ export default function BinsPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>#</TableHead>
                   <TableHead>Barcode</TableHead>
+                  <TableHead className="min-w-32">Location</TableHead>
                   <TableHead>Dimensions</TableHead>
-                  <TableHead>Unit</TableHead>
                   <TableHead>Max Weight</TableHead>
+                  <TableHead>Capacity</TableHead>
                   <TableHead>Volume</TableHead>
                   <TableHead className="min-w-44">Utilization</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Level</TableHead>
-                  <TableHead>Rack</TableHead>
-                  <TableHead>Aisle</TableHead>
-                  <TableHead>Zone</TableHead>
+                  <TableHead className="min-w-24">Stock</TableHead>
                   <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -932,12 +1084,30 @@ export default function BinsPage() {
                   const width = b.widthCm ?? b.width_cm;
                   const height = b.heightCm ?? b.height_cm;
                   const maxWeight = b.maxWeightG ?? b.max_weight_g;
-                  const utilization = b.utilization ?? b.utilizationPct ?? 0;
-                  const volume =
-                    length && width && height
-                      ? (length * width * height).toLocaleString()
-                      : "-";
+                  const utilization = b.utilizationPercentage ?? b.utilization ?? b.utilizationPct ?? 0;
+                  const volume = b.volumeCm3 || (length && width && height
+                    ? (length * width * height).toLocaleString()
+                    : "-");
                   const unit = b.unit || "cm";
+                  const hasStock = b.stockSummary?.hasStock || false;
+                  const totalQuantity = b.stockSummary?.totalQuantity || 0;
+                  const uniqueItems = b.stockSummary?.uniqueItemsCount || 0;
+                  const minCapacity = b.minCapacity;
+                  const maxCapacity = b.maxCapacity;
+                  const capacityUnit = b.capacityUnit || "pic";
+
+                  // Build location hierarchy
+                  const locationParts = [
+                    b.level?.rack?.aisle?.zone?.warehouse?.warehouseId || b.level?.rack?.aisle?.zone?.warehouse?.name,
+                    b.level?.rack?.aisle?.zone?.zoneId || b.level?.rack?.aisle?.zone?.name,
+                    b.level?.rack?.aisle?.aisleId || b.level?.rack?.aisle?.aisleNumber,
+                    b.rackName || b.level?.rack?.rackId || b.level?.rack?.name,
+                    b.levelName || b.level?.levelId || b.level?.name,
+                  ].filter(Boolean);
+                  
+                  const locationDisplay = locationParts.length > 0 
+                    ? locationParts.join(" › ")
+                    : b.fullLocation?.split("-").pop() || "-";
 
                   return (
                     <TableRow key={b.id} className="table-row-hover">
@@ -947,29 +1117,72 @@ export default function BinsPage() {
                       <TableCell className="font-mono text-xs font-medium">
                         {b.barcode || "-"}
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help flex items-center gap-1">
+                                <MapPin className="size-3 text-muted-foreground" />
+                                {locationDisplay.length > 30 
+                                  ? locationDisplay.slice(0, 30) + "..."
+                                  : locationDisplay}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <div className="space-y-0.5 text-xs">
+                                <p><strong>Full Location:</strong> {b.fullLocation || "N/A"}</p>
+                                <p><strong>Warehouse:</strong> {b.level?.rack?.aisle?.zone?.warehouse?.name || "-"}</p>
+                                <p><strong>Zone:</strong> {b.level?.rack?.aisle?.zone?.name || "-"}</p>
+                                <p><strong>Aisle:</strong> {b.level?.rack?.aisle?.aisleNumber || b.level?.rack?.aisle?.aisleId || "-"}</p>
+                                <p><strong>Rack:</strong> {b.rackName || b.level?.rack?.rackId || "-"}</p>
+                                <p><strong>Level:</strong> {b.levelName || b.level?.levelId || "-"}</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {length && width && height
-                          ? `${length} × ${width} × ${height}`
+                          ? `${length} × ${width} × ${height} ${unit}`
                           : "-"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                          {unit}
-                        </span>
                       </TableCell>
                       <TableCell className="text-xs">
                         {maxWeight
                           ? `${(maxWeight / 1000).toFixed(1)} kg`
                           : "-"}
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {minCapacity && maxCapacity
+                                  ? `${minCapacity} - ${maxCapacity} ${capacityUnit}`
+                                  : maxCapacity
+                                    ? `≤ ${maxCapacity} ${capacityUnit}`
+                                    : "-"}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-0.5 text-xs">
+                                <p><strong>Min Capacity:</strong> {minCapacity || "N/A"} {capacityUnit}</p>
+                                <p><strong>Max Capacity:</strong> {maxCapacity || "N/A"} {capacityUnit}</p>
+                                <p><strong>Unit:</strong> {capacityUnit}</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {volume}
+                        {typeof volume === 'number' || !isNaN(volume) 
+                          ? `${volume} ${unit}³` 
+                          : "-"}
                       </TableCell>
                       <TableCell className="min-w-44">
                         <div className="flex items-center gap-2">
                           <Progress
                             value={utilization}
-                            className="h-1.5 flex-1"
+                            className={`h-1.5 flex-1 ${getUtilizationColor(utilization)}`}
                           />
                           <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
                             {utilization}%
@@ -979,19 +1192,37 @@ export default function BinsPage() {
                       <TableCell>
                         <StatusBadge status={b.status || "AVAILABLE"} />
                       </TableCell>
-                      <TableCell className="text-xs">
-                        {b.level?.levelId || b.level?.name || "-"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {b.level?.rack?.rackId || b.level?.rack?.name || "-"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {b.level?.rack?.aisle?.aisleNumber ||
-                          b.level?.rack?.aisle?.aisleId ||
-                          "-"}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {b.level?.rack?.aisle?.zone?.name || "-"}
+                      <TableCell>
+                        {hasStock ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5">
+                                  <Package className="size-3.5 text-blue-500" />
+                                  <span className="text-xs font-medium">
+                                    {totalQuantity}
+                                  </span>
+                                  {uniqueItems > 1 && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                      ({uniqueItems} types)
+                                    </span>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="space-y-0.5 text-xs">
+                                  <p><strong>Total:</strong> {totalQuantity} units</p>
+                                  <p><strong>Available:</strong> {b.stockSummary?.availableQuantity || 0}</p>
+                                  <p><strong>Reserved:</strong> {b.stockSummary?.reservedQuantity || 0}</p>
+                                  <p><strong>In Transit:</strong> {b.stockSummary?.inTransitQuantity || 0}</p>
+                                  <p><strong>Item Types:</strong> {uniqueItems}</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Empty</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
@@ -1000,21 +1231,19 @@ export default function BinsPage() {
                           onClick={() => openBarcodePreview(b)}
                           title="View Barcode"
                           disabled={!b.barcodeImage}
-                          className="
-                              inline-flex items-center justify-center
-                              h-8 w-8
-                              rounded-md
-                              bg-blue-50
-                              text-blue-600
-                              transition-all duration-200
-                              hover:bg-blue-600
-                              hover:text-white
-                              hover:ring-blue-600
-                              hover:shadow-sm
-                              cursor-pointer
-                            "
+                          className={`
+                            inline-flex items-center justify-center
+                            h-8 w-8
+                            rounded-md
+                            transition-all duration-200
+                            cursor-pointer
+                            ${b.barcodeImage 
+                              ? "bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white hover:ring-blue-600 hover:shadow-sm"
+                              : "opacity-50 cursor-not-allowed"
+                            }
+                          `}
                         >
-                          <Barcode className="" />
+                          <Barcode className="size-4" />
                         </Button>
                       </TableCell>
                       <TableCell className="text-right">

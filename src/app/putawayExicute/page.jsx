@@ -2,22 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import {
-  Package,
-  CheckCircle2,
   Search,
   X,
-  ArrowRight,
-  Warehouse,
   User,
   FileText,
   Boxes,
   RefreshCw,
-  MapPin,
-  Plus,
-  Trash2,
-  Edit,
   Eye,
-  AlertCircle,
   Play,
   Check,
   ChevronLeft,
@@ -27,16 +18,6 @@ import {
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import { CREATE } from "@/components/apiRequest";
 import PutawayDetailsModal from "./components/PutawayDetailsModal";
@@ -707,17 +688,7 @@ export default function PutawayExicutePage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  GRN Number
-                </label>
-                <Input
-                  value={grnNumberFilter}
-                  onChange={(e) => setGrnNumberFilter(e.target.value)}
-                  className="h-9"
-                  placeholder="Enter GRN number..."
-                />
-              </div>
+             
             </div>
           )}
         </div>

@@ -87,8 +87,12 @@ export default function RFQPage() {
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingRFQ, setViewingRFQ] = useState(null);
+  const [navigatingRFQId, setNavigatingRFQId] = useState(null);
+
+  const handleNavigateToRFQ = (id) => {
+    setNavigatingRFQId(id);
+    router.push(`/rfqs/${id}`);
+  };
 
   // Debounce search term
   useEffect(() => {
@@ -133,25 +137,6 @@ export default function RFQPage() {
     }
   };
 
-  const handleViewClick = async (rfq) => {
-    try {
-      setLoading(true);
-      const fullRFQ = await getRFQByIdAPI(rfq.id);
-      setViewingRFQ(fullRFQ);
-      setShowViewModal(true);
-    } catch (error) {
-      console.error("Error loading RFQ details:", error);
-      setErrorMessage("Failed to load RFQ details.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleViewClose = () => {
-    setShowViewModal(false);
-    setViewingRFQ(null);
-  };
-
   const getStatusColor = (status) => {
     const colors = {
       DRAFT: "bg-gray-100 text-gray-700",
@@ -167,21 +152,6 @@ export default function RFQPage() {
     return colors[status] || colors.DRAFT;
   };
 
-  const getStatusBadgeColor = (status) => {
-    const colors = {
-      DRAFT: "bg-gray-100 text-gray-700 border-gray-200",
-      PENDING: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      IN_PROGRESS: "bg-blue-100 text-blue-700 border-blue-200",
-      SUBMITTED: "bg-purple-100 text-purple-700 border-purple-200",
-      APPROVED: "bg-green-100 text-green-700 border-green-200",
-      REJECTED: "bg-red-100 text-red-700 border-red-200",
-      COMPLETED: "bg-indigo-100 text-indigo-700 border-indigo-200",
-      EXPIRED: "bg-gray-100 text-gray-500 border-gray-200",
-      CANCELLED: "bg-red-100 text-red-500 border-red-200",
-    };
-    return colors[status] || colors.DRAFT;
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -189,18 +159,6 @@ export default function RFQPage() {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -371,11 +329,16 @@ export default function RFQPage() {
                         {/* // In the RFQPage component, update the view button: */}
                         <button
                           type="button"
-                          onClick={() => router.push(`/rfqs/${rfq.id}`)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          onClick={() => handleNavigateToRFQ(rfq.id)}
+                          disabled={navigatingRFQId === rfq.id}
+                          className="text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                           title="View Details"
                         >
-                          <Eye className="w-4 h-4" />
+                          {navigatingRFQId === rfq.id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
                         </button>
                       </td>
                     </tr>
@@ -412,17 +375,6 @@ export default function RFQPage() {
             </div>
           )}
         </div>
-
-        {/* View Modal */}
-        {showViewModal && viewingRFQ && (
-          <RFQViewModal
-            rfq={viewingRFQ}
-            onClose={handleViewClose}
-            formatDate={formatDate}
-            formatDateTime={formatDateTime}
-            getStatusBadgeColor={getStatusBadgeColor}
-          />
-        )}
       </div>
 
       <style jsx>{`
@@ -453,426 +405,6 @@ export default function RFQPage() {
           animation: scale-up 0.3s ease-out;
         }
       `}</style>
-    </div>
-  );
-}
-
-// RFQ View Modal Component
-function RFQViewModal({
-  rfq,
-  onClose,
-  formatDate,
-  formatDateTime,
-  getStatusBadgeColor,
-}) {
-  const [activeTab, setActiveTab] = useState("overview");
-
-  if (!rfq) return null;
-
-  const tabs = [
-    { id: "overview", label: "Overview", icon: FileText },
-    { id: "items", label: "Items", icon: Package },
-    { id: "quotations", label: "Quotations", icon: Users },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen p-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                {rfq.rfqNumber}
-              </h2>
-              <p className="text-sm text-gray-500">
-                PR: {rfq.prNumber} | Reference: {rfq.referenceNumber || "N/A"}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusBadgeColor(rfq.status)}`}
-              >
-                {rfq.status?.replace(/_/g, " ") || "N/A"}
-              </span>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="border-b border-gray-200 px-6">
-            <div className="flex gap-6">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
-                      activeTab === tab.id
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                    {tab.id === "quotations" && (
-                      <span className="ml-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                        {rfq.vendorQuotations?.length || 0}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-6">
-            {activeTab === "overview" && (
-              <div className="space-y-6">
-                {/* RFQ Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-gray-600 mb-2">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm font-medium">RFQ Date</span>
-                    </div>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {formatDate(rfq.rfqDate)}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-gray-600 mb-2">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm font-medium">Closing Date</span>
-                    </div>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {formatDate(rfq.closingDate)}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-gray-600 mb-2">
-                      <FileText className="w-4 h-4" />
-                      <span className="text-sm font-medium">Status</span>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium border inline-block ${getStatusBadgeColor(rfq.status)}`}
-                    >
-                      {rfq.status?.replace(/_/g, " ") || "N/A"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Terms */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {rfq.deliveryTerms && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-gray-600 mb-1">
-                        <Truck className="w-4 h-4" />
-                        <span className="text-sm font-medium">
-                          Delivery Terms
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-900">
-                        {rfq.deliveryTerms}
-                      </p>
-                    </div>
-                  )}
-                  {rfq.paymentTerms && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-gray-600 mb-1">
-                        <CreditCard className="w-4 h-4" />
-                        <span className="text-sm font-medium">
-                          Payment Terms
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-900">
-                        {rfq.paymentTerms}
-                      </p>
-                    </div>
-                  )}
-                  {rfq.termsAndConditions && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 text-gray-600 mb-1">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm font-medium">
-                          Terms & Conditions
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-900">
-                        {rfq.termsAndConditions}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Remarks */}
-                {rfq.remarks && (
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">
-                      Remarks
-                    </h4>
-                    <p className="text-sm text-gray-600">{rfq.remarks}</p>
-                  </div>
-                )}
-
-                {/* Timestamps */}
-                <div className="border-t border-gray-200 pt-4 flex justify-between text-xs text-gray-500">
-                  <span>Created: {formatDateTime(rfq.createdAt)}</span>
-                  <span>Updated: {formatDateTime(rfq.updatedAt)}</span>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "items" && (
-              <div>
-                <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Items ({rfq.items?.length || 0})
-                  </h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          #
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Item Code
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Item Name
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Description
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          UOM
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Quantity
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Unit Price
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {rfq.items?.map((item, index) => (
-                        <tr key={item.id || index} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-500">
-                            {index + 1}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
-                            {item.itemCode || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {item.itemName}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate">
-                            {item.description || "-"}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
-                            {item.uom || "Nos"}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                            {item.quantity || item.requestedQty || 0}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                            ₹{(item.estimatedUnitPrice || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-                            ₹{(item.estimatedTotal || 0).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-gray-50">
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="px-4 py-3 text-right font-medium text-gray-700"
-                        >
-                          Total Items:
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-gray-900">
-                          {rfq.items?.length || 0}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "quotations" && (
-              <div>
-                <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Vendor Quotations ({rfq.vendorQuotations?.length || 0})
-                  </h3>
-                </div>
-                {rfq.vendorQuotations?.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No quotations received yet
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {rfq.vendorQuotations?.map((quotation, index) => (
-                      <div
-                        key={quotation.id || index}
-                        className="border border-gray-200 rounded-lg overflow-hidden"
-                      >
-                        <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center flex-wrap gap-2">
-                          <div>
-                            <h4 className="font-semibold text-gray-900">
-                              {quotation.quotationNumber}
-                            </h4>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <Building2 className="w-3 h-3" />
-                              <span>{quotation.supplierName}</span>
-                              {quotation.supplierCode && (
-                                <span className="text-xs text-gray-400">
-                                  ({quotation.supplierCode})
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {quotation.rank && (
-                              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">
-                                Rank #{quotation.rank}
-                              </span>
-                            )}
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                quotation.status === "COMPARED"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700"
-                              }`}
-                            >
-                              {quotation.status || "PENDING"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <div>
-                              <span className="text-xs text-gray-500">
-                                Quotation Date
-                              </span>
-                              <p className="text-sm font-medium text-gray-900">
-                                {formatDate(quotation.quotationDate)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500">
-                                Delivery Date
-                              </span>
-                              <p className="text-sm font-medium text-gray-900">
-                                {formatDate(quotation.deliveryDate)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500">
-                                Valid Till
-                              </span>
-                              <p className="text-sm font-medium text-gray-900">
-                                {formatDate(quotation.validTill)}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500">
-                                Grand Total
-                              </span>
-                              <p className="text-sm font-bold text-green-600">
-                                ₹{quotation.grandTotal?.toFixed(2) || "0.00"}
-                              </p>
-                            </div>
-                          </div>
-
-                          {quotation.items && quotation.items.length > 0 && (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead className="bg-gray-50">
-                                  <tr>
-                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                      Item
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                      UOM
-                                    </th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">
-                                      Qty
-                                    </th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">
-                                      Unit Price
-                                    </th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">
-                                      Total
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                  {quotation.items.map((item, idx) => (
-                                    <tr key={idx}>
-                                      <td className="px-3 py-2 text-gray-900">
-                                        {item.itemName}
-                                      </td>
-                                      <td className="px-3 py-2 text-gray-500">
-                                        {item.uom || "Nos"}
-                                      </td>
-                                      <td className="px-3 py-2 text-gray-900 text-right">
-                                        {item.quantity}
-                                      </td>
-                                      <td className="px-3 py-2 text-gray-900 text-right">
-                                        ₹{item.unitPrice?.toFixed(2) || "0.00"}
-                                      </td>
-                                      <td className="px-3 py-2 font-medium text-gray-900 text-right">
-                                        ₹
-                                        {item.totalAmount?.toFixed(2) || "0.00"}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-
-                          {quotation.remarks && (
-                            <div className="mt-3 text-xs text-gray-500">
-                              <span className="font-medium">Remarks:</span>{" "}
-                              {quotation.remarks}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -112,9 +112,9 @@ export default function AppShellClient({ children }) {
     queryKey: ["dashboardKpis-header"],
     queryFn: () => api.get("/dashboard/kpis").then((r) => r.data),
     retry: false,
-    refetchInterval: 20000,
-    staleTime: 30000,
-    gcTime: 300000,
+    // refetchInterval: 20000,
+    // staleTime: 30000,
+    // gcTime: 300000,
     refetchOnWindowFocus: false,
     enabled: isAuthorized && !isPublicRoute,
   });

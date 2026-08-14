@@ -36,10 +36,32 @@ const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const fileInputRefs = useRef({});
+  const [users, setUsers] = useState([]);
+  const fetchMasterData = async () => {
+    try {
+      const [usersRes] = await Promise.all([
+        api.get("/users").catch(() => ({ data: [] })),
+      ]);
 
+      setUsers(
+        usersRes.data?.data?.content ||
+          usersRes.data?.content ||
+          usersRes.data ||
+          [],
+      );
+    } catch (error) {
+      console.error("Error fetching master data:", error);
+      setUsers([]);
+    }
+  };
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchMasterData();
+    }
+  }, [isOpen]);
   // Form state
   const [formData, setFormData] = useState({
-    inspectedBy: 1, // Default to current user
+    inspectedBy: "", // Default to current user
     overallRemarks: "",
     items: [],
   });
@@ -62,7 +84,7 @@ const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
         })) || [];
 
       setFormData({
-        inspectedBy: 1,
+        inspectedBy: "",
         overallRemarks: `Quality inspection for ${inbound.inboundNumber}`,
         items: items,
       });
@@ -105,64 +127,61 @@ const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   //     items: updatedItems,
   //   }));
   // };
-const handleItemChange = (index, field, value) => {
-  const updatedItems = [...formData.items];
-  const item = updatedItems[index];
+  const handleItemChange = (index, field, value) => {
+    const updatedItems = [...formData.items];
+    const item = updatedItems[index];
 
-  if (field === "acceptedQuantity" || field === "rejectedQuantity") {
-    let newValue = parseInt(value, 10);
+    if (field === "acceptedQuantity" || field === "rejectedQuantity") {
+      let newValue = parseInt(value, 10);
 
-    // Empty input should be treated as 0
-    if (isNaN(newValue)) {
-      newValue = 0;
-    }
+      // Empty input should be treated as 0
+      if (isNaN(newValue)) {
+        newValue = 0;
+      }
 
-    // Don't allow negative values
-    newValue = Math.max(0, newValue);
+      // Don't allow negative values
+      newValue = Math.max(0, newValue);
 
-    // Don't allow value greater than received quantity
-    newValue = Math.min(newValue, item.receivedQuantity);
+      // Don't allow value greater than received quantity
+      newValue = Math.min(newValue, item.receivedQuantity);
 
-    if (field === "acceptedQuantity") {
-      item.acceptedQuantity = newValue;
+      if (field === "acceptedQuantity") {
+        item.acceptedQuantity = newValue;
 
-      // Automatically calculate rejected quantity
-      item.rejectedQuantity = item.receivedQuantity - newValue;
+        // Automatically calculate rejected quantity
+        item.rejectedQuantity = item.receivedQuantity - newValue;
+      } else {
+        item.rejectedQuantity = newValue;
+
+        // Automatically calculate accepted quantity
+        item.acceptedQuantity = item.receivedQuantity - newValue;
+      }
+
+      // Automatically determine quality status
+      if (
+        item.acceptedQuantity === item.receivedQuantity &&
+        item.rejectedQuantity === 0
+      ) {
+        item.qualityStatus = "ACCEPTED";
+      } else if (
+        item.acceptedQuantity === 0 &&
+        item.rejectedQuantity === item.receivedQuantity
+      ) {
+        item.qualityStatus = "REJECTED";
+      } else if (item.acceptedQuantity > 0 && item.rejectedQuantity > 0) {
+        item.qualityStatus = "PARTIAL";
+      } else {
+        item.qualityStatus = "PENDING";
+      }
     } else {
-      item.rejectedQuantity = newValue;
-
-      // Automatically calculate accepted quantity
-      item.acceptedQuantity = item.receivedQuantity - newValue;
+      item[field] = value;
     }
 
-    // Automatically determine quality status
-    if (
-      item.acceptedQuantity === item.receivedQuantity &&
-      item.rejectedQuantity === 0
-    ) {
-      item.qualityStatus = "ACCEPTED";
-    } else if (
-      item.acceptedQuantity === 0 &&
-      item.rejectedQuantity === item.receivedQuantity
-    ) {
-      item.qualityStatus = "REJECTED";
-    } else if (
-      item.acceptedQuantity > 0 &&
-      item.rejectedQuantity > 0
-    ) {
-      item.qualityStatus = "PARTIAL";
-    } else {
-      item.qualityStatus = "PENDING";
-    }
-  } else {
-    item[field] = value;
-  }
-
-  setFormData((prev) => ({
-    ...prev,
-    items: updatedItems,
-  }));
-};
+    setFormData((prev) => ({
+      ...prev,
+      items: updatedItems,
+    }));
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -265,7 +284,7 @@ const handleItemChange = (index, field, value) => {
 
       // Add inspection data as JSON
       const inspectionData = {
-        inspectedBy: formData.inspectedBy,
+        inspectedBy: Number(formData.inspectedBy),
         overallRemarks: formData.overallRemarks || null,
         items: itemsToInspect.map((item) => ({
           lineId: item.lineId,
@@ -686,16 +705,29 @@ const handleItemChange = (index, field, value) => {
                     Inspected By
                     <span className="text-red-500 ml-1">*</span>
                   </label>
+
                   <div className="relative">
-                    <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
+                    <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+
+                    <select
                       name="inspectedBy"
                       value={formData.inspectedBy}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition-all"
-                      readOnly
-                    />
+                      required
+                      className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-white focus:ring-4 focus:ring-green-100 focus:border-green-400 transition-all appearance-none"
+                    >
+                      <option value="">Select </option>
+
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name ||
+                            user.fullName ||
+                            user.username ||
+                            user.userName ||
+                            `User ${user.id}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div>
