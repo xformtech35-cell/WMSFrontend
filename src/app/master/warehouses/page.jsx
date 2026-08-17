@@ -59,6 +59,9 @@ async function exportWarehousesExcel(items) {
       { header: "Contact Phone", key: "contactPhone", width: 18 },
       { header: "Contact Email", key: "contactEmail", width: 28 },
       { header: "Capacity", key: "capacity", width: 12, align: "right" },
+      { header: "Max Capacity", key: "maxCapacity", width: 12, align: "right" },
+      { header: "Min Capacity", key: "minCapacity", width: 12, align: "right" },
+      { header: "Capacity Unit", key: "capacityUnit", width: 12 },
       { header: "Status", key: "isActive", width: 10 },
       { header: "Remarks", key: "remarks", width: 30 },
     ],
@@ -72,6 +75,9 @@ async function exportWarehousesExcel(items) {
       contactPhone: w.contactPhone ?? "",
       contactEmail: w.contactEmail ?? "",
       capacity: w.capacity ?? "",
+      maxCapacity: w.maxCapacity ?? "",
+      minCapacity: w.minCapacity ?? "",
+      capacityUnit: w.capacityUnit ?? "",
       isActive: w.isActive ? "Active" : "Inactive",
       remarks: w.remarks ?? "",
     })),
@@ -139,6 +145,9 @@ export default function WarehousesPage() {
     contactPhone: "",
     contactEmail: "",
     capacity: "",
+    maxCapacity: "",
+    minCapacity: "",
+    capacityUnit: "pic",
     remarks: "",
   });
 
@@ -187,6 +196,19 @@ export default function WarehousesPage() {
     if (formData.capacity && formData.capacity < 0) {
       errors.capacity = "Capacity must be a positive number";
     }
+    if (formData.maxCapacity && formData.maxCapacity < 0) {
+      errors.maxCapacity = "Max capacity must be a positive number";
+    }
+    if (formData.minCapacity && formData.minCapacity < 0) {
+      errors.minCapacity = "Min capacity must be a positive number";
+    }
+    if (
+      formData.maxCapacity &&
+      formData.minCapacity &&
+      Number(formData.maxCapacity) < Number(formData.minCapacity)
+    ) {
+      errors.maxCapacity = "Max capacity cannot be less than min capacity";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -233,6 +255,9 @@ export default function WarehousesPage() {
       contactPhone: formData.contactPhone?.trim() || "",
       contactEmail: formData.contactEmail?.trim() || "",
       capacity: formData.capacity ? Number(formData.capacity) : 0,
+      maxCapacity: formData.maxCapacity ? Number(formData.maxCapacity) : 0,
+      minCapacity: formData.minCapacity ? Number(formData.minCapacity) : 0,
+      capacityUnit: formData.capacityUnit || "pic",
       remarks: formData.remarks?.trim() || "",
       isActive: true,
       createdBy: "admin",
@@ -299,6 +324,9 @@ export default function WarehousesPage() {
       contactPhone: "",
       contactEmail: "",
       capacity: "",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pic",
       remarks: "",
     });
     setFormErrors({});
@@ -321,6 +349,9 @@ export default function WarehousesPage() {
       contactPhone: item.contactPhone || "",
       contactEmail: item.contactEmail || "",
       capacity: item.capacity || "",
+      maxCapacity: item.maxCapacity || "",
+      minCapacity: item.minCapacity || "",
+      capacityUnit: item.capacityUnit || "pic",
       remarks: item.remarks || "",
     });
     setFormErrors({});
@@ -527,6 +558,58 @@ export default function WarehousesPage() {
           </div>
 
           <div className="space-y-1.5">
+            <Label htmlFor="maxCapacity">Max Capacity</Label>
+            <Input
+              id="maxCapacity"
+              name="maxCapacity"
+              type="number"
+              placeholder="e.g. 1000"
+              value={formData.maxCapacity}
+              onChange={handleInputChange}
+              className={formErrors.maxCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.maxCapacity && (
+              <p className="text-xs text-red-500">{formErrors.maxCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="minCapacity">Min Capacity</Label>
+            <Input
+              id="minCapacity"
+              name="minCapacity"
+              type="number"
+              placeholder="e.g. 500"
+              value={formData.minCapacity}
+              onChange={handleInputChange}
+              className={formErrors.minCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.minCapacity && (
+              <p className="text-xs text-red-500">{formErrors.minCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="capacityUnit">Capacity Unit</Label>
+            <select
+              id="capacityUnit"
+              name="capacityUnit"
+              value={formData.capacityUnit}
+              onChange={handleInputChange}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="pallet">Pallet Positions</option>
+              <option value="bin">Bin Positions</option>
+              <option value="sqft">Square Feet (sq ft)</option>
+              <option value="sqm">Square Meters (m²)</option>
+              <option value="cft">Cubic Feet (ft³)</option>
+              <option value="cbm">Cubic Meters (m³)</option>
+              <option value="ton">Tons</option>
+              <option value="kg">Kilograms (KG)</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="remarks">Remarks</Label>
             <Input
               id="remarks"
@@ -684,6 +767,7 @@ export default function WarehousesPage() {
                   <TableHead>Location</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Capacity</TableHead>
+                  <TableHead>Max/Min</TableHead>
                   <TableHead className="text-center">Barcode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -711,6 +795,20 @@ export default function WarehousesPage() {
                       </div>
                     </TableCell>
                     <TableCell>{w.capacity || "-"}</TableCell>
+                    <TableCell>
+                      {w.maxCapacity || w.minCapacity ? (
+                        <div className="text-xs">
+                          <div>
+                            Max: {w.maxCapacity || "-"} {w.capacityUnit || ""}
+                          </div>
+                          <div>
+                            Min: {w.minCapacity || "-"} {w.capacityUnit || ""}
+                          </div>
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Button
                         variant="ghost"

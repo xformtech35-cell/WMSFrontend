@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Package,
   CheckCircle2,
@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import Select from "react-select";
 
 export default function PutawayFormModal({
   open,
@@ -44,8 +45,182 @@ export default function PutawayFormModal({
   onInputChange,
   onLineChange,
   onSubmit,
+  grnPagination,
+  onGrnPageChange,
+  onGrnSearch,
+  isGrnLoading,
 }) {
-  if (!open) return null;
+ 
+
+ const grnOptions = useMemo(() => {
+    if (!Array.isArray(grns)) return [];
+
+    return grns
+      .map((grn) => {
+        const grnNumber =
+          grn.grnNumber ||
+          grn.grnNo ||
+          grn.grn_number ||
+          grn.number;
+
+        if (!grnNumber) return null;
+
+        return {
+          value: String(grnNumber),
+          label: String(grnNumber),
+          data: grn,
+        };
+      })
+      .filter(Boolean);
+  }, [grns]);
+
+  const selectedOption = useMemo(() => {
+    return grnOptions.find(
+      (option) =>
+        option.value === String(selectedGrnForPutaway)
+    );
+  }, [grnOptions, selectedGrnForPutaway]);
+  // Custom styles for react-select
+ const customStyles = {
+  control: (provided, state) => ({
+    ...provided,
+    minHeight: "40px",
+    height: "40px",
+    backgroundColor: "#ffffff",
+
+    borderColor: state.isFocused
+      ? "#2563eb"
+      : "#d1d5db",
+
+    boxShadow: state.isFocused
+      ? "0 0 0 2px rgba(37, 99, 235, 0.15)"
+      : "none",
+
+    "&:hover": {
+      borderColor: "#2563eb",
+    },
+  }),
+
+  valueContainer: (provided) => ({
+    ...provided,
+    height: "40px",
+    padding: "0 12px",
+  }),
+
+  input: (provided) => ({
+    ...provided,
+    margin: "0",
+    padding: "0",
+    color: "#111827",
+  }),
+
+  indicatorsContainer: (provided) => ({
+    ...provided,
+    height: "40px",
+  }),
+
+  menuPortal: (provided) => ({
+    ...provided,
+    zIndex: 99999,
+  }),
+
+  menu: (provided) => ({
+    ...provided,
+    zIndex: 99999,
+    backgroundColor: "#ffffff",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.12)",
+    overflow: "hidden",
+  }),
+
+  menuList: (provided) => ({
+    ...provided,
+    padding: "4px",
+    backgroundColor: "#ffffff",
+    maxHeight: "250px",
+  }),
+
+  option: (provided, state) => ({
+    ...provided,
+
+    backgroundColor: state.isSelected
+      ? "#2563eb"
+      : state.isFocused
+      ? "#dbeafe"
+      : "#ffffff",
+
+    color: state.isSelected
+      ? "#ffffff"
+      : "#111827",
+
+    cursor: "pointer",
+    padding: "10px 12px",
+    fontSize: "14px",
+    fontWeight: state.isSelected ? "500" : "400",
+
+    "&:hover": {
+      backgroundColor: state.isSelected
+        ? "#2563eb"
+        : "#dbeafe",
+      color: state.isSelected
+        ? "#ffffff"
+        : "#111827",
+    },
+  }),
+
+  placeholder: (provided) => ({
+    ...provided,
+    color: "#6b7280",
+  }),
+
+  singleValue: (provided) => ({
+    ...provided,
+    color: "#111827",
+  }),
+
+  noOptionsMessage: (provided) => ({
+    ...provided,
+    color: "#6b7280",
+    padding: "12px",
+  }),
+
+  loadingMessage: (provided) => ({
+    ...provided,
+    color: "#6b7280",
+    padding: "12px",
+  }),
+};
+
+  // Custom no options message
+  const noOptionsMessage = ({ inputValue }) => {
+    if (isGrnLoading) {
+      return "Loading GRNs...";
+    }
+    if (inputValue) {
+      return "No GRNs found matching your search";
+    }
+    return "No GRNs available";
+  };
+
+  // Handle search input change
+  const handleSearchChange = (inputValue) => {
+    if (onGrnSearch) {
+      onGrnSearch(inputValue);
+    }
+  };
+
+  // Handle menu scroll to load more
+  const handleMenuScrollToBottom = () => {
+    if (
+      grnPagination &&
+      grnPagination.page < grnPagination.totalPages - 1 &&
+      !isGrnLoading
+    ) {
+      onGrnPageChange(grnPagination.page + 1);
+    }
+  };
+ if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -93,19 +268,47 @@ export default function PutawayFormModal({
                   <FileText className="size-3.5" />
                   Select GRN *
                 </Label>
-                <select
-                  id="grnSelect"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  value={selectedGrnForPutaway}
-                  onChange={(e) => onGrnSelect(e.target.value)}
-                >
-                  <option value="">Select GRN</option>
-                  {grns.map((grn) => (
-                    <option key={grn.id} value={grn.grnNumber}>
-                      {grn.grnNumber}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <Select
+  id="grnSelect"
+  options={grnOptions}
+  value={selectedOption}
+  onChange={(option) => {
+    if (option) {
+      onGrnSelect(option.value);
+    }
+  }}
+  onInputChange={handleSearchChange}
+  onMenuScrollToBottom={handleMenuScrollToBottom}
+  isLoading={isGrnLoading}
+  placeholder="Search and select GRN..."
+  noOptionsMessage={noOptionsMessage}
+  styles={customStyles}
+  className="react-select-container"
+  classNamePrefix="react-select"
+  loadingMessage={() => "Loading GRNs..."}
+  menuPortalTarget={document.body}
+  menuPosition="fixed"
+  components={{
+    IndicatorSeparator: () => null,
+  }}
+/>
+
+                  {/* Pagination info */}
+                  {grnPagination && grnPagination.totalItems > 0 && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        Showing {grnPagination.startItem}-
+                        {grnPagination.endItem} of {grnPagination.totalItems}{" "}
+                        GRNs
+                      </span>
+                      <span>
+                        Page {grnPagination.page + 1} of{" "}
+                        {grnPagination.totalPages}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -195,7 +398,7 @@ export default function PutawayFormModal({
                     <Label className="text-sm font-medium text-blue-800 dark:text-blue-300">
                       Assigned Rock
                     </Label>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <Badge
                         variant="outline"
                         className="bg-blue-100 dark:bg-blue-900/30"
@@ -271,14 +474,8 @@ export default function PutawayFormModal({
                             className="h-4 w-4 rounded border-gray-300"
                             onChange={(e) => {
                               const checked = e.target.checked;
-                              const updatedItems = grnItems.map((item) => ({
-                                ...item,
-                                isSelected: checked,
-                              }));
-                              // This would need a callback, but we're using the parent's state
-                              // We'll handle this differently - need to pass a callback
                               grnItems.forEach((_, index) => {
-                                // This is a workaround - we should pass a proper callback
+                                // We need to handle this in parent
                                 onToggleItemSelection(index);
                               });
                             }}

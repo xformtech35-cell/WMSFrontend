@@ -59,13 +59,11 @@ async function exportLevelsExcel(items) {
       { header: "Level Number", key: "levelNumber", width: 14, align: "right" },
       { header: "Height", key: "height", width: 18, align: "right" },
       { header: "Unit", key: "unit", width: 10 },
-      {
-        header: "Max Weight (kg)",
-        key: "maxWeightKg",
-        width: 18,
-        align: "right",
-      },
+      { header: "Max Weight (kg)", key: "maxWeightKg", width: 18, align: "right" },
       { header: "Max Items", key: "maxItems", width: 14, align: "right" },
+      { header: "Max Capacity", key: "maxCapacity", width: 12, align: "right" },
+      { header: "Min Capacity", key: "minCapacity", width: 12, align: "right" },
+      { header: "Capacity Unit", key: "capacityUnit", width: 12 },
       { header: "Status", key: "status", width: 14 },
       { header: "Rack", key: "rack", width: 20 },
       { header: "Aisle", key: "aisle", width: 20 },
@@ -85,6 +83,9 @@ async function exportLevelsExcel(items) {
       unit: l.unit ?? "cm",
       maxWeightKg: l.maxWeightKg ?? "",
       maxItems: l.maxItems ?? "",
+      maxCapacity: l.maxCapacity ?? "",
+      minCapacity: l.minCapacity ?? "",
+      capacityUnit: l.capacityUnit ?? "",
       status: l.isActive ? "Active" : "Inactive",
       rack: l.rack?.rackId || l.rack?.name || "",
       aisle: l.rack?.aisle?.aisleNumber || l.rack?.aisle?.aisleId || "",
@@ -128,6 +129,9 @@ export default function LevelsPage() {
     unit: "cm",
     maxWeightKg: "",
     maxItems: "",
+    maxCapacity: "",
+    minCapacity: "",
+    capacityUnit: "pallet",
     isActive: true,
     remarks: "",
     createdBy: "admin",
@@ -216,6 +220,16 @@ export default function LevelsPage() {
     if (!formData.rackId || formData.rackId === "") {
       errors.rackId = "Rack is required";
     }
+    if (formData.maxCapacity && formData.maxCapacity < 0) {
+      errors.maxCapacity = "Max capacity must be a positive number";
+    }
+    if (formData.minCapacity && formData.minCapacity < 0) {
+      errors.minCapacity = "Min capacity must be a positive number";
+    }
+    if (formData.maxCapacity && formData.minCapacity && 
+        Number(formData.maxCapacity) < Number(formData.minCapacity)) {
+      errors.maxCapacity = "Max capacity cannot be less than min capacity";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -258,6 +272,9 @@ export default function LevelsPage() {
       unit: formData.unit || "cm",
       maxWeightKg: parseFloat(formData.maxWeightKg),
       maxItems: parseInt(formData.maxItems),
+      maxCapacity: formData.maxCapacity ? Number(formData.maxCapacity) : 0,
+      minCapacity: formData.minCapacity ? Number(formData.minCapacity) : 0,
+      capacityUnit: formData.capacityUnit || "pallet",
       isActive: formData.isActive,
       createdBy: formData.createdBy || "admin",
       remarks: formData.remarks.trim(),
@@ -319,6 +336,9 @@ export default function LevelsPage() {
       unit: "cm",
       maxWeightKg: "",
       maxItems: "",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       isActive: true,
       remarks: "",
       createdBy: "admin",
@@ -338,6 +358,9 @@ export default function LevelsPage() {
       unit: "cm",
       maxWeightKg: "",
       maxItems: "",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       isActive: true,
       remarks: "",
       createdBy: "admin",
@@ -358,6 +381,9 @@ export default function LevelsPage() {
       unit: item.unit || "cm",
       maxWeightKg: item.maxWeightKg?.toString() || "",
       maxItems: item.maxItems?.toString() || "",
+      maxCapacity: item.maxCapacity || "",
+      minCapacity: item.minCapacity || "",
+      capacityUnit: item.capacityUnit || "pallet",
       isActive: item.isActive !== undefined ? item.isActive : true,
       remarks: item.remarks || "",
       createdBy: item.createdBy || "admin",
@@ -709,6 +735,60 @@ export default function LevelsPage() {
             </p>
           </div>
 
+          {/* New Capacity Fields */}
+          <div className="space-y-1.5">
+            <Label htmlFor="maxCapacity">Max Capacity</Label>
+            <Input
+              id="maxCapacity"
+              name="maxCapacity"
+              type="number"
+              placeholder="e.g. 1000"
+              value={formData.maxCapacity}
+              onChange={handleInputChange}
+              className={formErrors.maxCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.maxCapacity && (
+              <p className="text-xs text-red-500">{formErrors.maxCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="minCapacity">Min Capacity</Label>
+            <Input
+              id="minCapacity"
+              name="minCapacity"
+              type="number"
+              placeholder="e.g. 500"
+              value={formData.minCapacity}
+              onChange={handleInputChange}
+              className={formErrors.minCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.minCapacity && (
+              <p className="text-xs text-red-500">{formErrors.minCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="capacityUnit">Capacity Unit</Label>
+            <select
+              id="capacityUnit"
+              name="capacityUnit"
+              value={formData.capacityUnit}
+              onChange={handleInputChange}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="pallet">Pallet Positions</option>
+              <option value="bin">Bin Positions</option>
+              <option value="sqft">Square Feet (sq ft)</option>
+              <option value="sqm">Square Meters (m²)</option>
+              <option value="cft">Cubic Feet (ft³)</option>
+              <option value="cbm">Cubic Meters (m³)</option>
+              <option value="ton">Tons</option>
+              <option value="kg">Kilograms (KG)</option>
+              <option value="lbs">Pounds (LBS)</option>
+            </select>
+          </div>
+
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">Active Status</Label>
@@ -867,6 +947,7 @@ export default function LevelsPage() {
                   <TableHead>Unit</TableHead>
                   <TableHead>Max Weight</TableHead>
                   <TableHead>Max Items</TableHead>
+                  <TableHead>Max/Min</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Rack</TableHead>
                   <TableHead>Aisle</TableHead>
@@ -901,6 +982,14 @@ export default function LevelsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-center">
                       {l.maxItems || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {l.maxCapacity || l.minCapacity ? (
+                        <div className="text-xs">
+                          <div>Max: {l.maxCapacity || "-"} {l.capacityUnit || ""}</div>
+                          <div>Min: {l.minCapacity || "-"} {l.capacityUnit || ""}</div>
+                        </div>
+                      ) : "-"}
                     </TableCell>
                     <TableCell>
                       <StatusBadge

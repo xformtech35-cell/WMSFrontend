@@ -16,7 +16,8 @@ import {
   CheckCircle,
   Save,
   X,
-  Send, // Add Send icon for RFQ
+  Send,
+  RotateCw, // Add Send icon for RFQ
 } from "lucide-react";
 import api from "@/lib/api";
 import PurchaseRequestView from "../purchase-requests/components/PurchaseRequestView";
@@ -512,7 +513,7 @@ export default function PurchaseRequestPage() {
                             <button
                               type="button"
                               onClick={() => handleViewClick(pr)}
-                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              className="text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
                               title="View Details"
                             >
                               <Eye className="w-4 h-4" />
@@ -520,10 +521,10 @@ export default function PurchaseRequestPage() {
                             <button
                               type="button"
                               onClick={() => handleStatusUpdateClick(pr)}
-                              className="text-purple-600 hover:text-purple-800 transition-colors"
+                              className="text-purple-600 cursor-pointer hover:text-purple-800 transition-colors"
                               title="Update Status"
                             >
-                              <Edit className="w-4 h-4" />
+                              <RotateCw className="w-4 h-4" />
                             </button>
                             {/* RFQ Button - Show for SUBMITTED, APPROVED, or PENDING statuses */}
                             {(pr.status === "SUBMITTED" || 

@@ -1,4 +1,5 @@
 "use client";
+import { CheckCircle, Settings } from "lucide-react";
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -11,6 +12,21 @@ import {
   Eye,
   Plus,
   Package,
+  Warehouse,
+  MapPin,
+  Layers,
+  Box,
+  Tag,
+  Hash,
+  Calendar,
+  User,
+  FileText,
+  Link,
+  Grid,
+  Ruler,
+  Scale,
+  Package2,
+  FolderTree,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -82,7 +98,7 @@ export default function QRCodeGeneratorPage() {
   const [zones, setZones] = useState([]);
   const [aisles, setAisles] = useState([]);
   const [racks, setRacks] = useState([]);
-  const [levels, setLevels] = useState([]); // Add levels state
+  const [levels, setLevels] = useState([]);
   const [bins, setBins] = useState([]);
   const [isLoadingMaster, setIsLoadingMaster] = useState(true);
   const [grnSelectorOpen, setGrnSelectorOpen] = useState(false);
@@ -105,7 +121,7 @@ export default function QRCodeGeneratorPage() {
     zoneId: "",
     aisleId: "",
     rackId: "",
-    levelId: "", // Add levelId
+    levelId: "",
     shelfId: "",
     binId: "",
     palletNumber: "",
@@ -138,11 +154,41 @@ export default function QRCodeGeneratorPage() {
   // State for form errors
   const [formErrors, setFormErrors] = useState({});
 
+  // State for selected bin details
+  const [selectedBinDetails, setSelectedBinDetails] = useState(null);
+
   // Fetch master data and QR codes on mount
   useEffect(() => {
     fetchMasterData();
     fetchQRCodesList(0);
   }, []);
+
+  // Update bin details when binId changes
+  useEffect(() => {
+    if (formData.binId) {
+      const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
+      if (selectedBin) {
+        setSelectedBinDetails(selectedBin);
+        // Validate quantity against available slots
+        if (formData.quantity) {
+          const availableSlots = selectedBin.stockSummary?.availableSlots || 0;
+          if (parseInt(formData.quantity) > availableSlots) {
+            setFormErrors((prev) => ({
+              ...prev,
+              quantity: `Quantity (${formData.quantity}) exceeds available slots (${availableSlots}) in this bin`,
+            }));
+          } else {
+            setFormErrors((prev) => ({
+              ...prev,
+              quantity: undefined,
+            }));
+          }
+        }
+      }
+    } else {
+      setSelectedBinDetails(null);
+    }
+  }, [formData.binId, bins, formData.quantity]);
 
   const handleGRNSelect = (selection) => {
     if (selection) {
@@ -265,7 +311,7 @@ export default function QRCodeGeneratorPage() {
         zone: item.zone,
         aisle: item.aisle,
         rack: item.rack,
-        level: item.level, // Add level
+        level: item.level,
         shelf: item.shelf,
         binId: item.binId,
         palletNumber: item.palletNumber,
@@ -279,7 +325,7 @@ export default function QRCodeGeneratorPage() {
         displayZone: item.zone,
         displayAisle: item.aisle,
         displayRack: item.rack,
-        displayLevel: item.level, // Add display level
+        displayLevel: item.level,
         displayBin: item.binId,
       }));
 
@@ -375,6 +421,7 @@ export default function QRCodeGeneratorPage() {
         levelId: "",
         binId: "",
       }));
+      setSelectedBinDetails(null);
     } else if (name === "zoneId") {
       setFormData((prev) => ({
         ...prev,
@@ -383,6 +430,7 @@ export default function QRCodeGeneratorPage() {
         levelId: "",
         binId: "",
       }));
+      setSelectedBinDetails(null);
     } else if (name === "aisleId") {
       setFormData((prev) => ({
         ...prev,
@@ -390,17 +438,56 @@ export default function QRCodeGeneratorPage() {
         levelId: "",
         binId: "",
       }));
+      setSelectedBinDetails(null);
     } else if (name === "rackId") {
       setFormData((prev) => ({
         ...prev,
         levelId: "",
         binId: "",
       }));
+      setSelectedBinDetails(null);
     } else if (name === "levelId") {
       setFormData((prev) => ({
         ...prev,
         binId: "",
       }));
+      setSelectedBinDetails(null);
+    } else if (name === "binId") {
+      // Validate quantity against available slots when bin changes
+      const selectedBin = bins.find((b) => b.id === parseInt(value));
+      if (selectedBin && formData.quantity) {
+        const availableSlots = selectedBin.stockSummary?.availableSlots || 0;
+        if (parseInt(formData.quantity) > availableSlots) {
+          setFormErrors((prev) => ({
+            ...prev,
+            quantity: `Quantity (${formData.quantity}) exceeds available slots (${availableSlots}) in this bin`,
+          }));
+        } else {
+          setFormErrors((prev) => ({
+            ...prev,
+            quantity: undefined,
+          }));
+        }
+      }
+    } else if (name === "quantity") {
+      // Validate quantity against available slots when quantity changes
+      if (formData.binId && value) {
+        const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
+        if (selectedBin) {
+          const availableSlots = selectedBin.stockSummary?.availableSlots || 0;
+          if (parseInt(value) > availableSlots) {
+            setFormErrors((prev) => ({
+              ...prev,
+              quantity: `Quantity (${value}) exceeds available slots (${availableSlots}) in this bin`,
+            }));
+          } else {
+            setFormErrors((prev) => ({
+              ...prev,
+              quantity: undefined,
+            }));
+          }
+        }
+      }
     }
   };
 
@@ -418,6 +505,17 @@ export default function QRCodeGeneratorPage() {
     }
     if (!formData.warehouseId) {
       errors.warehouseId = "Warehouse is required";
+    }
+
+    // Validate bin capacity if bin is selected
+    if (formData.binId && formData.quantity) {
+      const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
+      if (selectedBin) {
+        const availableSlots = selectedBin.stockSummary?.availableSlots || 0;
+        if (parseInt(formData.quantity) > availableSlots) {
+          errors.quantity = `Quantity (${formData.quantity}) exceeds available slots (${availableSlots}) in this bin`;
+        }
+      }
     }
 
     setFormErrors(errors);
@@ -485,7 +583,7 @@ export default function QRCodeGeneratorPage() {
       const qrData = response.data || response;
 
       toast.success("QR Code generated successfully!");
-      setGenerate(false); // Close the generate form
+      setGenerate(false);
       // Refresh the QR codes list - go to first page
       await fetchQRCodesList(0, search);
 
@@ -715,26 +813,25 @@ export default function QRCodeGeneratorPage() {
                   remarks: "",
                 });
                 setFormErrors({});
+                setSelectedBinDetails(null);
               }}
             />
             <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-              <Card className="glass-card">
-                <CardHeader className="flex flex-row items-center justify-between">
+              <Card className="border-0 shadow-none">
+                <CardHeader className="sticky top-0 bg-white z-10 border-b px-6 py-4 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <QrCode className="size-5" />
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <QrCode className="size-5 text-blue-600" />
                       Generate QR Code
                     </CardTitle>
                     <CardDescription>
-                      Fill in the details below to generate a QR code for
-                      warehouse labeling.
+                      Fill in the details below to generate a QR code for warehouse labeling.
                     </CardDescription>
                   </div>
-
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-muted-foreground cursor-pointer hover:bg-gray-100 hover:text-gray-600"
+                    className="text-muted-foreground hover:bg-gray-100 hover:text-gray-600"
                     onClick={() => {
                       setGenerate(false);
                       setFormData({
@@ -764,370 +861,431 @@ export default function QRCodeGeneratorPage() {
                         remarks: "",
                       });
                       setFormErrors({});
+                      setSelectedBinDetails(null);
                     }}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </CardHeader>
 
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="qrType">QR Type</Label>
-                        <select
-                          id="qrType"
-                          name="qrType"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.qrType}
-                          onChange={handleInputChange}
-                        >
-                          {QR_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type.replace("_", " ")}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                <CardContent className="px-6 py-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Section: Label Configuration */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Tag className="size-4" />
+                        Label Configuration
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="qrType">QR Type</Label>
+                          <select
+                            id="qrType"
+                            name="qrType"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.qrType}
+                            onChange={handleInputChange}
+                          >
+                            {QR_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type.replace("_", " ")}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="labelLevel">Label Level</Label>
-                        <select
-                          id="labelLevel"
-                          name="labelLevel"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.labelLevel}
-                          onChange={handleInputChange}
-                        >
-                          {LABEL_LEVELS.map((level) => (
-                            <option key={level} value={level}>
-                              {level.charAt(0) + level.slice(1).toLowerCase()}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="labelLevel">Label Level</Label>
+                          <select
+                            id="labelLevel"
+                            name="labelLevel"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.labelLevel}
+                            onChange={handleInputChange}
+                          >
+                            {LABEL_LEVELS.map((level) => (
+                              <option key={level} value={level}>
+                                {level.charAt(0) + level.slice(1).toLowerCase()}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="labelType">Label Type</Label>
-                        <select
-                          id="labelType"
-                          name="labelType"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.labelType}
-                          onChange={handleInputChange}
-                        >
-                          {LABEL_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type.charAt(0) + type.slice(1).toLowerCase()}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="labelType">Label Type</Label>
+                          <select
+                            id="labelType"
+                            name="labelType"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.labelType}
+                            onChange={handleInputChange}
+                          >
+                            {LABEL_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type.charAt(0) + type.slice(1).toLowerCase()}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="labelFormat">Label Format</Label>
-                        <select
-                          id="labelFormat"
-                          name="labelFormat"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.labelFormat}
-                          onChange={handleInputChange}
-                        >
-                          {LABEL_FORMATS.map((format) => (
-                            <option key={format} value={format}>
-                              {format}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="labelFormat">Label Format</Label>
+                          <select
+                            id="labelFormat"
+                            name="labelFormat"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.labelFormat}
+                            onChange={handleInputChange}
+                          >
+                            {LABEL_FORMATS.map((format) => (
+                              <option key={format} value={format}>
+                                {format}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="grnNumber">GRN Number *</Label>
-                        <div className="flex gap-2">
+                    {/* Section: Item & GRN Details */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Package className="size-4" />
+                        Item & GRN Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="grnNumber">GRN Number *</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="grnNumber"
+                              name="grnNumber"
+                              placeholder="e.g. GRN-INB-20260717-0003"
+                              value={formData.grnNumber}
+                              onChange={handleInputChange}
+                              className={
+                                formErrors.grnNumber ? "border-red-500" : ""
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setGrnSelectorOpen(true)}
+                              className="shrink-0"
+                            >
+                              <Package className="size-4" />
+                            </Button>
+                          </div>
+                          {formErrors.grnNumber && (
+                            <p className="text-xs text-red-500">
+                              {formErrors.grnNumber}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="palletNumber">Pallet Number</Label>
                           <Input
-                            id="grnNumber"
-                            name="grnNumber"
-                            placeholder="e.g. GRN-INB-20260717-0003"
-                            value={formData.grnNumber}
+                            id="palletNumber"
+                            name="palletNumber"
+                            placeholder="e.g. PAL-001"
+                            value={formData.palletNumber}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="itemCode">Item Code *</Label>
+                          <Input
+                            id="itemCode"
+                            name="itemCode"
+                            placeholder="e.g. mobile_23"
+                            value={formData.itemCode}
                             onChange={handleInputChange}
                             className={
-                              formErrors.grnNumber ? "border-red-500" : ""
+                              formErrors.itemCode ? "border-red-500" : ""
                             }
                           />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setGrnSelectorOpen(true)}
-                            className="shrink-0"
-                          >
-                            <Package className="size-4" />
-                          </Button>
+                          {formErrors.itemCode && (
+                            <p className="text-xs text-red-500">
+                              {formErrors.itemCode}
+                            </p>
+                          )}
                         </div>
-                        {formErrors.grnNumber && (
-                          <p className="text-xs text-red-500">
-                            {formErrors.grnNumber}
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="itemName">Item Name</Label>
+                          <Input
+                            id="itemName"
+                            name="itemName"
+                            placeholder="e.g. Barcode Scanner"
+                            value={formData.itemName}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="batchNumber">Batch Number</Label>
+                          <Input
+                            id="batchNumber"
+                            name="batchNumber"
+                            placeholder="e.g. BATCH-2026-001"
+                            value={formData.batchNumber}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="serialNumbers">Serial Numbers</Label>
+                          <Input
+                            id="serialNumbers"
+                            name="serialNumbers"
+                            placeholder="e.g. SN001,SN002,SN003"
+                            value={formData.serialNumbers}
+                            onChange={handleInputChange}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Comma-separated serial numbers
                           </p>
-                        )}
-                      </div>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="palletNumber">Pallet Number</Label>
-                        <Input
-                          id="palletNumber"
-                          name="palletNumber"
-                          placeholder="e.g. PAL-001"
-                          value={formData.palletNumber}
-                          onChange={handleInputChange}
-                        />
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="quantity">Quantity *</Label>
+                          <Input
+                            id="quantity"
+                            name="quantity"
+                            type="number"
+                            min="1"
+                            placeholder="15"
+                            value={formData.quantity}
+                            onChange={handleInputChange}
+                            className={
+                              formErrors.quantity ? "border-red-500" : ""
+                            }
+                          />
+                          {formErrors.quantity && (
+                            <p className="text-xs text-red-500">
+                              {formErrors.quantity}
+                            </p>
+                          )}
+                          {selectedBinDetails && formData.binId && (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <CheckCircle className="size-3" />
+                              Available slots:{" "}
+                              {selectedBinDetails.stockSummary?.availableSlots ||
+                                0}
+                            </p>
+                          )}
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="itemCode">Item Code *</Label>
-                        <Input
-                          id="itemCode"
-                          name="itemCode"
-                          placeholder="e.g. mobile_23"
-                          value={formData.itemCode}
-                          onChange={handleInputChange}
-                          className={
-                            formErrors.itemCode ? "border-red-500" : ""
-                          }
-                        />
-                        {formErrors.itemCode && (
-                          <p className="text-xs text-red-500">
-                            {formErrors.itemCode}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="itemName">Item Name</Label>
-                        <Input
-                          id="itemName"
-                          name="itemName"
-                          placeholder="e.g. Barcode Scanner"
-                          value={formData.itemName}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="batchNumber">Batch Number</Label>
-                        <Input
-                          id="batchNumber"
-                          name="batchNumber"
-                          placeholder="e.g. BATCH-2026-001"
-                          value={formData.batchNumber}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="serialNumbers">Serial Numbers</Label>
-                        <Input
-                          id="serialNumbers"
-                          name="serialNumbers"
-                          placeholder="e.g. SN001,SN002,SN003"
-                          value={formData.serialNumbers}
-                          onChange={handleInputChange}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Comma-separated serial numbers
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="quantity">Quantity *</Label>
-                        <Input
-                          id="quantity"
-                          name="quantity"
-                          type="number"
-                          min="1"
-                          placeholder="15"
-                          value={formData.quantity}
-                          onChange={handleInputChange}
-                          className={
-                            formErrors.quantity ? "border-red-500" : ""
-                          }
-                        />
-                        {formErrors.quantity && (
-                          <p className="text-xs text-red-500">
-                            {formErrors.quantity}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="uom">Unit of Measure</Label>
-                        <Input
-                          id="uom"
-                          name="uom"
-                          placeholder="e.g. Nos, KG, PCS"
-                          value={formData.uom}
-                          onChange={handleInputChange}
-                        />
+                        <div className="space-y-1.5">
+                          <Label htmlFor="uom">Unit of Measure</Label>
+                          <Input
+                            id="uom"
+                            name="uom"
+                            placeholder="e.g. Nos, KG, PCS"
+                            value={formData.uom}
+                            onChange={handleInputChange}
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="warehouseId">Warehouse *</Label>
-                        <select
-                          id="warehouseId"
-                          name="warehouseId"
-                          className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
-                            formErrors.warehouseId ? "border-red-500" : ""
-                          }`}
-                          value={formData.warehouseId}
-                          onChange={handleInputChange}
-                        >
-                          <option value="">Select warehouse</option>
-                          {warehouses.map((w) => (
-                            <option key={w.id} value={w.id}>
-                              {w.name}{" "}
-                              {w.warehouseId ? `(${w.warehouseId})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        {formErrors.warehouseId && (
-                          <p className="text-xs text-red-500">
-                            {formErrors.warehouseId}
-                          </p>
-                        )}
-                      </div>
+                    {/* Section: Warehouse Location */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <FolderTree className="size-4" />
+                        Warehouse Location
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="warehouseId">Warehouse *</Label>
+                          <select
+                            id="warehouseId"
+                            name="warehouseId"
+                            className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
+                              formErrors.warehouseId ? "border-red-500" : ""
+                            }`}
+                            value={formData.warehouseId}
+                            onChange={handleInputChange}
+                          >
+                            <option value="">Select warehouse</option>
+                            {warehouses.map((w) => (
+                              <option key={w.id} value={w.id}>
+                                {w.name}{" "}
+                                {w.warehouseId ? `(${w.warehouseId})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                          {formErrors.warehouseId && (
+                            <p className="text-xs text-red-500">
+                              {formErrors.warehouseId}
+                            </p>
+                          )}
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="zoneId">Zone</Label>
-                        <select
-                          id="zoneId"
-                          name="zoneId"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.zoneId}
-                          onChange={handleInputChange}
-                          disabled={!formData.warehouseId}
-                        >
-                          <option value="">Select zone</option>
-                          {filteredZones.map((z) => (
-                            <option key={z.id} value={z.id}>
-                              {z.name} {z.zoneId ? `(${z.zoneId})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="zoneId">Zone</Label>
+                          <select
+                            id="zoneId"
+                            name="zoneId"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.zoneId}
+                            onChange={handleInputChange}
+                            disabled={!formData.warehouseId}
+                          >
+                            <option value="">Select zone</option>
+                            {filteredZones.map((z) => (
+                              <option key={z.id} value={z.id}>
+                                {z.name} {z.zoneId ? `(${z.zoneId})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="aisleId">Aisle</Label>
-                        <select
-                          id="aisleId"
-                          name="aisleId"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.aisleId}
-                          onChange={handleInputChange}
-                          disabled={!formData.zoneId}
-                        >
-                          <option value="">Select aisle</option>
-                          {filteredAisles.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
-                              {a.name ? ` - ${a.name}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="aisleId">Aisle</Label>
+                          <select
+                            id="aisleId"
+                            name="aisleId"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.aisleId}
+                            onChange={handleInputChange}
+                            disabled={!formData.zoneId}
+                          >
+                            <option value="">Select aisle</option>
+                            {filteredAisles.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
+                                {a.name ? ` - ${a.name}` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="rackId">Rack</Label>
-                        <select
-                          id="rackId"
-                          name="rackId"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.rackId}
-                          onChange={handleInputChange}
-                          disabled={!formData.aisleId}
-                        >
-                          <option value="">Select rack</option>
-                          {filteredRacks.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
-                              {r.name ? ` - ${r.name}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="rackId">Rack</Label>
+                          <select
+                            id="rackId"
+                            name="rackId"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.rackId}
+                            onChange={handleInputChange}
+                            disabled={!formData.aisleId}
+                          >
+                            <option value="">Select rack</option>
+                            {filteredRacks.map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+                                {r.name ? ` - ${r.name}` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="levelId">Level</Label>
-                        <select
-                          id="levelId"
-                          name="levelId"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.levelId}
-                          onChange={handleInputChange}
-                          disabled={!formData.rackId}
-                        >
-                          <option value="">Select level</option>
-                          {filteredLevels.map((l) => (
-                            <option key={l.id} value={l.id}>
-                              {l.levelId || `Level ${l.id}`}
-                              {l.name ? ` - ${l.name}` : ""}
-                              {l.levelNumber ? ` (Level ${l.levelNumber})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="levelId">Level</Label>
+                          <select
+                            id="levelId"
+                            name="levelId"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.levelId}
+                            onChange={handleInputChange}
+                            disabled={!formData.rackId}
+                          >
+                            <option value="">Select level</option>
+                            {filteredLevels.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.levelId || `Level ${l.id}`}
+                                {l.name ? ` - ${l.name}` : ""}
+                                {l.levelNumber ? ` (Level ${l.levelNumber})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="shelfId">Shelf</Label>
-                        <Input
-                          id="shelfId"
-                          name="shelfId"
-                          placeholder="e.g. S-02"
-                          value={formData.shelfId}
-                          onChange={handleInputChange}
-                        />
-                      </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="shelfId">Shelf</Label>
+                          <Input
+                            id="shelfId"
+                            name="shelfId"
+                            placeholder="e.g. S-02"
+                            value={formData.shelfId}
+                            onChange={handleInputChange}
+                          />
+                        </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="binId">Bin</Label>
-                        <select
-                          id="binId"
-                          name="binId"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.binId}
-                          onChange={handleInputChange}
-                          disabled={!formData.rackId}
-                        >
-                          <option value="">Select bin</option>
-                          {filteredBins.map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.barcode || b.binId || `Bin ${b.id}`}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="binId">Bin</Label>
+                          <select
+                            id="binId"
+                            name="binId"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.binId}
+                            onChange={handleInputChange}
+                            disabled={!formData.rackId}
+                          >
+                            <option value="">Select bin</option>
+                            {filteredBins.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.barcode || b.binId || `Bin ${b.id}`} -{" "}
+                                {b.stockSummary?.availableSlots || 0} available
+                              </option>
+                            ))}
+                          </select>
+                          {selectedBinDetails && formData.binId && (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <CheckCircle className="size-3" />
+                              Selected bin has{" "}
+                              {selectedBinDetails.stockSummary?.availableSlots ||
+                                0}{" "}
+                              available slots
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="templateName">Template</Label>
-                        <select
-                          id="templateName"
-                          name="templateName"
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={formData.templateName}
-                          onChange={handleInputChange}
-                        >
-                          {TEMPLATES.map((template) => (
-                            <option key={template} value={template}>
-                              {template.charAt(0).toUpperCase() +
-                                template.slice(1)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    {/* Section: Additional Settings */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Settings className="size-4" />
+                        Additional Settings
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="templateName">Template</Label>
+                          <select
+                            id="templateName"
+                            name="templateName"
+                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={formData.templateName}
+                            onChange={handleInputChange}
+                          >
+                            {TEMPLATES.map((template) => (
+                              <option key={template} value={template}>
+                                {template.charAt(0).toUpperCase() +
+                                  template.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
+                        <div className="space-y-1.5">
+                          <Label htmlFor="remarks">Remarks</Label>
+                          <Input
+                            id="remarks"
+                            name="remarks"
+                            placeholder="Additional notes"
+                            value={formData.remarks}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hidden fields for inbound tracking */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
                       <div className="space-y-1.5">
                         <Label htmlFor="inboundId">Inbound ID</Label>
                         <Input
@@ -1135,11 +1293,11 @@ export default function QRCodeGeneratorPage() {
                           name="inboundId"
                           type="number"
                           placeholder="1"
+                          disabled
                           value={formData.inboundId}
                           onChange={handleInputChange}
                         />
                       </div>
-
                       <div className="space-y-1.5">
                         <Label htmlFor="inboundLineId">Inbound Line ID</Label>
                         <Input
@@ -1147,42 +1305,35 @@ export default function QRCodeGeneratorPage() {
                           name="inboundLineId"
                           type="number"
                           placeholder="1"
+                          disabled
                           value={formData.inboundLineId}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="remarks">Remarks</Label>
-                        <Input
-                          id="remarks"
-                          name="remarks"
-                          placeholder="Additional notes"
-                          value={formData.remarks}
                           onChange={handleInputChange}
                         />
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2">
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4 border-t">
                       <Button
                         type="submit"
                         disabled={isGenerating}
-                        className="flex-1 cursor-pointer"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700"
                       >
                         {isGenerating ? (
                           <>
-                            <RefreshCw className="mr-1.5 size-3.5 animate-spin" />
+                            <RefreshCw className="mr-2 size-4 animate-spin" />
                             Generating...
                           </>
                         ) : (
                           <>
-                            <QrCode className="mr-1.5 size-3.5" />
+                            <QrCode className="mr-2 size-4" />
                             Generate QR Code
                           </>
                         )}
                       </Button>
                       <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => {
                           setGenerate(false);
                           setFormData({
@@ -1212,15 +1363,14 @@ export default function QRCodeGeneratorPage() {
                             remarks: "",
                           });
                           setFormErrors({});
+                          setSelectedBinDetails(null);
                         }}
-                        className="flex-1 cursor-pointer"
                       >
                         Close
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
-                        className="flex-1 cursor-pointer"
+                        variant="ghost"
                         onClick={() => {
                           setFormData({
                             qrType: "QR_CODE",
@@ -1249,6 +1399,7 @@ export default function QRCodeGeneratorPage() {
                             remarks: "",
                           });
                           setFormErrors({});
+                          setSelectedBinDetails(null);
                         }}
                       >
                         Reset
@@ -1261,7 +1412,6 @@ export default function QRCodeGeneratorPage() {
           </div>
         </div>
       )}
-      {/* QR Code Generator Form */}
 
       {/* QR Code Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
@@ -1410,3 +1560,5 @@ export default function QRCodeGeneratorPage() {
     </div>
   );
 }
+
+// Add missing imports at the top

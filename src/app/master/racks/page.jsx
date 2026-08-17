@@ -58,6 +58,9 @@ async function exportRacksExcel(items) {
       { header: "Width", key: "width", width: 12, align: "right" },
       { header: "Depth", key: "depth", width: 12, align: "right" },
       { header: "Unit", key: "unit", width: 10 },
+      { header: "Max Capacity", key: "maxCapacity", width: 12, align: "right" },
+      { header: "Min Capacity", key: "minCapacity", width: 12, align: "right" },
+      { header: "Capacity Unit", key: "capacityUnit", width: 12 },
       { header: "Status", key: "isActive", width: 12 },
       { header: "Aisle", key: "aisle", width: 20 },
       { header: "Zone", key: "zone", width: 24 },
@@ -76,6 +79,9 @@ async function exportRacksExcel(items) {
       width: r.width ?? "",
       depth: r.depth ?? "",
       unit: r.unit ?? "Meter",
+      maxCapacity: r.maxCapacity ?? "",
+      minCapacity: r.minCapacity ?? "",
+      capacityUnit: r.capacityUnit ?? "",
       isActive: r.isActive ? "Active" : "Inactive",
       aisle: r.aisle?.aisleId || r.aisle?.aisleNumber || "",
       zone: r.aisle?.zone?.name ?? "",
@@ -116,6 +122,9 @@ export default function RacksPage() {
     width: "",
     depth: "",
     unit: "Meter",
+    maxCapacity: "",
+    minCapacity: "",
+    capacityUnit: "pallet",
     remarks: "",
     aisleId: "",
     createdBy: "admin",
@@ -199,6 +208,16 @@ export default function RacksPage() {
     if (formData.depth && parseFloat(formData.depth) <= 0) {
       errors.depth = "Depth must be greater than 0";
     }
+    if (formData.maxCapacity && formData.maxCapacity < 0) {
+      errors.maxCapacity = "Max capacity must be a positive number";
+    }
+    if (formData.minCapacity && formData.minCapacity < 0) {
+      errors.minCapacity = "Min capacity must be a positive number";
+    }
+    if (formData.maxCapacity && formData.minCapacity && 
+        Number(formData.maxCapacity) < Number(formData.minCapacity)) {
+      errors.maxCapacity = "Max capacity cannot be less than min capacity";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -234,6 +253,9 @@ export default function RacksPage() {
       width: formData.width ? parseFloat(formData.width) : null,
       depth: formData.depth ? parseFloat(formData.depth) : null,
       unit: formData.unit || "Meter",
+      maxCapacity: formData.maxCapacity ? Number(formData.maxCapacity) : 0,
+      minCapacity: formData.minCapacity ? Number(formData.minCapacity) : 0,
+      capacityUnit: formData.capacityUnit || "pallet",
       createdBy: "admin",
       remarks: formData.remarks.trim(),
       aisleId: Number(formData.aisleId),
@@ -294,6 +316,9 @@ export default function RacksPage() {
       width: "",
       depth: "",
       unit: "Meter",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       remarks: "",
       aisleId: "",
       createdBy: "admin",
@@ -312,6 +337,9 @@ export default function RacksPage() {
       width: "",
       depth: "",
       unit: "Meter",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       remarks: "",
       aisleId: aisles[0]?.id || "",
       createdBy: "admin",
@@ -331,6 +359,9 @@ export default function RacksPage() {
       width: item.width?.toString() || "",
       depth: item.depth?.toString() || "",
       unit: item.unit || "Meter",
+      maxCapacity: item.maxCapacity || "",
+      minCapacity: item.minCapacity || "",
+      capacityUnit: item.capacityUnit || "pallet",
       remarks: item.remarks || "",
       aisleId: item.aisle?.id || "",
       createdBy: item.createdBy || "admin",
@@ -635,6 +666,60 @@ export default function RacksPage() {
             </p>
           </div>
 
+          {/* New Capacity Fields */}
+          <div className="space-y-1.5">
+            <Label htmlFor="maxCapacity">Max Capacity</Label>
+            <Input
+              id="maxCapacity"
+              name="maxCapacity"
+              type="number"
+              placeholder="e.g. 1000"
+              value={formData.maxCapacity}
+              onChange={handleInputChange}
+              className={formErrors.maxCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.maxCapacity && (
+              <p className="text-xs text-red-500">{formErrors.maxCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="minCapacity">Min Capacity</Label>
+            <Input
+              id="minCapacity"
+              name="minCapacity"
+              type="number"
+              placeholder="e.g. 500"
+              value={formData.minCapacity}
+              onChange={handleInputChange}
+              className={formErrors.minCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.minCapacity && (
+              <p className="text-xs text-red-500">{formErrors.minCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="capacityUnit">Capacity Unit</Label>
+            <select
+              id="capacityUnit"
+              name="capacityUnit"
+              value={formData.capacityUnit}
+              onChange={handleInputChange}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="pallet">Pallet Positions</option>
+              <option value="bin">Bin Positions</option>
+              <option value="sqft">Square Feet (sq ft)</option>
+              <option value="sqm">Square Meters (m²)</option>
+              <option value="cft">Cubic Feet (ft³)</option>
+              <option value="cbm">Cubic Meters (m³)</option>
+              <option value="ton">Tons</option>
+              <option value="kg">Kilograms (KG)</option>
+              <option value="lbs">Pounds (LBS)</option>
+            </select>
+          </div>
+
           <div className="flex items-center space-x-2 pt-1">
             <input
               type="checkbox"
@@ -778,6 +863,7 @@ export default function RacksPage() {
                   <TableHead>Rack Name</TableHead>
                   <TableHead>Dimensions</TableHead>
                   <TableHead>Unit</TableHead>
+                  <TableHead>Max/Min</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Aisle</TableHead>
                   <TableHead>Zone</TableHead>
@@ -813,6 +899,14 @@ export default function RacksPage() {
                       <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         {r.unit || "Meter"}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {r.maxCapacity || r.minCapacity ? (
+                        <div className="text-xs">
+                          <div>Max: {r.maxCapacity || "-"} {r.capacityUnit || ""}</div>
+                          <div>Min: {r.minCapacity || "-"} {r.capacityUnit || ""}</div>
+                        </div>
+                      ) : "-"}
                     </TableCell>
                     <TableCell>
                       <span

@@ -190,6 +190,13 @@ const ALL_MENU_ITEMS = [
     permission: P.INBOUND_VIEW,
   },
   {
+    href: "/putawayInitiate",
+    label: "Putaway Initiate",
+    icon: Warehouse,
+    group: "Putaway",
+    permission: P.PUTAWAY_VIEW,
+  },
+  {
     href: "/putaway",
     label: "Putaway",
     icon: Warehouse,

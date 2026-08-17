@@ -55,6 +55,9 @@ async function exportZonesExcel(items) {
       { header: "Description", key: "description", width: 30 },
       { header: "Zone Type", key: "zoneType", width: 18 },
       { header: "Priority", key: "priority", width: 10, align: "right" },
+      { header: "Max Capacity", key: "maxCapacity", width: 12, align: "right" },
+      { header: "Min Capacity", key: "minCapacity", width: 12, align: "right" },
+      { header: "Capacity Unit", key: "capacityUnit", width: 12 },
       { header: "Status", key: "isActive", width: 12 },
       { header: "Warehouse", key: "warehouse", width: 28 },
       { header: "Barcode Data", key: "barcodeData", width: 20 },
@@ -66,6 +69,9 @@ async function exportZonesExcel(items) {
       description: z.description ?? "",
       zoneType: z.zoneType ?? "",
       priority: z.priority ?? "",
+      maxCapacity: z.maxCapacity ?? "",
+      minCapacity: z.minCapacity ?? "",
+      capacityUnit: z.capacityUnit ?? "",
       isActive: z.isActive ? "Active" : "Inactive",
       warehouse: z.warehouse?.name ?? "",
       barcodeData: z.barcodeData ?? "",
@@ -102,6 +108,9 @@ export default function ZonesPage() {
     zoneType: "PICKING",
     isActive: true,
     priority: 1,
+    maxCapacity: "",
+    minCapacity: "",
+    capacityUnit: "pallet",
     remarks: "",
     warehouseId: "",
   });
@@ -167,6 +176,16 @@ export default function ZonesPage() {
     if (formData.priority < 1 || formData.priority > 99) {
       errors.priority = "Priority must be between 1 and 99";
     }
+    if (formData.maxCapacity && formData.maxCapacity < 0) {
+      errors.maxCapacity = "Max capacity must be a positive number";
+    }
+    if (formData.minCapacity && formData.minCapacity < 0) {
+      errors.minCapacity = "Min capacity must be a positive number";
+    }
+    if (formData.maxCapacity && formData.minCapacity && 
+        Number(formData.maxCapacity) < Number(formData.minCapacity)) {
+      errors.maxCapacity = "Max capacity cannot be less than min capacity";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -200,6 +219,9 @@ export default function ZonesPage() {
       zoneType: formData.zoneType,
       isActive: formData.isActive,
       priority: Number(formData.priority) || 1,
+      maxCapacity: formData.maxCapacity ? Number(formData.maxCapacity) : 0,
+      minCapacity: formData.minCapacity ? Number(formData.minCapacity) : 0,
+      capacityUnit: formData.capacityUnit || "pallet",
       createdBy: "admin",
       remarks: formData.remarks.trim(),
       warehouseId: Number(formData.warehouseId),
@@ -258,6 +280,9 @@ export default function ZonesPage() {
       zoneType: "PICKING",
       isActive: true,
       priority: 1,
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       remarks: "",
       warehouseId: "",
     });
@@ -273,6 +298,9 @@ export default function ZonesPage() {
       zoneType: "PICKING",
       isActive: true,
       priority: 1,
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       remarks: "",
       warehouseId: warehouses[0]?.id || "",
     });
@@ -289,6 +317,9 @@ export default function ZonesPage() {
       zoneType: item.zoneType || "PICKING",
       isActive: item.isActive ?? true,
       priority: item.priority || 1,
+      maxCapacity: item.maxCapacity || "",
+      minCapacity: item.minCapacity || "",
+      capacityUnit: item.capacityUnit || "pallet",
       remarks: item.remarks || "",
       warehouseId: item.warehouse?.id || "",
     });
@@ -535,6 +566,60 @@ export default function ZonesPage() {
             </p>
           </div>
 
+          {/* New Capacity Fields */}
+          <div className="space-y-1.5">
+            <Label htmlFor="maxCapacity">Max Capacity</Label>
+            <Input
+              id="maxCapacity"
+              name="maxCapacity"
+              type="number"
+              placeholder="e.g. 1000"
+              value={formData.maxCapacity}
+              onChange={handleInputChange}
+              className={formErrors.maxCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.maxCapacity && (
+              <p className="text-xs text-red-500">{formErrors.maxCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="minCapacity">Min Capacity</Label>
+            <Input
+              id="minCapacity"
+              name="minCapacity"
+              type="number"
+              placeholder="e.g. 500"
+              value={formData.minCapacity}
+              onChange={handleInputChange}
+              className={formErrors.minCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.minCapacity && (
+              <p className="text-xs text-red-500">{formErrors.minCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="capacityUnit">Capacity Unit</Label>
+            <select
+              id="capacityUnit"
+              name="capacityUnit"
+              value={formData.capacityUnit}
+              onChange={handleInputChange}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="pallet">Pallet Positions</option>
+              <option value="bin">Bin Positions</option>
+              <option value="sqft">Square Feet (sq ft)</option>
+              <option value="sqm">Square Meters (m²)</option>
+              <option value="cft">Cubic Feet (ft³)</option>
+              <option value="cbm">Cubic Meters (m³)</option>
+              <option value="ton">Tons</option>
+              <option value="kg">Kilograms (KG)</option>
+              <option value="lbs">Pounds (LBS)</option>
+            </select>
+          </div>
+
           <div className="flex items-center space-x-2 pt-1">
             <input
               type="checkbox"
@@ -675,6 +760,7 @@ export default function ZonesPage() {
                   <TableHead>Zone Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Priority</TableHead>
+                  <TableHead>Max/Min</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Warehouse</TableHead>
                   <TableHead className="text-center">Barcode</TableHead>
@@ -698,6 +784,14 @@ export default function ZonesPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       {z.priority || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {z.maxCapacity || z.minCapacity ? (
+                        <div className="text-xs">
+                          <div>Max: {z.maxCapacity || "-"} {z.capacityUnit || ""}</div>
+                          <div>Min: {z.minCapacity || "-"} {z.capacityUnit || ""}</div>
+                        </div>
+                      ) : "-"}
                     </TableCell>
                     <TableCell>
                       <span

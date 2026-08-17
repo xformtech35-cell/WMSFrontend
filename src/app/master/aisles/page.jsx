@@ -56,6 +56,9 @@ async function exportAislesExcel(items) {
       { header: "Width", key: "width", width: 12, align: "right" },
       { header: "Length", key: "length", width: 12, align: "right" },
       { header: "Unit", key: "unit", width: 10 },
+      { header: "Max Capacity", key: "maxCapacity", width: 12, align: "right" },
+      { header: "Min Capacity", key: "minCapacity", width: 12, align: "right" },
+      { header: "Capacity Unit", key: "capacityUnit", width: 12 },
       { header: "Status", key: "isActive", width: 12 },
       { header: "Zone", key: "zone", width: 28 },
       { header: "Warehouse", key: "warehouse", width: 28 },
@@ -69,6 +72,9 @@ async function exportAislesExcel(items) {
       width: a.width ?? "",
       length: a.length ?? "",
       unit: a.unit ?? "Meter",
+      maxCapacity: a.maxCapacity ?? "",
+      minCapacity: a.minCapacity ?? "",
+      capacityUnit: a.capacityUnit ?? "",
       isActive: a.isActive ? "Active" : "Inactive",
       zone: a.zone?.name ?? "",
       warehouse: a.zone?.warehouse?.name ?? "",
@@ -107,6 +113,9 @@ export default function AislesPage() {
     width: "",
     length: "",
     unit: "Meter",
+    maxCapacity: "",
+    minCapacity: "",
+    capacityUnit: "pallet",
     remarks: "",
     zoneId: "",
     createdBy: "admin",
@@ -184,6 +193,16 @@ export default function AislesPage() {
     if (formData.length && parseFloat(formData.length) <= 0) {
       errors.length = "Length must be greater than 0";
     }
+    if (formData.maxCapacity && formData.maxCapacity < 0) {
+      errors.maxCapacity = "Max capacity must be a positive number";
+    }
+    if (formData.minCapacity && formData.minCapacity < 0) {
+      errors.minCapacity = "Min capacity must be a positive number";
+    }
+    if (formData.maxCapacity && formData.minCapacity && 
+        Number(formData.maxCapacity) < Number(formData.minCapacity)) {
+      errors.maxCapacity = "Max capacity cannot be less than min capacity";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -218,6 +237,9 @@ export default function AislesPage() {
       width: formData.width ? parseFloat(formData.width) : null,
       length: formData.length ? parseFloat(formData.length) : null,
       unit: formData.unit || "Meter",
+      maxCapacity: formData.maxCapacity ? Number(formData.maxCapacity) : 0,
+      minCapacity: formData.minCapacity ? Number(formData.minCapacity) : 0,
+      capacityUnit: formData.capacityUnit || "pallet",
       createdBy: "admin",
       remarks: formData.remarks.trim(),
       zoneId: Number(formData.zoneId),
@@ -277,6 +299,9 @@ export default function AislesPage() {
       width: "",
       length: "",
       unit: "Meter",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       remarks: "",
       zoneId: "",
       createdBy: "admin",
@@ -294,6 +319,9 @@ export default function AislesPage() {
       width: "",
       length: "",
       unit: "Meter",
+      maxCapacity: "",
+      minCapacity: "",
+      capacityUnit: "pallet",
       remarks: "",
       zoneId: zones[0]?.id || "",
       createdBy: "admin",
@@ -312,6 +340,9 @@ export default function AislesPage() {
       width: item.width?.toString() || "",
       length: item.length?.toString() || "",
       unit: item.unit || "Meter",
+      maxCapacity: item.maxCapacity || "",
+      minCapacity: item.minCapacity || "",
+      capacityUnit: item.capacityUnit || "pallet",
       remarks: item.remarks || "",
       zoneId: item.zone?.id || "",
       createdBy: item.createdBy || "admin",
@@ -582,6 +613,60 @@ export default function AislesPage() {
             </p>
           </div>
 
+          {/* New Capacity Fields */}
+          <div className="space-y-1.5">
+            <Label htmlFor="maxCapacity">Max Capacity</Label>
+            <Input
+              id="maxCapacity"
+              name="maxCapacity"
+              type="number"
+              placeholder="e.g. 1000"
+              value={formData.maxCapacity}
+              onChange={handleInputChange}
+              className={formErrors.maxCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.maxCapacity && (
+              <p className="text-xs text-red-500">{formErrors.maxCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="minCapacity">Min Capacity</Label>
+            <Input
+              id="minCapacity"
+              name="minCapacity"
+              type="number"
+              placeholder="e.g. 500"
+              value={formData.minCapacity}
+              onChange={handleInputChange}
+              className={formErrors.minCapacity ? "border-red-500" : ""}
+            />
+            {formErrors.minCapacity && (
+              <p className="text-xs text-red-500">{formErrors.minCapacity}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="capacityUnit">Capacity Unit</Label>
+            <select
+              id="capacityUnit"
+              name="capacityUnit"
+              value={formData.capacityUnit}
+              onChange={handleInputChange}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="pallet">Pallet Positions</option>
+              <option value="bin">Bin Positions</option>
+              <option value="sqft">Square Feet (sq ft)</option>
+              <option value="sqm">Square Meters (m²)</option>
+              <option value="cft">Cubic Feet (ft³)</option>
+              <option value="cbm">Cubic Meters (m³)</option>
+              <option value="ton">Tons</option>
+              <option value="kg">Kilograms (KG)</option>
+              <option value="lbs">Pounds (LBS)</option>
+            </select>
+          </div>
+
           <div className="flex items-center space-x-2 pt-1">
             <input
               type="checkbox"
@@ -723,6 +808,7 @@ export default function AislesPage() {
                   <TableHead>Aisle Name</TableHead>
                   <TableHead>Dimensions</TableHead>
                   <TableHead>Unit</TableHead>
+                  <TableHead>Max/Min</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Zone</TableHead>
                   <TableHead>Warehouse</TableHead>
@@ -753,6 +839,14 @@ export default function AislesPage() {
                       <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         {a.unit || "Meter"}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {a.maxCapacity || a.minCapacity ? (
+                        <div className="text-xs">
+                          <div>Max: {a.maxCapacity || "-"} {a.capacityUnit || ""}</div>
+                          <div>Min: {a.minCapacity || "-"} {a.capacityUnit || ""}</div>
+                        </div>
+                      ) : "-"}
                     </TableCell>
                     <TableCell>
                       <span

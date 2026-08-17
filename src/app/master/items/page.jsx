@@ -248,7 +248,7 @@ export default function ItemsPage() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">Item Management</h1>
@@ -268,7 +268,7 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={handleCreateClick}
-                  className="bg-white text-purple-600 hover:bg-purple-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
                 >
                   <Plus className="w-4 h-4" />
                   New Item
@@ -361,7 +361,7 @@ export default function ItemsPage() {
                   items.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 cursor-pointer" onClick={() => handleViewClick(item)}>
-                        <span className="font-medium text-purple-600 hover:text-purple-800">
+                        <span className="font-medium text-blue-600 hover:text-blue-800">
                           {item.itemCode}
                         </span>
                       </td>

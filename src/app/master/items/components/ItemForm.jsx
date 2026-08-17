@@ -483,7 +483,7 @@ export default function ItemForm({
                 <button
                   type="submit"
                   disabled={loading || showSuccess}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 text-blue-600 text-white rounded-lg hover:bg-blue-600 cursor-pointer bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
@@ -501,7 +501,7 @@ export default function ItemForm({
                   type="button"
                   onClick={onClose}
                   disabled={loading}
-                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-6 py-2 cursor-pointer border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
