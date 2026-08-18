@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Filter,
   ChevronDown,
+  ArrowRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -40,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ItemTransferPopup from "./components/InventoryDetailModal";
 
 async function fetchInventoryStock(params = {}) {
   const response = await api.get("/inventory-stock", { params });
@@ -80,6 +82,22 @@ export default function InventoryStockPage() {
 
   // Debounce timer for filter auto-apply
   const [filterTimeout, setFilterTimeout] = useState(null);
+
+  // Add state for transfer popup
+  const [transferPopupOpen, setTransferPopupOpen] = useState(false);
+  const [transferItemData, setTransferItemData] = useState(null);
+
+  // Add function to open transfer popup
+  const openTransferPopup = (item) => {
+    setTransferItemData(item);
+    setTransferPopupOpen(true);
+  };
+
+  // Add function to handle successful transfer
+  const handleTransferSuccess = () => {
+    // Refresh the inventory list after successful transfer
+    fetchInventoryList(pagination.currentPage, search);
+  };
 
   // Status options
   const statusOptions = [
@@ -122,37 +140,37 @@ export default function InventoryStockPage() {
         warehousesRes.data?.data?.content ||
           warehousesRes.data?.content ||
           warehousesRes.data ||
-          []
+          [],
       );
       setZones(
         zonesRes.data?.data?.content ||
           zonesRes.data?.content ||
           zonesRes.data ||
-          []
+          [],
       );
       setAisles(
         aislesRes.data?.data?.content ||
           aislesRes.data?.content ||
           aislesRes.data ||
-          []
+          [],
       );
       setRacks(
         racksRes.data?.data?.content ||
           racksRes.data?.content ||
           racksRes.data ||
-          []
+          [],
       );
       setLevels(
         levelsRes.data?.data?.content ||
           levelsRes.data?.content ||
           levelsRes.data ||
-          []
+          [],
       );
       setBins(
         binsRes.data?.data?.content ||
           binsRes.data?.content ||
           binsRes.data ||
-          []
+          [],
       );
     } catch (error) {
       console.error("Error fetching master data:", error);
@@ -301,7 +319,7 @@ export default function InventoryStockPage() {
 
   // Count active filters
   const activeFilterCount = Object.values(filters).filter(
-    (v) => v && v.trim() !== ""
+    (v) => v && v.trim() !== "",
   ).length;
 
   return (
@@ -366,25 +384,33 @@ export default function InventoryStockPage() {
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Status
+                  </Label>
                   <span
                     className={`px-2.5 py-1 rounded-full text-xs font-semibold border inline-block ${getStatusBadge(
-                      selectedItem.status
+                      selectedItem.status,
                     )}`}
                   >
                     {selectedItem.status || "ACTIVE"}
                   </span>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Item Code</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Item Code
+                  </Label>
                   <p className="font-medium">{selectedItem.itemCode || "-"}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Item Name</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Item Name
+                  </Label>
                   <p className="font-medium">{selectedItem.itemName || "-"}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Quantity</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Quantity
+                  </Label>
                   <p className="font-medium">
                     {selectedItem.quantity || 0} {selectedItem.uom || "Nos"}
                   </p>
@@ -393,7 +419,9 @@ export default function InventoryStockPage() {
                   <Label className="text-xs text-muted-foreground">
                     Available Quantity
                   </Label>
-                  <p className="font-medium">{selectedItem.availableQuantity || 0}</p>
+                  <p className="font-medium">
+                    {selectedItem.availableQuantity || 0}
+                  </p>
                 </div>
               </div>
 
@@ -406,29 +434,41 @@ export default function InventoryStockPage() {
                     <Label className="text-xs text-muted-foreground">
                       Warehouse
                     </Label>
-                    <p className="font-medium">{selectedItem.warehouseId || "-"}</p>
+                    <p className="font-medium">
+                      {selectedItem.warehouseId || "-"}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Zone</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Zone
+                    </Label>
                     <p className="font-medium">{selectedItem.zone || "-"}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Aisle</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Aisle
+                    </Label>
                     <p className="font-medium">{selectedItem.aisle || "-"}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Rack</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Rack
+                    </Label>
                     <p className="font-medium">{selectedItem.rack || "-"}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Bin ID</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Bin ID
+                    </Label>
                     <p className="font-medium">{selectedItem.binId || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
                       Bin Barcode
                     </Label>
-                    <p className="font-medium">{selectedItem.binBarcode || "-"}</p>
+                    <p className="font-medium">
+                      {selectedItem.binBarcode || "-"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -466,14 +506,18 @@ export default function InventoryStockPage() {
                     <Label className="text-xs text-muted-foreground">
                       Received Date
                     </Label>
-                    <p className="font-medium">{formatDate(selectedItem.receivedDate)}</p>
+                    <p className="font-medium">
+                      {formatDate(selectedItem.receivedDate)}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {selectedItem.remarks && (
                 <div className="border-t pt-4">
-                  <Label className="text-xs text-muted-foreground">Remarks</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Remarks
+                  </Label>
                   <p className="text-sm">{selectedItem.remarks}</p>
                 </div>
               )}
@@ -540,8 +584,6 @@ export default function InventoryStockPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            
-
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <select
@@ -559,11 +601,15 @@ export default function InventoryStockPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Warehouse</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Warehouse
+                </Label>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   value={filters.warehouseId}
-                  onChange={(e) => handleFilterChange("warehouseId", e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("warehouseId", e.target.value)
+                  }
                 >
                   <option value="">All Warehouses</option>
                   {warehouses.map((w) => (
@@ -654,9 +700,6 @@ export default function InventoryStockPage() {
                   ))}
                 </select>
               </div>
-
-              
-             
             </div>
           </div>
         )}
@@ -800,7 +843,7 @@ export default function InventoryStockPage() {
                       <td className="px-4 py-3">
                         <span
                           className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(
-                            item.status
+                            item.status,
                           )}`}
                         >
                           {item.status || "ACTIVE"}
@@ -822,6 +865,26 @@ export default function InventoryStockPage() {
                           </button>
                         </div>
                       </td>
+                      {/* // Add a Transfer button in the action column (replace or
+                      add alongside View button) // In the table action column: */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => viewDetails(item)}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openTransferPopup(item)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Transfer Item"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
@@ -829,7 +892,15 @@ export default function InventoryStockPage() {
             </tbody>
           </table>
         </div>
-
+        <ItemTransferPopup
+          isOpen={transferPopupOpen}
+          onClose={() => {
+            setTransferPopupOpen(false);
+            setTransferItemData(null);
+          }}
+          itemData={transferItemData}
+          onSuccess={handleTransferSuccess}
+        />
         {/* Pagination */}
         {!isLoading && inventory.length > 0 && (
           <TablePagination
@@ -839,7 +910,7 @@ export default function InventoryStockPage() {
             startItem={pagination.currentPage * pagination.pageSize + 1}
             endItem={Math.min(
               (pagination.currentPage + 1) * pagination.pageSize,
-              pagination.totalElements
+              pagination.totalElements,
             )}
             onPrev={() => handlePageChange(pagination.currentPage - 1)}
             onNext={() => handlePageChange(pagination.currentPage + 1)}
