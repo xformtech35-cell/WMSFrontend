@@ -1,7 +1,7 @@
 // components/ItemTransferPopup.jsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, ArrowRight, Package, Warehouse, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -25,7 +25,7 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
   const [errors, setErrors] = useState({});
 
   // Pre-fill form when itemData changes
-  useState(() => {
+  useEffect(() => {
     if (itemData) {
       // Build source location from item data
       const sourceLocation = [
@@ -38,17 +38,17 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
       ].filter(Boolean).join("-");
 
       setFormData({
-        sourceLocation: sourceLocation || "",
+        sourceLocation: itemData?.fullLocation || "",
         targetLocation: "",
         itemCode: itemData.itemCode || "",
-        quantity: 1,
+        quantity: itemData.quantity || 1,
         inventoryNumber: itemData.inventoryNumber || "",
         transferReason: "",
         remarks: "",
         createdBy: "system_user"
       });
     }
-  }, [itemData]);
+  }, [isOpen]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -207,6 +207,7 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                 <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   value={formData.sourceLocation}
+                  disabled
                   onChange={(e) => handleChange("sourceLocation", e.target.value)}
                   className={`pl-10 ${errors.sourceLocation ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                   placeholder="e.g., WH-001-ZONE-01-AISLE-01-RACK-01-LEVEL-01-BIN-01"
@@ -250,6 +251,7 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                 </Label>
                 <Input
                   value={formData.itemCode}
+                  disabled
                   onChange={(e) => handleChange("itemCode", e.target.value)}
                   className={errors.itemCode ? "border-red-500 focus-visible:ring-red-500" : ""}
                   placeholder="Enter item code"
@@ -268,6 +270,7 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                 <Input
                   type="number"
                   min="1"
+
                   value={formData.quantity}
                   onChange={(e) => handleChange("quantity", parseInt(e.target.value) || 0)}
                   className={errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}
@@ -289,6 +292,8 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
               </Label>
               <Input
                 value={formData.inventoryNumber}
+                  disabled
+
                 onChange={(e) => handleChange("inventoryNumber", e.target.value)}
                 className={errors.inventoryNumber ? "border-red-500 focus-visible:ring-red-500" : ""}
                 placeholder="Enter inventory number"
