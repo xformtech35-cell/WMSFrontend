@@ -648,8 +648,12 @@ export default function BinsPage() {
                         {selectedBin.stockSummary.totalQuantity || 0}
                       </p>
                       <p>
+                        <strong>Stock In:</strong>{" "}
+                        {selectedBin.stockSummary.stockin || 0}
+                      </p>
+                      <p>
                         <strong>Available:</strong>{" "}
-                        {selectedBin.stockSummary.availableQuantity || 0}
+                        {selectedBin.stockSummary.availableSlots || 0}
                       </p>
                       <p>
                         <strong>Reserved:</strong>{" "}
@@ -1200,7 +1204,7 @@ export default function BinsPage() {
                                 <div className="flex items-center gap-1.5">
                                   <Package className="size-3.5 text-blue-500" />
                                   <span className="text-xs font-medium">
-                                    {totalQuantity}
+                                    {b.stockSummary?.stockin || 0}
                                   </span>
                                   {uniqueItems > 1 && (
                                     <span className="text-[10px] text-muted-foreground">
@@ -1211,8 +1215,8 @@ export default function BinsPage() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="space-y-0.5 text-xs">
-                                  <p><strong>Total:</strong> {totalQuantity} units</p>
-                                  <p><strong>Available:</strong> {b.stockSummary?.availableQuantity || 0}</p>
+                                  <p><strong>Stock In:</strong> {b.stockSummary?.stockin || 0} units</p>
+                                  <p><strong>Available:</strong> {b.stockSummary?.availableSlots || 0}</p>
                                   <p><strong>Reserved:</strong> {b.stockSummary?.reservedQuantity || 0}</p>
                                   <p><strong>In Transit:</strong> {b.stockSummary?.inTransitQuantity || 0}</p>
                                   <p><strong>Item Types:</strong> {uniqueItems}</p>

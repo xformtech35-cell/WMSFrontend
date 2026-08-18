@@ -196,13 +196,13 @@ const ALL_MENU_ITEMS = [
     group: "Putaway",
     permission: P.PUTAWAY_VIEW,
   },
-  {
-    href: "/putaway",
-    label: "Putaway",
-    icon: Warehouse,
-    group: "Putaway",
-    permission: P.PUTAWAY_VIEW,
-  },
+  // {
+  //   href: "/putaway",
+  //   label: "Putaway",
+  //   icon: Warehouse,
+  //   group: "Putaway",
+  //   permission: P.PUTAWAY_VIEW,
+  // },
   {
     href: "/putawayExicute",
     label: "Putaway Execute",

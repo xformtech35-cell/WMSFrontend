@@ -167,6 +167,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
 const [putawayForm, setPutawayForm] = useState({
   assignedTo: "",
   receivingArea: "",
+  warehouseArea: "",
   remarks: "",
 });
 const [putawayErrors, setPutawayErrors] = useState({});
@@ -358,6 +359,7 @@ const getUserName = (userId) => {
         displayRack: item.rack,
         displayLevel: item.level,
         displayBin: item.binId,
+        rock: item.rock,
       }));
 
       setQrHistory(transformedData);
@@ -580,7 +582,7 @@ const handlePutawaySubmit = async (e) => {
     warehouseId: qr.warehouseId || "",
     assignedTo: putawayForm.assignedTo,
     receivingArea: putawayForm.receivingArea || qr.binId || "",
-    rockId: null,
+    // rockId: null,
     createdBy: "admin",
     lines: [
       {
@@ -626,11 +628,20 @@ const handlePutawaySubmit = async (e) => {
 
 const openPutawayDialog = (qr) => {
   setSelectedQrForPutaway(qr);
+  const rockId =
+    qr?.rock?.rockId ||
+    qr?.rockId ||
+    "";
+    const warehouseId =
+    qr?.rock?.warehouse?.warehouseId 
+    "";
   setPutawayForm({
     assignedTo: "",
-    receivingArea: qr.binId || "",
+    receivingArea: rockId || "",
+    warehouseArea: warehouseId || "",
     remarks: "",
   });
+  console.log("Selected QR for putaway:", rockId);
   setPutawayErrors({});
   setPutawayDialogOpen(true);
 };
@@ -1130,7 +1141,7 @@ const openPutawayDialog = (qr) => {
               >
                 <option value="">-- Select User --</option>
                 {users.map((user) => (
-                  <option key={user.id} value={user.id}>
+                  <option key={user.id} value={user.username}>
                     {user.name || user.username || `User ${user.id}`}
                   </option>
                 ))}
@@ -1158,10 +1169,27 @@ const openPutawayDialog = (qr) => {
                 }
                 placeholder="Enter receiving area"
                 className="mt-1"
+                disabled
               />
-              <p className="text-xs text-gray-400 mt-1">
-                Default: Current bin location
-              </p>
+             
+            </div>
+              <div>
+              <Label htmlFor="warehouseArea" className="text-sm font-medium">
+                Warehouse Location
+              </Label>
+              <Input
+                id="warehouseArea"
+                value={putawayForm.warehouseArea}
+                onChange={(e) =>
+                  setPutawayForm((prev) => ({
+                    ...prev,
+                    warehouseArea: e.target.value,
+                  }))
+                }
+                placeholder="Enter warehouse location"
+                className="mt-1"
+                disabled
+              />
             </div>
           </div>
 

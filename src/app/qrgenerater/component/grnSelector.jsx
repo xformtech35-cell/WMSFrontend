@@ -57,7 +57,7 @@ export default function GRNSelector({
   const [expandedGRN, setExpandedGRN] = useState(null);
   const [selectedGrnId, setSelectedGrnId] = useState(selectedGRN?.id || null);
   const [selectedLineId, setSelectedLineId] = useState(
-    selectedItem?.id || null
+    selectedItem?.id || null,
   );
 
   // Pagination state
@@ -129,83 +129,83 @@ export default function GRNSelector({
   // };
 
   const fetchGRNs = async (page = 0, searchQuery = "") => {
-  try {
-    setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-    const params = {
-      page,
-      size: pagination.pageSize,
-    };
+      const params = {
+        page,
+        size: pagination.pageSize,
+      };
 
-    if (searchQuery) {
-      params.search = searchQuery;
-    }
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
 
-    const response = await fetchApprovedGRNs(params);
+      const response = await fetchApprovedGRNs(params);
 
-    const data = response.data?.data || response.data || response;
-    const content = data.content || [];
-console.log("Fetched GRNs:", content); // Debugging log
-    const totalElements = data.totalElements || 0;
-    const totalPages = data.totalPages || 0;
-    const currentPage = data.number || page;
-    const pageSize = data.size || pagination.pageSize;
-    const first = data.first !== undefined ? data.first : true;
-    const last = data.last !== undefined ? data.last : true;
+      const data = response.data?.data || response.data || response;
+      const content = data.content || [];
+      console.log("Fetched GRNs:", content); // Debugging log
+      const totalElements = data.totalElements || 0;
+      const totalPages = data.totalPages || 0;
+      const currentPage = data.number || page;
+      const pageSize = data.size || pagination.pageSize;
+      const first = data.first !== undefined ? data.first : true;
+      const last = data.last !== undefined ? data.last : true;
 
-    // Only GRNs having at least one pending barcode line
-    const filteredContent = content.filter((grn) =>
-      grn.lines?.some((line) => line.barcodeGenerate === null)
-    );
-
-    setGrns(filteredContent);
-
-    setPagination({
-      currentPage,
-      pageSize,
-      totalElements: totalElements,
-      totalPages,
-      first,
-      last,
-    });
-
-    // Select first GRN + first pending line by default
-    if (filteredContent.length > 0) {
-      const firstGRN = filteredContent[0];
-
-      const firstPendingLine = firstGRN.lines?.find(
-        (line) => line.barcodeGenerate === null
+      // Only GRNs having at least one pending barcode line
+      const filteredContent = content.filter((grn) =>
+        grn.lines?.some((line) => line.barcodeGenerate === null),
       );
 
-      setExpandedGRN(firstGRN.id);
-      setSelectedGrnId(firstGRN.id);
+      setGrns(filteredContent);
 
-      if (firstPendingLine) {
-        setSelectedLineId(firstPendingLine.id);
+      setPagination({
+        currentPage,
+        pageSize,
+        totalElements: totalElements,
+        totalPages,
+        first,
+        last,
+      });
+
+      // Select first GRN + first pending line by default
+      if (filteredContent.length > 0) {
+        const firstGRN = filteredContent[0];
+
+        const firstPendingLine = firstGRN.lines?.find(
+          (line) => line.barcodeGenerate === null,
+        );
+
+        setExpandedGRN(firstGRN.id);
+        setSelectedGrnId(firstGRN.id);
+
+        if (firstPendingLine) {
+          setSelectedLineId(firstPendingLine.id);
+        } else {
+          setSelectedLineId(null);
+        }
       } else {
+        setExpandedGRN(null);
+        setSelectedGrnId(null);
         setSelectedLineId(null);
       }
-    } else {
+
+      return filteredContent;
+    } catch (error) {
+      console.error("Error fetching approved GRNs:", error);
+      toast.error("Failed to load GRNs. Please try again.");
+
+      setGrns([]);
       setExpandedGRN(null);
       setSelectedGrnId(null);
       setSelectedLineId(null);
+
+      return [];
+    } finally {
+      setIsLoading(false);
     }
-
-    return filteredContent;
-  } catch (error) {
-    console.error("Error fetching approved GRNs:", error);
-    toast.error("Failed to load GRNs. Please try again.");
-
-    setGrns([]);
-    setExpandedGRN(null);
-    setSelectedGrnId(null);
-    setSelectedLineId(null);
-
-    return [];
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
   const handlePageChange = (newPage) => {
     if (newPage >= 0 && newPage < pagination.totalPages) {
       fetchGRNs(newPage, search);
@@ -243,7 +243,7 @@ console.log("Fetched GRNs:", content); // Debugging log
       itemCode: line.itemCode,
       itemName: line.itemName,
       uom: line.uom,
-      quantity: line.acceptedQuantity || line.orderedQuantity,
+      quantity: line.remainingQuantity || line.acceptedQuantity,
     });
   };
 
@@ -255,7 +255,7 @@ console.log("Fetched GRNs:", content); // Debugging log
 
     const selectedGrn = grns.find((g) => g.id === selectedGrnId);
     const selectedLine = selectedGrn?.lines?.find(
-      (l) => l.id === selectedLineId
+      (l) => l.id === selectedLineId,
     );
 
     if (selectedGrn && selectedLine) {
@@ -269,7 +269,7 @@ console.log("Fetched GRNs:", content); // Debugging log
         itemCode: selectedLine.itemCode,
         itemName: selectedLine.itemName,
         uom: selectedLine.uom,
-        quantity: selectedLine.acceptedQuantity || selectedLine.orderedQuantity,
+        quantity: selectedLine.remainingQuantity || selectedLine.acceptedQuantity,
       });
       onOpenChange(false);
     }
@@ -295,7 +295,10 @@ console.log("Fetched GRNs:", content); // Debugging log
 
         <div className="flex flex-col gap-4 overflow-y-auto px-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <form onSubmit={handleSearch} className="relative w-full sm:max-w-xs">
+            <form
+              onSubmit={handleSearch}
+              className="relative w-full sm:max-w-xs"
+            >
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
@@ -317,7 +320,9 @@ console.log("Fetched GRNs:", content); // Debugging log
               disabled={isLoading}
               className="shrink-0"
             >
-              <RefreshCw className={cn("size-3.5", isLoading && "animate-spin")} />
+              <RefreshCw
+                className={cn("size-3.5", isLoading && "animate-spin")}
+              />
               <span className="ml-1.5">Refresh</span>
             </Button>
           </div>
@@ -345,8 +350,9 @@ console.log("Fetched GRNs:", content); // Debugging log
                   const isExpanded = expandedGRN === grn.id;
                   const isSelected = selectedGrnId === grn.id;
                   const pendingLines =
-                    grn.lines?.filter((line) => line.barcodeGenerate === null) ||
-                    [];
+                    grn.lines?.filter(
+                      (line) => line.barcodeGenerate === null,
+                    ) || [];
 
                   return (
                     <div key={grn.id}>
@@ -426,6 +432,7 @@ console.log("Fetched GRNs:", content); // Debugging log
                                   <TableHead>Item Name</TableHead>
                                   <TableHead>UOM</TableHead>
                                   <TableHead>Received</TableHead>
+                                  <TableHead>Remaining</TableHead>
                                   <TableHead>Quality</TableHead>
                                   <TableHead>Barcode</TableHead>
                                   <TableHead className="text-right">
@@ -436,7 +443,10 @@ console.log("Fetched GRNs:", content); // Debugging log
                               <TableBody>
                                 {grn.lines?.map((line, index) => {
                                   const isPending =
-                                    line.barcodeGenerate === null;
+                                    line.remainingQuantity === null ||
+                                    line.remainingQuantity > 0;
+                                  const barcodeStatus =
+                                    line.remainingQuantity === 0;
                                   const isLineSelected =
                                     selectedLineId === line.id;
 
@@ -466,25 +476,30 @@ console.log("Fetched GRNs:", content); // Debugging log
                                           line.orderedQuantity}
                                       </TableCell>
                                       <TableCell>
+                                        {line.remainingQuantity || 0}
+                                      </TableCell>
+                                      <TableCell>
                                         <StatusBadge
-                                          status={line.qualityStatus || "PENDING"}
+                                          status={
+                                            line.qualityStatus || "PENDING"
+                                          }
                                           showDot={false}
                                         />
                                       </TableCell>
                                       <TableCell>
-                                        {isPending ? (
+                                        {!barcodeStatus ? (
                                           <Badge
                                             variant="outline"
                                             className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                                           >
-                                            Not Generated
+                                            Remain Items
                                           </Badge>
                                         ) : (
                                           <Badge
                                             variant="outline"
                                             className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                                           >
-                                            Generated
+                                            All Generated
                                           </Badge>
                                         )}
                                       </TableCell>
@@ -538,7 +553,8 @@ console.log("Fetched GRNs:", content); // Debugging log
           {grns.length > 0 && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
-                {grns.length} GRN{grns.length !== 1 ? "s" : ""} with pending items
+                {grns.length} GRN{grns.length !== 1 ? "s" : ""} with pending
+                items
               </p>
               <TablePagination
                 currentPage={pagination.currentPage}
