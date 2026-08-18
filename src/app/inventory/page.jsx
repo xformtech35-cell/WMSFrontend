@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ItemTransferPopup from "./components/InventoryDetailModal";
+import { useRouter } from "next/navigation";
 
 async function fetchInventoryStock(params = {}) {
   const response = await api.get("/inventory-stock", { params });
@@ -79,6 +80,7 @@ export default function InventoryStockPage() {
   const [racks, setRacks] = useState([]);
   const [levels, setLevels] = useState([]);
   const [bins, setBins] = useState([]);
+  const router = useRouter();
 
   // Debounce timer for filter auto-apply
   const [filterTimeout, setFilterTimeout] = useState(null);
@@ -321,7 +323,6 @@ export default function InventoryStockPage() {
   const activeFilterCount = Object.values(filters).filter(
     (v) => v && v.trim() !== "",
   ).length;
-
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -349,6 +350,14 @@ export default function InventoryStockPage() {
                     {activeFilterCount}
                   </Badge>
                 )}
+              </button>
+              <button
+                type="button"
+               onClick={() => router.push("/inventory/transfer-history")}
+                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                History
               </button>
               <button
                 type="button"
