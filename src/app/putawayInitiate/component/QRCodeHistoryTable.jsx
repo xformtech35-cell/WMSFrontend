@@ -123,6 +123,7 @@ export default function QRCodeHistoryTable({
                 h.displayZone || h.zone,
                 h.displayAisle || h.aisle,
                 h.displayRack || h.rack,
+                h.displayLevel || h.level,
                 h.displayBin || h.binId,
               ]
                 .filter(Boolean)
@@ -199,14 +200,14 @@ export default function QRCodeHistoryTable({
                     <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => onView(h)}
-                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        className="p-1.5 cursor-pointer text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                         title="Preview"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onDownload(h)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 cursor-pointer text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Download QR"
                         disabled={!h.qrImage}
                       >
@@ -214,19 +215,23 @@ export default function QRCodeHistoryTable({
                       </button>
                       <button
                         onClick={() => handleDownloadbarcode(h)}
-                        className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        className="p-1.5 cursor-pointer text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                         title="Download Barcode"
                         disabled={!h.barcodeImage}
                       >
                         <ScanBarcode className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => onInitiatePutaway && onInitiatePutaway(h)}
-                        className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Initiate Putaway"
-                      >
-                        <PackagePlus className="w-4 h-4" />
-                      </button>
+                      {!h?.isTaskAssinged && (
+                        <button
+                          onClick={() =>
+                            onInitiatePutaway && onInitiatePutaway(h)
+                          }
+                          className="p-1.5 cursor-pointer text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Initiate Putaway"
+                        >
+                          <PackagePlus className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

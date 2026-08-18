@@ -27,7 +27,7 @@ import {
   Scale,
   Package2,
   FolderTree,
-   PackagePlus,
+  PackagePlus,
   UserCheck,
   ClipboardList,
   AlertCircle,
@@ -159,26 +159,26 @@ export default function PutawayInitiate() {
 
   // State for form errors
   const [formErrors, setFormErrors] = useState({});
-// State for putaway dialog
-const [users, setUsers] = useState([]);
-const [putawayDialogOpen, setPutawayDialogOpen] = useState(false);
-const [selectedQrForPutaway, setSelectedQrForPutaway] = useState(null);
-const [isSubmitting, setIsSubmitting] = useState(false);
-const [putawayForm, setPutawayForm] = useState({
-  assignedTo: "",
-  receivingArea: "",
-  warehouseArea: "",
-  remarks: "",
-});
-const [putawayErrors, setPutawayErrors] = useState({});
-async function initiatePutaway(payload) {
-  const response = await api.post("/putaway/initiate", payload);
-  return response.data;
-}
-const getUserName = (userId) => {
-  const user = users.find((u) => u.id === parseInt(userId));
-  return user?.name || user?.username || `User ${userId}`;
-};
+  // State for putaway dialog
+  const [users, setUsers] = useState([]);
+  const [putawayDialogOpen, setPutawayDialogOpen] = useState(false);
+  const [selectedQrForPutaway, setSelectedQrForPutaway] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [putawayForm, setPutawayForm] = useState({
+    assignedTo: "",
+    receivingArea: "",
+    warehouseArea: "",
+    remarks: "",
+  });
+  const [putawayErrors, setPutawayErrors] = useState({});
+  async function initiatePutaway(payload) {
+    const response = await api.post("/putaway/initiate", payload);
+    return response.data;
+  }
+  const getUserName = (userId) => {
+    const user = users.find((u) => u.id === parseInt(userId));
+    return user?.name || user?.username || `User ${userId}`;
+  };
   // State for selected bin details
   const [selectedBinDetails, setSelectedBinDetails] = useState(null);
 
@@ -233,12 +233,19 @@ const getUserName = (userId) => {
     }
   };
 
- const fetchMasterData = async () => {
-  try {
-    setIsLoadingMaster(true);
+  const fetchMasterData = async () => {
+    try {
+      setIsLoadingMaster(true);
 
-    const [warehousesRes, zonesRes, aislesRes, racksRes, levelsRes, binsRes, usersRes] =
-      await Promise.all([
+      const [
+        warehousesRes,
+        zonesRes,
+        aislesRes,
+        racksRes,
+        levelsRes,
+        binsRes,
+        usersRes,
+      ] = await Promise.all([
         api.get("/warehouses").catch(() => ({ data: [] })),
         api.get("/zones").catch(() => ({ data: [] })),
         api.get("/aisles").catch(() => ({ data: [] })),
@@ -248,55 +255,55 @@ const getUserName = (userId) => {
         api.get("/users").catch(() => ({ data: [] })),
       ]);
 
-    setWarehouses(
-      warehousesRes.data?.data?.content ||
-        warehousesRes.data?.content ||
-        warehousesRes.data ||
-        [],
-    );
-    setZones(
-      zonesRes.data?.data?.content ||
-        zonesRes.data?.content ||
-        zonesRes.data ||
-        [],
-    );
-    setAisles(
-      aislesRes.data?.data?.content ||
-        aislesRes.data?.content ||
-        aislesRes.data ||
-        [],
-    );
-    setRacks(
-      racksRes.data?.data?.content ||
-        racksRes.data?.content ||
-        racksRes.data ||
-        [],
-    );
-    setLevels(
-      levelsRes.data?.data?.content ||
-        levelsRes.data?.content ||
-        levelsRes.data ||
-        [],
-    );
-    setBins(
-      binsRes.data?.data?.content ||
-        binsRes.data?.content ||
-        binsRes.data ||
-        [],
-    );
-    setUsers(
-      usersRes.data?.data?.content ||
-        usersRes.data?.content ||
-        usersRes.data ||
-        [],
-    );
-  } catch (error) {
-    console.error("Error fetching master data:", error);
-    toast.error("Failed to load master data.");
-  } finally {
-    setIsLoadingMaster(false);
-  }
-};
+      setWarehouses(
+        warehousesRes.data?.data?.content ||
+          warehousesRes.data?.content ||
+          warehousesRes.data ||
+          [],
+      );
+      setZones(
+        zonesRes.data?.data?.content ||
+          zonesRes.data?.content ||
+          zonesRes.data ||
+          [],
+      );
+      setAisles(
+        aislesRes.data?.data?.content ||
+          aislesRes.data?.content ||
+          aislesRes.data ||
+          [],
+      );
+      setRacks(
+        racksRes.data?.data?.content ||
+          racksRes.data?.content ||
+          racksRes.data ||
+          [],
+      );
+      setLevels(
+        levelsRes.data?.data?.content ||
+          levelsRes.data?.content ||
+          levelsRes.data ||
+          [],
+      );
+      setBins(
+        binsRes.data?.data?.content ||
+          binsRes.data?.content ||
+          binsRes.data ||
+          [],
+      );
+      setUsers(
+        usersRes.data?.data?.content ||
+          usersRes.data?.content ||
+          usersRes.data ||
+          [],
+      );
+    } catch (error) {
+      console.error("Error fetching master data:", error);
+      toast.error("Failed to load master data.");
+    } finally {
+      setIsLoadingMaster(false);
+    }
+  };
 
   // Fetch QR codes from API with pagination
   const fetchQRCodesList = async (page = 0, searchQuery = "") => {
@@ -360,6 +367,7 @@ const getUserName = (userId) => {
         displayLevel: item.level,
         displayBin: item.binId,
         rock: item.rock,
+        isTaskAssinged: item.isTaskAssinged,
       }));
 
       setQrHistory(transformedData);
@@ -554,97 +562,93 @@ const getUserName = (userId) => {
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
-const validatePutawayForm = () => {
-  const errors = {};
-  if (!putawayForm.assignedTo) {
-    errors.assignedTo = "Please select a user";
-  }
-  setPutawayErrors(errors);
-  return Object.keys(errors).length === 0;
-};
-
-const handlePutawaySubmit = async (e) => {
-  e.preventDefault();
-
-  if (!validatePutawayForm()) {
-    return;
-  }
-
-  if (!selectedQrForPutaway) {
-    toast.error("QR data not selected.");
-    return;
-  }
-
-  const qr = selectedQrForPutaway;
-
-  const payload = {
-    grnNumber: qr.grnNumber || "",
-    warehouseId: qr.warehouseId || "",
-    assignedTo: putawayForm.assignedTo,
-    receivingArea: putawayForm.receivingArea || qr.binId || "",
-    // rockId: null,
-    createdBy: "admin",
-    lines: [
-      {
-        itemCode: qr.itemCode || "",
-        itemName: qr.itemName || "",
-        uom: qr.uom || "Nos",
-        quantity: parseFloat(qr.quantity) || 0,
-        inboundLineId: qr.id,
-        batchNumber: qr.batchNumber || "",
-        serialNumber: "",
-        suggestedBin: qr.binId || "",
-        remarks: putawayForm.remarks || "",
-      },
-    ],
+  const validatePutawayForm = () => {
+    const errors = {};
+    if (!putawayForm.assignedTo) {
+      errors.assignedTo = "Please select a user";
+    }
+    setPutawayErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  try {
-    setIsSubmitting(true);
-    await initiatePutaway(payload);
-    toast.success(
-      `Putaway assigned successfully to ${getUserName(putawayForm.assignedTo)}`
-    );
-    setPutawayDialogOpen(false);
-    setSelectedQrForPutaway(null);
+  const handlePutawaySubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validatePutawayForm()) {
+      return;
+    }
+
+    if (!selectedQrForPutaway) {
+      toast.error("QR data not selected.");
+      return;
+    }
+
+    const qr = selectedQrForPutaway;
+
+    const payload = {
+      grnNumber: qr.grnNumber || "",
+      warehouseId: qr.warehouseId || "",
+      assignedTo: putawayForm.assignedTo,
+      receivingArea: putawayForm.receivingArea || qr.binId || "",
+      // rockId: null,
+      createdBy: "admin",
+      lines: [
+        {
+          itemCode: qr.itemCode || "",
+          itemName: qr.itemName || "",
+          uom: qr.uom || "Nos",
+          quantity: parseFloat(qr.quantity) || 0,
+          inboundLineId: qr.id,
+          batchNumber: qr.batchNumber || "",
+          serialNumber: "",
+          suggestedBin: qr.binId || "",
+          remarks: putawayForm.remarks || "",
+        },
+      ],
+    };
+
+    try {
+      setIsSubmitting(true);
+      await initiatePutaway(payload);
+      toast.success(
+        `Putaway assigned successfully to ${getUserName(putawayForm.assignedTo)}`,
+      );
+      setPutawayDialogOpen(false);
+      setSelectedQrForPutaway(null);
+      setPutawayForm({
+        assignedTo: "",
+        receivingArea: "",
+        remarks: "",
+      });
+      setPutawayErrors({});
+      await fetchQRCodesList(pagination.currentPage, search);
+    } catch (error) {
+      console.error("Error initiating putaway:", error);
+      toast.error(
+        error.response?.data?.message ||
+          error.response?.data?.detail ||
+          "Failed to initiate putaway.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openPutawayDialog = (qr) => {
+    setSelectedQrForPutaway(qr);
+    const rockId = qr?.rock?.rockId || qr?.rockId || "";
+    const warehouseId = qr?.rock?.warehouse?.warehouseId;
+    ("");
     setPutawayForm({
       assignedTo: "",
-      receivingArea: "",
+      receivingArea: rockId || "",
+      warehouseArea: warehouseId || "",
       remarks: "",
     });
+    console.log("Selected QR for putaway:", rockId);
     setPutawayErrors({});
-    await fetchQRCodesList(pagination.currentPage, search);
-  } catch (error) {
-    console.error("Error initiating putaway:", error);
-    toast.error(
-      error.response?.data?.message ||
-        error.response?.data?.detail ||
-        "Failed to initiate putaway."
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-const openPutawayDialog = (qr) => {
-  setSelectedQrForPutaway(qr);
-  const rockId =
-    qr?.rock?.rockId ||
-    qr?.rockId ||
-    "";
-    const warehouseId =
-    qr?.rock?.warehouse?.warehouseId 
-    "";
-  setPutawayForm({
-    assignedTo: "",
-    receivingArea: rockId || "",
-    warehouseArea: warehouseId || "",
-    remarks: "",
-  });
-  console.log("Selected QR for putaway:", rockId);
-  setPutawayErrors({});
-  setPutawayDialogOpen(true);
-};
+    setPutawayDialogOpen(true);
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -877,18 +881,10 @@ const openPutawayDialog = (qr) => {
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white">
-                QR Code Generator
+                Putaway Assignment Management
               </h1>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setGenerate(!generate)}
-                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                Generate
-              </button>
               <button
                 type="button"
                 onClick={handleRefresh}
@@ -902,319 +898,337 @@ const openPutawayDialog = (qr) => {
         </div>
       </div>
 
-   {/* Putaway Assignment Dialog */}
-<Dialog open={putawayDialogOpen} onOpenChange={setPutawayDialogOpen}>
-  <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-    <DialogHeader className="border-b pb-4">
-      <DialogTitle className="flex items-center gap-2 text-xl">
-        <PackagePlus className="w-6 h-6 text-orange-600" />
-        Initiate Putaway Assignment
-      </DialogTitle>
-      <DialogDescription>
-        Assign the selected QR/GRN item to a user for putaway processing.
-      </DialogDescription>
-    </DialogHeader>
+      {/* Putaway Assignment Dialog */}
+      <Dialog open={putawayDialogOpen} onOpenChange={setPutawayDialogOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <PackagePlus className="w-6 h-6 text-orange-600" />
+              Initiate Putaway Assignment
+            </DialogTitle>
+            <DialogDescription>
+              Assign the selected QR/GRN item to a user for putaway processing.
+            </DialogDescription>
+          </DialogHeader>
 
-    {selectedQrForPutaway && (
-      <form onSubmit={handlePutawaySubmit} className="space-y-6 py-4">
-        {/* QR / GRN Information */}
-        <div className="rounded-xl border bg-gradient-to-r from-blue-50 to-blue-100/50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-800">
-              QR / GRN Information
-            </h3>
-            <Badge className="ml-auto bg-blue-600 text-white">
-              {selectedQrForPutaway.labelType || "GRN"}
-            </Badge>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 min-w-[80px]">
-                QR ID:
-              </span>
-              <span className="font-mono text-sm font-medium">
-                {selectedQrForPutaway.qrId || "-"}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 min-w-[80px]">
-                GRN Number:
-              </span>
-              <span className="font-mono text-sm font-medium text-blue-600">
-                {selectedQrForPutaway.grnNumber || "-"}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 min-w-[80px]">
-                Barcode:
-              </span>
-              <span className="font-mono text-sm">
-                {selectedQrForPutaway.barcode || "-"}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 min-w-[80px]">
-                Status:
-              </span>
-              <Badge variant="outline" className="bg-green-50 text-green-700">
-                {selectedQrForPutaway.status || "GENERATED"}
-              </Badge>
-            </div>
-          </div>
-        </div>
+          {selectedQrForPutaway && (
+            <form onSubmit={handlePutawaySubmit} className="space-y-6 py-4">
+              {/* QR / GRN Information */}
+              <div className="rounded-xl border bg-gradient-to-r from-blue-50 to-blue-100/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    QR / GRN Information
+                  </h3>
+                  <Badge className="ml-auto bg-blue-600 text-white">
+                    {selectedQrForPutaway.labelType || "GRN"}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 min-w-[80px]">
+                      QR ID:
+                    </span>
+                    <span className="font-mono text-sm font-medium">
+                      {selectedQrForPutaway.qrId || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 min-w-[80px]">
+                      GRN Number:
+                    </span>
+                    <span className="font-mono text-sm font-medium text-blue-600">
+                      {selectedQrForPutaway.grnNumber || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 min-w-[80px]">
+                      Barcode:
+                    </span>
+                    <span className="font-mono text-sm">
+                      {selectedQrForPutaway.barcode || "-"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 min-w-[80px]">
+                      Status:
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700"
+                    >
+                      {selectedQrForPutaway.status || "GENERATED"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-        {/* Item Details */}
-        <div className="rounded-xl border bg-white p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Package className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-semibold text-gray-800">Item Details</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs text-gray-500">Item Code</Label>
-              <Input
-                value={selectedQrForPutaway.itemCode || "-"}
-                readOnly
-                className="bg-gray-50 border-0 font-mono text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Item Name</Label>
-              <Input
-                value={selectedQrForPutaway.itemName || "-"}
-                readOnly
-                className="bg-gray-50 border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Quantity</Label>
-              <Input
-                value={`${selectedQrForPutaway.quantity || 0} ${
-                  selectedQrForPutaway.uom || "Nos"
-                }`}
-                readOnly
-                className="bg-gray-50 border-0 text-sm font-medium"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Batch Number</Label>
-              <Input
-                value={selectedQrForPutaway.batchNumber || "-"}
-                readOnly
-                className="bg-gray-50 border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Pallet Number</Label>
-              <Input
-                value={selectedQrForPutaway.palletNumber || "-"}
-                readOnly
-                className="bg-gray-50 border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Inbound Line ID</Label>
-              <Input
-                value={selectedQrForPutaway.id || "-"}
-                readOnly
-                className="bg-gray-50 border-0 font-mono text-sm"
-              />
-            </div>
-          </div>
-        </div>
+              {/* Item Details */}
+              <div className="rounded-xl border bg-white p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-semibold text-gray-800">Item Details</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs text-gray-500">Item Code</Label>
+                    <Input
+                      value={selectedQrForPutaway.itemCode || "-"}
+                      readOnly
+                      className="bg-gray-50 border-0 font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Item Name</Label>
+                    <Input
+                      value={selectedQrForPutaway.itemName || "-"}
+                      readOnly
+                      className="bg-gray-50 border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Quantity</Label>
+                    <Input
+                      value={`${selectedQrForPutaway.quantity || 0} ${
+                        selectedQrForPutaway.uom || "Nos"
+                      }`}
+                      readOnly
+                      className="bg-gray-50 border-0 text-sm font-medium"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">
+                      Batch Number
+                    </Label>
+                    <Input
+                      value={selectedQrForPutaway.batchNumber || "-"}
+                      readOnly
+                      className="bg-gray-50 border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">
+                      Pallet Number
+                    </Label>
+                    <Input
+                      value={selectedQrForPutaway.palletNumber || "-"}
+                      readOnly
+                      className="bg-gray-50 border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">
+                      Inbound Line ID
+                    </Label>
+                    <Input
+                      value={selectedQrForPutaway.id || "-"}
+                      readOnly
+                      className="bg-gray-50 border-0 font-mono text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
 
-        {/* Current Location */}
-        <div className="rounded-xl border bg-blue-50/50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <MapPin className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-800">
-              Current Location
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs text-gray-500">Warehouse</Label>
-              <Input
-                value={selectedQrForPutaway.warehouseId || "-"}
-                readOnly
-                className="bg-white border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Zone</Label>
-              <Input
-                value={selectedQrForPutaway.zone || "-"}
-                readOnly
-                className="bg-white border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Aisle</Label>
-              <Input
-                value={selectedQrForPutaway.aisle || "-"}
-                readOnly
-                className="bg-white border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Rack</Label>
-              <Input
-                value={selectedQrForPutaway.rack || "-"}
-                readOnly
-                className="bg-white border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Level</Label>
-              <Input
-                value={selectedQrForPutaway.level || "-"}
-                readOnly
-                className="bg-white border-0 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">Bin</Label>
-              <Input
-                value={selectedQrForPutaway.binId || "-"}
-                readOnly
-                className="bg-white border-0 text-sm font-medium text-blue-600"
-              />
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-blue-200">
-            <Label className="text-xs text-gray-500">Location Path</Label>
-            <div className="mt-1 flex items-center gap-2 text-sm font-medium text-gray-700 bg-white rounded-lg px-3 py-2 border">
-              {[
-                selectedQrForPutaway.warehouseId,
-                selectedQrForPutaway.zone,
-                selectedQrForPutaway.aisle,
-                selectedQrForPutaway.rack,
-                selectedQrForPutaway.binId,
-              ]
-                .filter(Boolean)
-                .map((item, index, array) => (
-                  <span key={index} className="flex items-center gap-2">
-                    <span className="text-blue-600 font-mono">{item}</span>
-                    {index < array.length - 1 && (
-                      <ArrowRight className="w-3 h-3 text-gray-400" />
+              {/* Current Location */}
+              <div className="rounded-xl border bg-blue-50/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Current Location
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs text-gray-500">Warehouse</Label>
+                    <Input
+                      value={selectedQrForPutaway.warehouseId || "-"}
+                      readOnly
+                      className="bg-white border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Zone</Label>
+                    <Input
+                      value={selectedQrForPutaway.zone || "-"}
+                      readOnly
+                      className="bg-white border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Aisle</Label>
+                    <Input
+                      value={selectedQrForPutaway.aisle || "-"}
+                      readOnly
+                      className="bg-white border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Rack</Label>
+                    <Input
+                      value={selectedQrForPutaway.rack || "-"}
+                      readOnly
+                      className="bg-white border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Level</Label>
+                    <Input
+                      value={selectedQrForPutaway.level || "-"}
+                      readOnly
+                      className="bg-white border-0 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Bin</Label>
+                    <Input
+                      value={selectedQrForPutaway.binId || "-"}
+                      readOnly
+                      className="bg-white border-0 text-sm font-medium text-blue-600"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <Label className="text-xs text-gray-500">Location Path</Label>
+                  <div className="mt-1 flex items-center gap-2 text-sm font-medium text-gray-700 bg-white rounded-lg px-3 py-2 border">
+                    {[
+                      selectedQrForPutaway.warehouseId,
+                      selectedQrForPutaway.zone,
+                      selectedQrForPutaway.aisle,
+                      selectedQrForPutaway.rack,
+                      selectedQrForPutaway.binId,
+                    ]
+                      .filter(Boolean)
+                      .map((item, index, array) => (
+                        <span key={index} className="flex items-center gap-2">
+                          <span className="text-blue-600 font-mono">
+                            {item}
+                          </span>
+                          {index < array.length - 1 && (
+                            <ArrowRight className="w-3 h-3 text-gray-400" />
+                          )}
+                        </span>
+                      ))}
+                    {[
+                      selectedQrForPutaway.warehouseId,
+                      selectedQrForPutaway.zone,
+                      selectedQrForPutaway.aisle,
+                      selectedQrForPutaway.rack,
+                      selectedQrForPutaway.binId,
+                    ].filter(Boolean).length === 0 && "-"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Assignment Section */}
+              <div className="rounded-xl border bg-orange-50/50 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <UserCheck className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Putaway Assignment
+                  </h3>
+                  <span className="text-xs text-red-500 ml-2">* Required</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="assignedTo" className="text-sm font-medium">
+                      Assign To <span className="text-red-500">*</span>
+                    </Label>
+                    <select
+                      id="assignedTo"
+                      value={putawayForm.assignedTo}
+                      onChange={(e) =>
+                        setPutawayForm((prev) => ({
+                          ...prev,
+                          assignedTo: e.target.value,
+                        }))
+                      }
+                      className={`mt-1 w-full h-10 rounded-md border ${
+                        putawayErrors.assignedTo
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
+                    >
+                      <option value="">-- Select User --</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.username}>
+                          {user.name || user.username || `User ${user.id}`}
+                        </option>
+                      ))}
+                    </select>
+                    {putawayErrors.assignedTo && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {putawayErrors.assignedTo}
+                      </p>
                     )}
-                  </span>
-                ))}
-              {[
-                selectedQrForPutaway.warehouseId,
-                selectedQrForPutaway.zone,
-                selectedQrForPutaway.aisle,
-                selectedQrForPutaway.rack,
-                selectedQrForPutaway.binId,
-              ].filter(Boolean).length === 0 && "-"}
-            </div>
-          </div>
-        </div>
+                  </div>
 
-        {/* Assignment Section */}
-        <div className="rounded-xl border bg-orange-50/50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <UserCheck className="w-5 h-5 text-orange-600" />
-            <h3 className="font-semibold text-gray-800">
-              Putaway Assignment
-            </h3>
-            <span className="text-xs text-red-500 ml-2">* Required</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="assignedTo" className="text-sm font-medium">
-                Assign To <span className="text-red-500">*</span>
-              </Label>
-              <select
-                id="assignedTo"
-                value={putawayForm.assignedTo}
-                onChange={(e) =>
-                  setPutawayForm((prev) => ({
-                    ...prev,
-                    assignedTo: e.target.value,
-                  }))
-                }
-                className={`mt-1 w-full h-10 rounded-md border ${
-                  putawayErrors.assignedTo ? "border-red-500" : "border-gray-300"
-                } bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
-              >
-                <option value="">-- Select User --</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.username}>
-                    {user.name || user.username || `User ${user.id}`}
-                  </option>
-                ))}
-              </select>
-              {putawayErrors.assignedTo && (
-                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {putawayErrors.assignedTo}
-                </p>
-              )}
-            </div>
+                  <div>
+                    <Label
+                      htmlFor="receivingArea"
+                      className="text-sm font-medium"
+                    >
+                      Receiving Area
+                    </Label>
+                    <Input
+                      id="receivingArea"
+                      value={putawayForm.receivingArea}
+                      onChange={(e) =>
+                        setPutawayForm((prev) => ({
+                          ...prev,
+                          receivingArea: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter receiving area"
+                      className="mt-1"
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="warehouseArea"
+                      className="text-sm font-medium"
+                    >
+                      Warehouse Location
+                    </Label>
+                    <Input
+                      id="warehouseArea"
+                      value={putawayForm.warehouseArea}
+                      onChange={(e) =>
+                        setPutawayForm((prev) => ({
+                          ...prev,
+                          warehouseArea: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter warehouse location"
+                      className="mt-1"
+                      disabled
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <Label htmlFor="receivingArea" className="text-sm font-medium">
-                Receiving Area
-              </Label>
-              <Input
-                id="receivingArea"
-                value={putawayForm.receivingArea}
-                onChange={(e) =>
-                  setPutawayForm((prev) => ({
-                    ...prev,
-                    receivingArea: e.target.value,
-                  }))
-                }
-                placeholder="Enter receiving area"
-                className="mt-1"
-                disabled
-              />
-             
-            </div>
-              <div>
-              <Label htmlFor="warehouseArea" className="text-sm font-medium">
-                Warehouse Location
-              </Label>
-              <Input
-                id="warehouseArea"
-                value={putawayForm.warehouseArea}
-                onChange={(e) =>
-                  setPutawayForm((prev) => ({
-                    ...prev,
-                    warehouseArea: e.target.value,
-                  }))
-                }
-                placeholder="Enter warehouse location"
-                className="mt-1"
-                disabled
-              />
-            </div>
-          </div>
+                <div className="mt-4">
+                  <Label htmlFor="remarks" className="text-sm font-medium">
+                    Remarks
+                  </Label>
+                  <textarea
+                    id="remarks"
+                    value={putawayForm.remarks}
+                    onChange={(e) =>
+                      setPutawayForm((prev) => ({
+                        ...prev,
+                        remarks: e.target.value,
+                      }))
+                    }
+                    rows={2}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Enter any additional remarks..."
+                  />
+                </div>
+              </div>
 
-          <div className="mt-4">
-            <Label htmlFor="remarks" className="text-sm font-medium">
-              Remarks
-            </Label>
-            <textarea
-              id="remarks"
-              value={putawayForm.remarks}
-              onChange={(e) =>
-                setPutawayForm((prev) => ({
-                  ...prev,
-                  remarks: e.target.value,
-                }))
-              }
-              rows={2}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Enter any additional remarks..."
-            />
-          </div>
-        </div>
-
-        {/* Payload Preview */}
-        {/* <div className="rounded-lg bg-gray-900 p-4 text-xs text-green-400 overflow-x-auto">
+              {/* Payload Preview */}
+              {/* <div className="rounded-lg bg-gray-900 p-4 text-xs text-green-400 overflow-x-auto">
           <div className="text-gray-400 mb-2 flex items-center gap-2">
             <ClipboardList className="w-4 h-4" />
             Payload Preview (inboundLineId: {selectedQrForPutaway.id})
@@ -1245,38 +1259,38 @@ const openPutawayDialog = (qr) => {
           </pre>
         </div> */}
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPutawayDialogOpen(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting || !putawayForm.assignedTo}
-            className="bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            {isSubmitting ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Initiating...
-              </>
-            ) : (
-              <>
-                <PackagePlus className="w-4 h-4 mr-2" />
-                Initiate Putaway
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    )}
-  </DialogContent>
-</Dialog>
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPutawayDialogOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !putawayForm.assignedTo}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Initiating...
+                    </>
+                  ) : (
+                    <>
+                      <PackagePlus className="w-4 h-4 mr-2" />
+                      Initiate Putaway
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* QR Code Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
@@ -1402,27 +1416,27 @@ const openPutawayDialog = (qr) => {
       />
 
       {/* QR Code History Table */}
-     <QRCodeHistoryTable
-  qrHistory={qrHistory}
-  isLoading={isLoadingHistory}
-  onView={(qr) => {
-    setPreviewQr(qr);
-    setPreviewDialogOpen(true);
-  }}
-  onDownload={handleDownload}
-  handleDownloadbarcode={handleDownloadbarcode}
-  onPrint={handlePrint}
-  onInitiatePutaway={openPutawayDialog} // Add this line
-  page={pagination.currentPage + 1}
-  totalPages={pagination.totalPages}
-  totalItems={pagination.totalElements}
-  startItem={pagination.currentPage * pagination.pageSize + 1}
-  endItem={Math.min(
-    (pagination.currentPage + 1) * pagination.pageSize,
-    pagination.totalElements,
-  )}
-  onPageChange={handlePageChange}
-/>
+      <QRCodeHistoryTable
+        qrHistory={qrHistory}
+        isLoading={isLoadingHistory}
+        onView={(qr) => {
+          setPreviewQr(qr);
+          setPreviewDialogOpen(true);
+        }}
+        onDownload={handleDownload}
+        handleDownloadbarcode={handleDownloadbarcode}
+        onPrint={handlePrint}
+        onInitiatePutaway={openPutawayDialog} // Add this line
+        page={pagination.currentPage + 1}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalElements}
+        startItem={pagination.currentPage * pagination.pageSize + 1}
+        endItem={Math.min(
+          (pagination.currentPage + 1) * pagination.pageSize,
+          pagination.totalElements,
+        )}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }
