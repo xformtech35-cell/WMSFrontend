@@ -231,49 +231,50 @@ export default function GRNSelector({
     // Don't auto-select, wait for item selection
   };
 
-  const handleSelectLine = (grn, line) => {
-    setSelectedLineId(line.id);
+const handleSelectLine = (grn, line) => {
+  setSelectedLineId(line.id);
+  onSelect({
+    grn: grn,
+    line: line,
+    inboundId: grn.id,
+    inboundLineId: line.id,
+    grnNumber: grn.grnNumber,
+    inboundNumber: grn.inboundNumber,
+    itemCode: line.itemCode,
+    itemName: line.itemName,
+    uom: line.uom,
+    quantity: line.remainingQuantity || line.acceptedQuantity,
+    remainingQuantity: line.remainingQuantity || 0, // Add this line
+  });
+};
+ const handleConfirm = () => {
+  if (!selectedGrnId || !selectedLineId) {
+    toast.error("Please select a GRN and an item");
+    return;
+  }
+
+  const selectedGrn = grns.find((g) => g.id === selectedGrnId);
+  const selectedLine = selectedGrn?.lines?.find(
+    (l) => l.id === selectedLineId,
+  );
+
+  if (selectedGrn && selectedLine) {
     onSelect({
-      grn: grn,
-      line: line,
-      inboundId: grn.id,
-      inboundLineId: line.id,
-      grnNumber: grn.grnNumber,
-      inboundNumber: grn.inboundNumber,
-      itemCode: line.itemCode,
-      itemName: line.itemName,
-      uom: line.uom,
-      quantity: line.remainingQuantity || line.acceptedQuantity,
+      grn: selectedGrn,
+      line: selectedLine,
+      inboundId: selectedGrn.id,
+      inboundLineId: selectedLine.id,
+      grnNumber: selectedGrn.grnNumber,
+      inboundNumber: selectedGrn.inboundNumber,
+      itemCode: selectedLine.itemCode,
+      itemName: selectedLine.itemName,
+      uom: selectedLine.uom,
+      quantity: selectedLine.remainingQuantity || selectedLine.acceptedQuantity,
+      remainingQuantity: selectedLine.remainingQuantity || 0, // Add this
     });
-  };
-
-  const handleConfirm = () => {
-    if (!selectedGrnId || !selectedLineId) {
-      toast.error("Please select a GRN and an item");
-      return;
-    }
-
-    const selectedGrn = grns.find((g) => g.id === selectedGrnId);
-    const selectedLine = selectedGrn?.lines?.find(
-      (l) => l.id === selectedLineId,
-    );
-
-    if (selectedGrn && selectedLine) {
-      onSelect({
-        grn: selectedGrn,
-        line: selectedLine,
-        inboundId: selectedGrn.id,
-        inboundLineId: selectedLine.id,
-        grnNumber: selectedGrn.grnNumber,
-        inboundNumber: selectedGrn.inboundNumber,
-        itemCode: selectedLine.itemCode,
-        itemName: selectedLine.itemName,
-        uom: selectedLine.uom,
-        quantity: selectedLine.remainingQuantity || selectedLine.acceptedQuantity,
-      });
-      onOpenChange(false);
-    }
-  };
+    onOpenChange(false);
+  }
+};
 
   if (!open) return null;
 

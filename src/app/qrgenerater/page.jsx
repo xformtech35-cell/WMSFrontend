@@ -129,6 +129,7 @@ export default function QRCodeGeneratorPage() {
     templateName: "standard",
     labelFormat: "PNG",
     remarks: "",
+    remainingQuantity: 0,
   });
 
   // State for QR history from API
@@ -192,6 +193,7 @@ export default function QRCodeGeneratorPage() {
 
   const handleGRNSelect = (selection) => {
     if (selection) {
+      const remainingQuantity = Number(selection.remainingQuantity ?? 0);
       setFormData((prev) => ({
         ...prev,
         grnNumber: selection.grnNumber,
@@ -200,7 +202,8 @@ export default function QRCodeGeneratorPage() {
         itemCode: selection.itemCode,
         itemName: selection.itemName,
         uom: selection.uom,
-        quantity: selection.quantity || 1,
+        remainingQuantity: remainingQuantity,
+        quantity: remainingQuantity > 0 ? String(remainingQuantity) : "", // Set initial quantity to remaining
       }));
       toast.success(
         `Selected: ${selection.itemCode} from ${selection.grnNumber}`,
@@ -469,21 +472,63 @@ export default function QRCodeGeneratorPage() {
           }));
         }
       }
-    } else if (name === "quantity") {
-      // Validate quantity against available slots when quantity changes
-      if (formData.binId && value) {
+    }
+    //  else if (name === "quantity") {
+    //   // Validate quantity against available slots when quantity changes
+    //   if (formData.binId && value) {
+    //     const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
+    //     if (selectedBin) {
+    //       const availableSlots = selectedBin.stockSummary?.availableSlots || 0;
+    //       if (parseInt(value) > availableSlots) {
+    //         setFormErrors((prev) => ({
+    //           ...prev,
+    //           quantity: `Quantity (${value}) exceeds available slots (${availableSlots}) in this bin`,
+    //         }));
+    //       } else {
+    //         setFormErrors((prev) => ({
+    //           ...prev,
+    //           quantity: undefined,
+    //         }));
+    //       }
+    //     }
+    //   }
+    // }
+    else if (name === "quantity") {
+      let quantity = value;
+      const remainingQuantity = Number(formData.remainingQuantity || 0);
+
+      // Prevent entering more than remaining quantity
+      if (remainingQuantity > 0 && Number(quantity) > remainingQuantity) {
+        setFormErrors((prev) => ({
+          ...prev,
+          quantity: `Quantity cannot exceed remaining quantity (${remainingQuantity})`,
+        }));
+      } else if (remainingQuantity > 0 && Number(quantity) <= 0) {
+        setFormErrors((prev) => ({
+          ...prev,
+          quantity: "Quantity must be at least 1",
+        }));
+      } else {
+        setFormErrors((prev) => ({
+          ...prev,
+          quantity: undefined,
+        }));
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        quantity,
+      }));
+
+      // Bin capacity validation (keep this as well)
+      if (formData.binId && quantity) {
         const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
         if (selectedBin) {
           const availableSlots = selectedBin.stockSummary?.availableSlots || 0;
-          if (parseInt(value) > availableSlots) {
+          if (parseInt(quantity) > availableSlots) {
             setFormErrors((prev) => ({
               ...prev,
-              quantity: `Quantity (${value}) exceeds available slots (${availableSlots}) in this bin`,
-            }));
-          } else {
-            setFormErrors((prev) => ({
-              ...prev,
-              quantity: undefined,
+              quantity: `Quantity (${quantity}) exceeds available slots (${availableSlots}) in this bin`,
             }));
           }
         }
@@ -502,6 +547,15 @@ export default function QRCodeGeneratorPage() {
     }
     if (!formData.quantity || parseInt(formData.quantity) <= 0) {
       errors.quantity = "Valid quantity is required";
+    } else {
+      // Validate against remaining quantity
+      const remainingQuantity = Number(formData.remainingQuantity || 0);
+      if (
+        remainingQuantity > 0 &&
+        parseInt(formData.quantity) > remainingQuantity
+      ) {
+        errors.quantity = `Quantity (${formData.quantity}) exceeds remaining quantity (${remainingQuantity})`;
+      }
     }
     if (!formData.warehouseId) {
       errors.warehouseId = "Warehouse is required";
@@ -586,7 +640,7 @@ export default function QRCodeGeneratorPage() {
       setGenerate(false);
       // Refresh the QR codes list - go to first page
       await fetchQRCodesList(0, search);
-
+      fetchMasterData();
       // Open preview with the newly generated QR
       const newQr = {
         id: qrData.id || Date.now(),
@@ -635,6 +689,7 @@ export default function QRCodeGeneratorPage() {
         remarks: "",
         inboundId: "",
         inboundLineId: "",
+        remainingQuantity: 0, // Add this
       }));
     } catch (error) {
       console.error("Error generating QR code:", error);
@@ -680,7 +735,9 @@ export default function QRCodeGeneratorPage() {
       toast.error("No QR image available to download");
     }
   };
-
+  useEffect(() => {
+    console.log("Generate state changed to:", generate);
+  }, [generate]);
   const handleDownloadbarcode = (qrData) => {
     if (qrData.barcodeImage) {
       // Convert base64 to blob and download
@@ -760,7 +817,15 @@ export default function QRCodeGeneratorPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setGenerate(!generate)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log(
+                    "Generate button clicked, current state:",
+                    generate,
+                  );
+                  setGenerate(!generate);
+                }}
                 className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
               >
                 <Plus className="w-4 h-4" />
@@ -779,7 +844,7 @@ export default function QRCodeGeneratorPage() {
         </div>
       </div>
 
-      {generate && (
+      {generate === true && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
             <div
@@ -811,9 +876,11 @@ export default function QRCodeGeneratorPage() {
                   templateName: "standard",
                   labelFormat: "PNG",
                   remarks: "",
+                  remainingQuantity: 0, // Add this
                 });
                 setFormErrors({});
                 setSelectedBinDetails(null);
+                fetchMasterData();
               }}
             />
             <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
@@ -825,7 +892,8 @@ export default function QRCodeGeneratorPage() {
                       Generate QR Code
                     </CardTitle>
                     <CardDescription>
-                      Fill in the details below to generate a QR code for warehouse labeling.
+                      Fill in the details below to generate a QR code for
+                      warehouse labeling.
                     </CardDescription>
                   </div>
                   <Button
@@ -859,6 +927,7 @@ export default function QRCodeGeneratorPage() {
                         templateName: "standard",
                         labelFormat: "PNG",
                         remarks: "",
+                        remainingQuantity: 0, // Add this
                       });
                       setFormErrors({});
                       setSelectedBinDetails(null);
@@ -1056,9 +1125,31 @@ export default function QRCodeGeneratorPage() {
                             name="quantity"
                             type="number"
                             min="1"
+                            max={formData.remainingQuantity || undefined}
                             placeholder="15"
                             value={formData.quantity}
-                            onChange={handleInputChange}
+                            // onChange={handleInputChange}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const maxQuantity = Number(
+                                formData.remainingQuantity || 0,
+                              );
+
+                              // Allow clearing the input
+                              if (value === "") {
+                                handleInputChange(e);
+                                return;
+                              }
+
+                              const quantity = Number(value);
+
+                              // Don't allow typing more than remaining quantity
+                              if (maxQuantity > 0 && quantity > maxQuantity) {
+                                return;
+                              }
+
+                              handleInputChange(e);
+                            }}
                             className={
                               formErrors.quantity ? "border-red-500" : ""
                             }
@@ -1068,14 +1159,13 @@ export default function QRCodeGeneratorPage() {
                               {formErrors.quantity}
                             </p>
                           )}
-                          {selectedBinDetails && formData.binId && (
-                            <p className="text-xs text-green-600 flex items-center gap-1">
-                              <CheckCircle className="size-3" />
-                              Available slots:{" "}
-                              {selectedBinDetails.stockSummary?.availableSlots ||
-                                0}
+                          {formData.remainingQuantity > 0 && (
+                            <p className="text-xs text-blue-600">
+                              Remaining quantity: {formData.remainingQuantity}{" "}
+                              {formData.uom}
                             </p>
                           )}
+                          {/* ... rest of your code */}
                         </div>
 
                         <div className="space-y-1.5">
@@ -1198,7 +1288,9 @@ export default function QRCodeGeneratorPage() {
                               <option key={l.id} value={l.id}>
                                 {l.levelId || `Level ${l.id}`}
                                 {l.name ? ` - ${l.name}` : ""}
-                                {l.levelNumber ? ` (Level ${l.levelNumber})` : ""}
+                                {l.levelNumber
+                                  ? ` (Level ${l.levelNumber})`
+                                  : ""}
                               </option>
                             ))}
                           </select>
@@ -1237,8 +1329,8 @@ export default function QRCodeGeneratorPage() {
                             <p className="text-xs text-green-600 flex items-center gap-1">
                               <CheckCircle className="size-3" />
                               Selected bin has{" "}
-                              {selectedBinDetails.stockSummary?.availableSlots ||
-                                0}{" "}
+                              {selectedBinDetails.stockSummary
+                                ?.availableSlots || 0}{" "}
                               available slots
                             </p>
                           )}
@@ -1397,6 +1489,7 @@ export default function QRCodeGeneratorPage() {
                             templateName: "standard",
                             labelFormat: "PNG",
                             remarks: "",
+                            remainingQuantity: 0, // Add this
                           });
                           setFormErrors({});
                           setSelectedBinDetails(null);
