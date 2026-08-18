@@ -458,9 +458,9 @@ export default function InventoryStockPage() {
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
-                      Bin ID
+                      Level
                     </Label>
-                    <p className="font-medium">{selectedItem.binId || "-"}</p>
+                    <p className="font-medium">{selectedItem.level || "-"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
@@ -776,6 +776,7 @@ export default function InventoryStockPage() {
                     item.zone,
                     item.aisle,
                     item.rack,
+                    item.level,
                     item.binId,
                   ]
                     .filter(Boolean)
@@ -858,27 +859,14 @@ export default function InventoryStockPage() {
                         <div className="flex items-center justify-center">
                           <button
                             onClick={() => viewDetails(item)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                      {/* // Add a Transfer button in the action column (replace or
-                      add alongside View button) // In the table action column: */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => viewDetails(item)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            className="p-1.5 cursor-pointer text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => openTransferPopup(item)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 cursor-pointer text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Transfer Item"
                           >
                             <ArrowRight className="w-4 h-4" />
