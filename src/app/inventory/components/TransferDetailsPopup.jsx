@@ -1,7 +1,7 @@
 // components/TransferDetailsPopup.jsx
 "use client";
 
-import { X, Package, ArrowRight, Warehouse, MapPin, User, Calendar, Hash, FileText, CheckCircle, Clock, AlertCircle, Layers, Copy, Check } from "lucide-react";
+import { X, Package, ArrowRight, Warehouse, RefreshCw,MapPin, User, Calendar, Hash, FileText, CheckCircle, Clock, AlertCircle, Layers, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";

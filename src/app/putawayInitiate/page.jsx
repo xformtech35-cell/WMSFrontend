@@ -941,15 +941,15 @@ export default function PutawayInitiate() {
                       {selectedQrForPutaway.grnNumber || "-"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  {/* <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500 min-w-[80px]">
                       Barcode:
                     </span>
                     <span className="font-mono text-sm">
                       {selectedQrForPutaway.barcode || "-"}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  </div> */}
+                  {/* <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500 min-w-[80px]">
                       Status:
                     </span>
@@ -959,7 +959,7 @@ export default function PutawayInitiate() {
                     >
                       {selectedQrForPutaway.status || "GENERATED"}
                     </Badge>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -1095,6 +1095,7 @@ export default function PutawayInitiate() {
                       selectedQrForPutaway.zone,
                       selectedQrForPutaway.aisle,
                       selectedQrForPutaway.rack,
+                      selectedQrForPutaway.level,
                       selectedQrForPutaway.binId,
                     ]
                       .filter(Boolean)
