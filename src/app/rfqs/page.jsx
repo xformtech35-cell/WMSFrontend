@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   ChevronLeft,
@@ -28,6 +28,7 @@ import {
   Building,
 } from "lucide-react";
 import api from "@/lib/api";
+import RFQDetailPage from "./details/page";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -89,11 +90,26 @@ export default function RFQPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [navigatingRFQId, setNavigatingRFQId] = useState(null);
 
+  const searchParams = useSearchParams();
+  const rfqId = searchParams.get("id");
+
+  // const handleNavigateToRFQ = (id) => {
+  //   setNavigatingRFQId(id);
+  //   router.push(`/rfqs/${id}`);
+  // };
+  useEffect(() => {
+    if (!rfqId) {
+      setNavigatingRFQId(null);
+    }
+  }, [rfqId]);
   const handleNavigateToRFQ = (id) => {
     setNavigatingRFQId(id);
-    router.push(`/rfqs/${id}`);
+    router.push(`/rfqs?id=${id}`);
   };
-
+  const backToList = () => {
+    setNavigatingRFQId(null);
+    // router.push("/rfqs");
+  };
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -167,7 +183,9 @@ export default function RFQPage() {
       setCurrentPage(newPage);
     }
   };
-
+  if (rfqId) {
+    return <RFQDetailPage rfqId={rfqId} backToList={backToList} />;
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-6 max-w-7xl">

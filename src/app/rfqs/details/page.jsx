@@ -138,10 +138,10 @@ const getSuppliersAPI = async (
   }
 };
 
-export default function RFQDetailPage() {
+export default function RFQDetailPage({ rfqId, backToList }) {
   const router = useRouter();
-  const params = useParams();
-  const rfqId = params?.id;
+  // const params = useParams();
+  // const rfqId = params?.id;
 
   const [rfq, setRfq] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -464,7 +464,10 @@ export default function RFQDetailPage() {
             The requested RFQ could not be found.
           </p>
           <button
-            onClick={() => router.push("/rfqs")}
+            onClick={() => {
+              router.push("/rfqs");
+              backToList();
+            }}
             className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to RFQs
@@ -885,7 +888,7 @@ function QuotationsTab({
     const result = await ConvertPO(quotationId);
     console.log("jjj", result);
     setSuccessMessage("Quotation converted to PO successfully!");
-    load()
+    load();
   };
   return (
     <div>

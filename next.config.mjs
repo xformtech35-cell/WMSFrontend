@@ -22,6 +22,7 @@ const parsedBackendUrl = BACKEND_BASE ? new URL(BACKEND_BASE) : null;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "export",
   env: {
     NEXT_PUBLIC_API_URL: BACKEND_RAW,
   },
