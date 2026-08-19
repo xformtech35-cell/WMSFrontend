@@ -21,6 +21,85 @@ import {
 import UserForm from './component/UserForm';
 import UserDetailsModal from './component/UserDetailsModal';
 
+const AuthImage = React.memo(function AuthImage({
+  userId,
+  alt,
+  className,
+  onClick,
+  width,
+  height,
+}) {
+  const [imgSrc, setImgSrc] = useState(null);
+  const [error, setError] = useState(false);
+
+  React.useEffect(() => {
+    let objectUrl = null;
+    let cancelled = false;
+
+    const fetchImage = async () => {
+      if (!userId) return;
+
+      try {
+        const response = await api.get(
+          `/users/${userId}/profile-photo`,
+          {
+            responseType: 'blob',
+          }
+        );
+
+        if (cancelled) return;
+
+        objectUrl = URL.createObjectURL(response.data);
+        setImgSrc(objectUrl);
+      } catch (err) {
+        if (!cancelled) {
+          setError(true);
+        }
+      }
+    };
+
+    fetchImage();
+
+    return () => {
+      cancelled = true;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [userId]);
+
+  if (error || !imgSrc) {
+    return (
+      <div
+        className={
+          className ||
+          'w-8 h-8 rounded-full bg-muted flex items-center justify-center cursor-pointer'
+        }
+        onClick={onClick}
+        style={{ width, height }}
+      >
+        <span className="text-xs font-medium">
+          {alt?.charAt(0)?.toUpperCase() || '?'}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt || ''}
+      width={width || 32}
+      height={height || 32}
+      className={
+        className ||
+        'rounded-full object-cover cursor-pointer'
+      }
+      onClick={onClick}
+    />
+  );
+});
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const [editingUserId, setEditingUserId] = useState(null);
@@ -171,85 +250,7 @@ export default function UsersPage() {
   };
 
   // Custom Image component with authentication
-  const AuthImage = React.memo(function AuthImage({
-    userId,
-    alt,
-    className,
-    onClick,
-    width,
-    height,
-  }) {
-    const [imgSrc, setImgSrc] = useState(null);
-    const [error, setError] = useState(false);
-
-    React.useEffect(() => {
-      let objectUrl = null;
-      let cancelled = false;
-
-      const fetchImage = async () => {
-        if (!userId) return;
-
-        try {
-          const response = await api.get(
-            `/users/${userId}/profile-photo`,
-            {
-              responseType: 'blob',
-            }
-          );
-
-          if (cancelled) return;
-
-          objectUrl = URL.createObjectURL(response.data);
-          setImgSrc(objectUrl);
-        } catch (err) {
-          if (!cancelled) {
-            setError(true);
-          }
-        }
-      };
-
-      fetchImage();
-
-      return () => {
-        cancelled = true;
-
-        if (objectUrl) {
-          URL.revokeObjectURL(objectUrl);
-        }
-      };
-    }, [userId]);
-
-    if (error || !imgSrc) {
-      return (
-        <div
-          className={
-            className ||
-            'w-8 h-8 rounded-full bg-muted flex items-center justify-center cursor-pointer'
-          }
-          onClick={onClick}
-          style={{ width, height }}
-        >
-          <span className="text-xs font-medium">
-            {alt?.charAt(0)?.toUpperCase() || '?'}
-          </span>
-        </div>
-      );
-    }
-
-    return (
-      <Image
-        src={imgSrc}
-        alt={alt}
-        width={width || 32}
-        height={height || 32}
-        className={
-          className ||
-          'rounded-full object-cover cursor-pointer'
-        }
-        onClick={onClick}
-      />
-    );
-  });
+  
 
   return (
     <PermissionGate permission={P.USERS_VIEW} fallback={<p className="text-sm text-muted-foreground">Access denied.</p>}>
