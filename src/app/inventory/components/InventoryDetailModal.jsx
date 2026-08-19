@@ -9,7 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess }) {
+export default function ItemTransferPopup({
+  isOpen,
+  onClose,
+  itemData,
+  onSuccess,
+}) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     sourceLocation: "",
@@ -19,7 +24,7 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
     inventoryNumber: "",
     transferReason: "",
     remarks: "",
-    createdBy: "system_user"
+    createdBy: "system_user",
   });
 
   const [errors, setErrors] = useState({});
@@ -34,8 +39,10 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
         itemData.aisle,
         itemData.rack,
         itemData.level,
-        itemData.binId
-      ].filter(Boolean).join("-");
+        itemData.binId,
+      ]
+        .filter(Boolean)
+        .join("-");
 
       setFormData({
         sourceLocation: itemData?.fullLocation || "",
@@ -45,14 +52,14 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
         inventoryNumber: itemData.inventoryNumber || "",
         transferReason: "",
         remarks: "",
-        createdBy: "system_user"
+        createdBy: "system_user",
       });
     }
   }, [isOpen]);
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.sourceLocation) {
       newErrors.sourceLocation = "Source location is required";
     }
@@ -68,14 +75,14 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
     if (!formData.inventoryNumber) {
       newErrors.inventoryNumber = "Inventory number is required";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -90,11 +97,11 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
         inventoryNumber: formData.inventoryNumber,
         transferReason: formData.transferReason || "Transfer between locations",
         remarks: formData.remarks || "",
-        createdBy: formData.createdBy || "system_user"
+        createdBy: formData.createdBy || "system_user",
       };
 
       const response = await api.post("/stock-transfers/transfer", payload);
-      
+
       if (response.status === 200 || response.status === 201) {
         toast.success("Item transferred successfully!");
         onSuccess?.();
@@ -102,14 +109,15 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
       }
     } catch (error) {
       console.error("Transfer error:", error);
-      const errorMessage = error.response?.data?.message || "Failed to transfer item";
+      const errorMessage =
+        error.response?.data?.message || "Failed to transfer item";
       toast.error(errorMessage);
-      
+
       // Show specific validation errors from backend
       if (error.response?.data?.errors) {
         const backendErrors = error.response.data.errors;
-        Object.keys(backendErrors).forEach(key => {
-          setErrors(prev => ({ ...prev, [key]: backendErrors[key] }));
+        Object.keys(backendErrors).forEach((key) => {
+          setErrors((prev) => ({ ...prev, [key]: backendErrors[key] }));
         });
       }
     } finally {
@@ -126,24 +134,24 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
       inventoryNumber: "",
       transferReason: "",
       remarks: "",
-      createdBy: "system_user"
+      createdBy: "system_user",
     });
     setErrors({});
     onClose();
   };
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
@@ -157,8 +165,12 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
               <ArrowRight className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Transfer Item</h2>
-              <p className="text-blue-100 text-sm">Move inventory to new location</p>
+              <h2 className="text-xl font-semibold text-white">
+                Transfer Item
+              </h2>
+              <p className="text-blue-100 text-sm">
+                Move inventory to new location
+              </p>
             </div>
           </div>
           <button
@@ -170,7 +182,10 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]"
+        >
           <div className="space-y-5">
             {/* Item Info Summary */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -181,19 +196,27 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-gray-500">Item Code:</span>
-                  <span className="ml-2 font-medium">{itemData?.itemCode || "-"}</span>
+                  <span className="ml-2 font-medium">
+                    {itemData?.itemCode || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Item Name:</span>
-                  <span className="ml-2 font-medium">{itemData?.itemName || "-"}</span>
+                  <span className="ml-2 font-medium">
+                    {itemData?.itemName || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Inventory #:</span>
-                  <span className="ml-2 font-medium">{itemData?.inventoryNumber || "-"}</span>
+                  <span className="ml-2 font-medium">
+                    {itemData?.inventoryNumber || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Available Qty:</span>
-                  <span className="ml-2 font-medium text-green-600">{itemData?.availableQuantity || 0}</span>
+                  <span className="ml-2 font-medium text-green-600">
+                    {itemData?.availableQuantity || 0}
+                  </span>
                 </div>
               </div>
             </div>
@@ -207,8 +230,9 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                 <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   value={formData.sourceLocation}
-                  disabled
-                  onChange={(e) => handleChange("sourceLocation", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("sourceLocation", e.target.value)
+                  }
                   className={`pl-10 ${errors.sourceLocation ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                   placeholder="e.g., WH-001-ZONE-01-AISLE-01-RACK-01-LEVEL-01-BIN-01"
                 />
@@ -230,7 +254,9 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                 <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   value={formData.targetLocation}
-                  onChange={(e) => handleChange("targetLocation", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("targetLocation", e.target.value)
+                  }
                   className={`pl-10 ${errors.targetLocation ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                   placeholder="e.g., WH-002-XCXVCX-ASLE_1-WEEWRWE-EW34-BIN_03_UP_2"
                 />
@@ -253,7 +279,11 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                   value={formData.itemCode}
                   disabled
                   onChange={(e) => handleChange("itemCode", e.target.value)}
-                  className={errors.itemCode ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={
+                    errors.itemCode
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : ""
+                  }
                   placeholder="Enter item code"
                 />
                 {errors.itemCode && (
@@ -270,10 +300,15 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
                 <Input
                   type="number"
                   min="1"
-
                   value={formData.quantity}
-                  onChange={(e) => handleChange("quantity", parseInt(e.target.value) || 0)}
-                  className={errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  onChange={(e) =>
+                    handleChange("quantity", parseInt(e.target.value) || 0)
+                  }
+                  className={
+                    errors.quantity
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : ""
+                  }
                   placeholder="Enter quantity"
                 />
                 {errors.quantity && (
@@ -292,10 +327,15 @@ export default function ItemTransferPopup({ isOpen, onClose, itemData, onSuccess
               </Label>
               <Input
                 value={formData.inventoryNumber}
-                  disabled
-
-                onChange={(e) => handleChange("inventoryNumber", e.target.value)}
-                className={errors.inventoryNumber ? "border-red-500 focus-visible:ring-red-500" : ""}
+                disabled
+                onChange={(e) =>
+                  handleChange("inventoryNumber", e.target.value)
+                }
+                className={
+                  errors.inventoryNumber
+                    ? "border-red-500 focus-visible:ring-red-500"
+                    : ""
+                }
                 placeholder="Enter inventory number"
               />
               {errors.inventoryNumber && (
