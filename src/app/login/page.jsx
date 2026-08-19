@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -63,6 +64,11 @@ export default function LoginPage() {
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Invalid username or password');
     }
+  };
+
+  const handleForgotPassword = (e) => {
+    e.preventDefault();
+    router.push('/forgot-password');
   };
 
   return (
@@ -153,6 +159,17 @@ export default function LoginPage() {
                 )}
               </div>
 
+              {/* Forgot Password Link - Using button with onClick */}
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
               {/* Submit Button */}
               <Button 
                 type="submit" 
@@ -171,15 +188,6 @@ export default function LoginPage() {
                   </>
                 )}
               </Button>
-
-              {/* Demo Credentials */}
-              {/* <div className="flex items-center gap-3 pt-1">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                <p className="text-[10px] font-medium text-slate-400 whitespace-nowrap">
-                  Demo: <span className="font-mono text-slate-500">demo</span> / <span className="font-mono text-slate-500">••••••••</span>
-                </p>
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-              </div> */}
             </form>
           </CardContent>
         </Card>

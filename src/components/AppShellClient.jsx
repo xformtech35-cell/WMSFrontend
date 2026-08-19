@@ -11,7 +11,7 @@ import { useWebSocketSubscription } from "@/lib/hooks/useWebSocketSubscription";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-const PUBLIC_ROUTES = ["/login", "/guide"];
+const PUBLIC_ROUTES = ["/login", "/guide", "/forgot-password"];
 
 const ROUTE_TITLES = {
   "/dashboard": "Dashboard",
