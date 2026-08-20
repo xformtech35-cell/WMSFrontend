@@ -96,105 +96,105 @@ const ALL_MENU_ITEMS = [
     label: "Purchase Requests",
     icon: FileText,
     group: "Purchase",
-    permission: P.PURCHASE_VIEW,
+    permission: P.PURCHASE_REQUEST,
   },
   {
     href: "/purchase-approval",
     label: "PR Approval",
     icon: FileCheck,
     group: "Purchase",
-    permission: P.PURCHASE_VIEW,
+    permission: P.PURCHASE_REQUEST_APPROVAL,
   },
   {
     href: "/rfqs",
     label: "RFQS",
     icon: FileSearch,
     group: "Purchase",
-    permission: P.PURCHASE_VIEW,
+    permission: P.RFQS,
   },
   {
     href: "/purchase-orders",
     label: "Purchase Orders",
     icon: ClipboardList,
     group: "Purchase",
-    permission: P.PURCHASE_VIEW,
+    permission: P.PURCHASE_ORDER,
   },
   {
     href: "/po-approval",
     label: "PO Approval",
     icon: ClipboardCheck,
     group: "Purchase",
-    permission: P.PURCHASE_VIEW,
+    permission: P.PURCHASE_ORDER_APPROVAL,
   },
   {
     href: "/inbound",
     label: "Inbound",
     icon: PackageOpen,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.INBOUND,
   },
   {
     href: "/gateEntry",
     label: "Gate Entry",
     icon: DoorOpen,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.GATE_ENTRY,
   },
   {
     href: "/materialUnload",
     label: "Material Unloading",
     icon: PackageSearch,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.MATERIAL_UNLOADING,
   },
   {
     href: "/GoodsReceving",
     label: "Goods Receiving",
     icon: PackageCheck,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.GOODS_RECEIVING,
   },
   {
     href: "/qualityCheck",
     label: "Quality Checking",
     icon: ClipboardCheck,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.QUALITY_CHECKING,
   },
   {
     href: "/qualityApproval",
     label: "Quality Approval",
     icon: CircleCheck,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.QUALITY_APPROVAL,
   },
   {
     href: "/grn",
     label: "GRN",
     icon: FileCheck,
     group: "Inbound",
-    permission: P.INBOUND_VIEW,
+    permission: P.GRN,
   },
   {
     href: "/qrgenerater",
     label: "QR Generator",
     icon: QrCode,
     group: "QR/Barcode",
-    permission: P.INBOUND_VIEW,
+    permission: P.QR_CODE_GENERATOR,
   },
   {
     href: "/barcodescan",
     label: "Barcode Scanner",
     icon: ScanBarcode,
     group: "QR/Barcode",
-    permission: P.INBOUND_VIEW,
+    permission: P.BARCODE_SCANNER,
   },
   {
     href: "/putawayInitiate",
     label: "Putaway Initiate",
     icon: Warehouse,
     group: "Putaway",
-    permission: P.PUTAWAY_VIEW,
+    permission: P.PUTAWAY_ASSIGNMENT_MANAGEMENT,
   },
   // {
   //   href: "/putaway",
@@ -208,21 +208,21 @@ const ALL_MENU_ITEMS = [
     label: "Putaway Execute",
     icon: ClipboardPen,
     group: "Putaway",
-    permission: P.PUTAWAY_VIEW,
+    permission: P.PUTAWAY_EXECUTE,
   },
   {
     href: "/putawayConfirmation",
     label: "Putaway Confirmation",
     icon: CircleCheck,
     group: "Putaway",
-    permission: P.PUTAWAY_VIEW,
+    permission: P.PUTAWAY_CONFIRMATION_MANAGEMENT,
   },
   {
     href: "/inventory",
     label: "Inventory",
     icon: Boxes,
     group: "Putaway",
-    permission: P.INVENTORY_VIEW,
+    permission: P.INVENTORY_STOCK_MANAGEMENT,
   },
   {
     href: "/outbound",
@@ -431,10 +431,9 @@ const NavItem = memo(function NavItem({
 
       {!isCollapsed && (
         <>
-          <span className="truncate flex-1 !text-[13px] relative z-10">{item.label}</span>
-
-         
-          
+          <span className="truncate flex-1 !text-[13px] relative z-10">
+            {item.label}
+          </span>
         </>
       )}
 
@@ -485,7 +484,7 @@ const SectionHeader = memo(function SectionHeader({
           "w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 transition-all duration-200",
           "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
           isExpanded && "text-sidebar-foreground",
-          "cursor-pointer"
+          "cursor-pointer",
         )}
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -669,7 +668,7 @@ const Sidebar = () => {
       if (prev[group]) {
         return { ...prev, [group]: false };
       }
-      
+
       // Otherwise, close all groups and open this one
       const newState = {};
       Object.keys(prev).forEach((key) => {
@@ -744,7 +743,6 @@ const Sidebar = () => {
                 <p className="truncate text-[0.92rem] font-semibold leading-none text-sidebar-foreground">
                   WMS Pro Control Tower
                 </p>
-               
               </div>
             )}
           </div>
@@ -799,7 +797,7 @@ const Sidebar = () => {
                   stats={getGroupStats(group)}
                 />
 
-                {(!searchQuery && expandedGroups[group] !== false) && (
+                {!searchQuery && expandedGroups[group] !== false && (
                   <div
                     className={cn(
                       "space-y-0.5 px-2 overflow-hidden transition-all duration-300 ease-out",
@@ -824,32 +822,36 @@ const Sidebar = () => {
                 )}
 
                 {/* When searching, show all matches without expand toggle */}
-                {searchQuery && Object.entries(filteredItems).map(([g, items]) => 
-                  g === group && (
-                    <div
-                      key={`search-${group}`}
-                      className={cn(
-                        "space-y-0.5 px-2 overflow-hidden transition-all duration-300 ease-out",
-                        "animate-in fade-in slide-in-from-top-1",
-                      )}
-                    >
-                      {items.map((item) => (
+                {searchQuery &&
+                  Object.entries(filteredItems).map(
+                    ([g, items]) =>
+                      g === group && (
                         <div
-                          key={item.href}
-                          className="transition-all duration-200"
+                          key={`search-${group}`}
+                          className={cn(
+                            "space-y-0.5 px-2 overflow-hidden transition-all duration-300 ease-out",
+                            "animate-in fade-in slide-in-from-top-1",
+                          )}
                         >
-                          <NavItem
-                            item={item}
-                            isCollapsed={isCollapsed}
-                            liveValue={item.liveKey && kpis ? pendingPicks : 0}
-                            isFavorite={favorites.includes(item.href)}
-                            onToggleFavorite={toggleFavorite}
-                          />
+                          {items.map((item) => (
+                            <div
+                              key={item.href}
+                              className="transition-all duration-200"
+                            >
+                              <NavItem
+                                item={item}
+                                isCollapsed={isCollapsed}
+                                liveValue={
+                                  item.liveKey && kpis ? pendingPicks : 0
+                                }
+                                isFavorite={favorites.includes(item.href)}
+                                onToggleFavorite={toggleFavorite}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )
-                )}
+                      ),
+                  )}
               </div>
             ))}
           </div>
@@ -889,7 +891,7 @@ const Sidebar = () => {
                   className="rounded-lg p-1 !text-[12px] cursor-pointer text-sidebar-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-all duration-200"
                   aria-label="Sign out"
                 >
-                  <LogOut  />
+                  <LogOut />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
