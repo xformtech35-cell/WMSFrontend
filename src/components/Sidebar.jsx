@@ -330,6 +330,13 @@ const ALL_MENU_ITEMS = [
     group: "Admin/Masters",
     permission: P.MASTER_VIEW,
   },
+   {
+    href: "/master/customer",
+    label: "Customers",
+    icon: Users,
+    group: "Admin/Masters",
+    permission: P.MASTER_VIEW,
+  },
   {
     href: "/master/allotments",
     label: "Rack Allotments",

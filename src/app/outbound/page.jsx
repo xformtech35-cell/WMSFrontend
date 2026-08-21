@@ -1,668 +1,659 @@
-'use client';
-export const dynamic = 'force-dynamic';
+// app/sales-order/page.jsx
+"use client";
 
-import { Fragment, useMemo, useState } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as z from 'zod';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  Loader2,
-  Package,
-  PackageCheck,
   Plus,
+  Eye,
+  Edit,
   Search,
-  Ship,
-  ShoppingCart,
-  Trash2,
-  Truck,
-  X,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  AlertCircle,
   XCircle,
-} from 'lucide-react';
-import PageHeader from '@/components/PageHeader';
-import StatCard from '@/components/StatCard';
-import StatusBadge from '@/components/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import SlideOverForm from '@/components/ui/SlideOverForm';
-import { SheetFooter } from '@/components/ui/sheet';
-import api from '@/lib/api';
-import { exportWmsWorkbook } from '@/lib/exportExcel';
-import { usePaginatedItems } from '@/lib/hooks/usePaginatedItems';
-import TablePagination from '@/components/TablePagination';
-import { toast } from 'sonner';
+  Building2,
+  Flag,
+  CheckCircle,
+  Package,
+  Truck,
+  Calendar,
+  User,
+  Building,
+  MapPin,
+} from "lucide-react";
+import api from "@/lib/api";
+import SalesOrderForm from "./components/SalesOrderForm";
+import SalesOrderDetails from "./components/SalesOrderDetails";
 
-// ─── Constants ──────────────────────────────────────────────────────────────
-const COURIERS = ['Blue Dart', 'Delhivery', 'DTDC', 'FedEx', 'Ekart', 'Shadowfax', 'Xpressbees', 'Other'];
-const STATUS_FLOW = ['OPEN', 'RESERVED', 'PICKED', 'PACKED', 'SHIPPED', 'CANCELLED'];
+// API Functions
+const apiRequest = async (endpoint, method = "GET", data = null) => {
+  try {
+    const response = await api.request({
+      url: endpoint,
+      method,
+      data,
+    });
 
-const orderSchema = z.object({
-  customerName: z.string().min(1, 'Customer name is required'),
-  lines: z.array(z.object({
-    skuCode: z.string().min(1, 'SKU code is required'),
-    quantity: z.coerce.number().int().min(1, 'Minimum 1'),
-  })).min(1, 'At least one order line is required'),
-});
-
-const shipSchema = z.object({
-  orderId: z.coerce.number().int().positive('Order is required'),
-  awbNumber: z.string().min(1, 'AWB number is required'),
-  courierName: z.string().min(1, 'Courier is required'),
-});
-
-// ─── Status step indicator ───────────────────────────────────────────────────
-const STEPS = ['OPEN', 'RESERVED', 'PICKED', 'PACKED', 'SHIPPED'];
-
-function OrderFlowStep({ status }) {
-  const idx = STEPS.indexOf((status ?? 'OPEN').toUpperCase());
-  return (
-    <div className="flex items-center gap-1">
-      {STEPS.map((step, i) => (
-        <div key={step} className="flex items-center gap-1">
-          <div
-            className={`size-2 rounded-full transition-colors ${
-              i < idx ? 'bg-emerald-500' : i === idx ? 'bg-primary' : 'bg-muted-foreground/30'
-            }`}
-          />
-          {i < STEPS.length - 1 && (
-            <div className={`h-px w-4 ${i < idx ? 'bg-emerald-500/60' : 'bg-muted-foreground/20'}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Pick tasks sub-row ──────────────────────────────────────────────────────
-function PickTasksRow({ orderId }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['order-pick-tasks', orderId],
-    queryFn: () => api.get(`/orders/${orderId}/pick-tasks`).then((r) => r.data ?? []),
-    enabled: Boolean(orderId),
-    staleTime: 30_000,
-    retry: false,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2 px-4 py-3">
-        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
-      </div>
-    );
-  }
-  if (!data?.length) {
-    return (
-      <div className="flex items-center gap-2 px-6 py-4 text-sm text-muted-foreground">
-        <Package className="size-4 opacity-40" />
-        No pick tasks generated yet for this order.
-      </div>
-    );
-  }
-  return (
-    <div className="bg-muted/20 border-t border-border/40">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-8 text-xs">#</TableHead>
-              <TableHead className="text-xs">SKU</TableHead>
-              <TableHead className="text-xs">Bin</TableHead>
-              <TableHead className="text-xs">Qty</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((task, i) => (
-              <TableRow key={task.id} className="hover:bg-muted/30">
-                <TableCell className="pl-8 text-xs text-muted-foreground">{i + 1}</TableCell>
-                <TableCell className="font-mono text-xs font-medium">{task.skuCode ?? task.skuId ?? '—'}</TableCell>
-                <TableCell className="font-mono text-xs text-primary">{task.binBarcode ?? '—'}</TableCell>
-                <TableCell className="font-semibold text-sm">{task.quantity ?? 1}</TableCell>
-                <TableCell><StatusBadge status={task.state ?? 'PENDING'} /></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
-
-// ─── Export helper ───────────────────────────────────────────────────────────
-async function exportOrdersExcel(orders) {
-  await exportWmsWorkbook({
-    fileName: `outbound_orders_${format(new Date(), 'yyyy-MM-dd')}.xlsx`,
-    sheetName: 'Outbound Orders',
-    title: 'WMS Outbound Orders Export',
-    columns: [
-      { header: 'Order ID',    key: 'id',           width: 12,  align: 'right' },
-      { header: 'Customer',    key: 'customerName', width: 26 },
-      { header: 'Status',      key: 'status',       width: 14,  align: 'center' },
-      { header: 'Created At',  key: 'createdAt',    width: 20,  align: 'center' },
-    ],
-    rows: orders.map((o) => ({
-      id:           o.id,
-      customerName: o.customerName ?? '',
-      status:       o.status ?? o.state ?? '',
-      createdAt:    o.createdAt ? format(new Date(o.createdAt), 'dd MMM yyyy') : '',
-    })),
-  });
-  toast.success('Orders exported to Excel');
-}
-
-// ─── Main page ───────────────────────────────────────────────────────────────
-export default function OutboundPage() {
-  const queryClient = useQueryClient();
-
-  // UI state
-  const [createOpen, setCreateOpen]   = useState(false);
-  const [shipOpen, setShipOpen]       = useState(false);
-  const [cancelTarget, setCancelTarget] = useState(null);
-  const [expandedId, setExpandedId]   = useState(null);
-  const [search, setSearch]           = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [selectedCourier, setSelectedCourier] = useState('');
-  const [shipSuccess, setShipSuccess] = useState(null);
-
-  // ── Queries ────────────────────────────────────────────────────────────────
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ['outbound-orders'],
-    queryFn: () => api.get('/orders').then((r) => r.data ?? []),
-    staleTime: 20_000,
-    refetchInterval: 30_000,
-    retry: false,
-  });
-
-  // ── Mutations ──────────────────────────────────────────────────────────────
-  const { register: regOrder, control, handleSubmit: handleOrder, reset: resetOrder,
-          formState: { errors: orderErrors } } = useForm({
-    resolver: zodResolver(orderSchema),
-    defaultValues: { customerName: '', lines: [{ skuCode: '', quantity: 1 }] },
-  });
-  const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
-
-  const { register: regShip, handleSubmit: handleShip, reset: resetShip,
-          setValue: setShipValue, formState: { errors: shipErrors } } = useForm({
-    resolver: zodResolver(shipSchema),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (payload) => api.post('/orders', payload).then((r) => r.data),
-    onSuccess: (data) => {
-      toast.success(`Order created — pick tasks ready`);
-      queryClient.invalidateQueries({ queryKey: ['outbound-orders'] });
-      setCreateOpen(false);
-      resetOrder();
-    },
-    onError: (err) => toast.error(err.response?.data?.detail || 'Failed to create order'),
-  });
-
-  const shipMutation = useMutation({
-    mutationFn: (payload) => api.post('/shipping/confirm', payload).then((r) => r.data),
-    onSuccess: (data) => {
-      toast.success(`Shipment confirmed — AWB ${data.awbNumber}`);
-      setShipSuccess(data);
-      queryClient.invalidateQueries({ queryKey: ['outbound-orders'] });
-    },
-    onError: (err) => toast.error(err.response?.data?.detail || 'Failed to confirm shipment'),
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: (id) => api.patch(`/orders/${id}/cancel`),
-    onSuccess: () => {
-      toast.success('Order cancelled');
-      queryClient.invalidateQueries({ queryKey: ['outbound-orders'] });
-      setCancelTarget(null);
-    },
-    onError: (err) => toast.error(err.response?.data?.detail || 'Failed to cancel'),
-  });
-
-  // ── Derived data ───────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const all = orders ?? [];
-    const byStatus = (s) => all.filter((o) => (o.status ?? o.state ?? '').toUpperCase() === s).length;
-    return {
-      total:    all.length,
-      open:     byStatus('OPEN') + byStatus('RESERVED'),
-      packed:   byStatus('PACKED'),
-      shipped:  byStatus('SHIPPED'),
-    };
-  }, [orders]);
-
-  const filtered = useMemo(() => {
-    let list = orders ?? [];
-    if (statusFilter !== 'ALL') {
-      list = list.filter((o) => (o.status ?? o.state ?? '').toUpperCase() === statusFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (o) =>
-          String(o.customerName ?? '').toLowerCase().includes(q) ||
-          String(o.id ?? '').includes(q) ||
-          String(o.soNumber ?? '').toLowerCase().includes(q),
+    const result = response.data;
+    if (result && result.success === false) {
+      throw new Error(
+        result?.message || `API request failed: ${response.status}`,
       );
     }
-    return list;
-  }, [orders, statusFilter, search]);
+    return result?.data || result;
+  } catch (error) {
+    console.error("API Error:", error);
+    throw new Error(
+      error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "API request failed",
+    );
+  }
+};
 
-  const {
-    page,
-    setPage,
-    totalPages,
-    totalItems,
-    startItem,
-    endItem,
-    paginatedItems: visibleOrders,
-  } = usePaginatedItems(filtered, { resetDeps: [search, statusFilter] });
+const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+  try {
+    const params = new URLSearchParams();
+    if (page !== undefined) params.append("page", page);
+    if (size) params.append("size", size);
+    if (searchTerm) params.append("search", searchTerm);
+    if (status && status !== "ALL") params.append("status", status);
 
-  const packedOrders = useMemo(
-    () => (orders ?? []).filter((o) => (o.status ?? o.state ?? '').toUpperCase() === 'PACKED'),
-    [orders],
-  );
+    const url = `/outbound/sales-orders${params.toString() ? `?${params.toString()}` : ""}`;
+    const response = await api.get(url);
+    console.log("GET sales orders response:", response);
 
-  const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id));
+    if (response.data) {
+      const data = response.data;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+      if (data.content && Array.isArray(data.content)) {
+        return {
+          data: data.content,
+          total: data.totalElements || data.content.length,
+          page: data.number || page,
+          size: data.size || size,
+          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          first: data.first,
+          last: data.last,
+        };
+      }
+
+      if (Array.isArray(data)) {
+        return {
+          data: data,
+          total: data.length,
+          page: page,
+          size: size,
+          totalPages: Math.ceil(data.length / size),
+        };
+      }
+    }
+
+    return {
+      data: response.data?.content || response.data?.data || [],
+      total: response.data?.totalElements || response.data?.total || 0,
+      page: page,
+      size: size,
+      totalPages: response.data?.totalPages || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching sales orders:", error);
+    throw error;
+  }
+};
+
+const getSalesOrderByIdAPI = async (id) => {
+  return apiRequest(`/outbound/sales-order/${id}`);
+};
+
+const deleteSalesOrderAPI = async (id) => {
+  return apiRequest(`/outbound/sales-order/${id}`, "DELETE");
+};
+
+export default function SalesOrderPage() {
+  const router = useRouter();
+
+  // List State
+  const [salesOrders, setSalesOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  // UI State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [editingSO, setEditingSO] = useState(null);
+  const [viewingSO, setViewingSO] = useState(null);
+  const [formMode, setFormMode] = useState("create");
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadSalesOrders();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Load data on component mount and when dependencies change
+  useEffect(() => {
+    loadSalesOrders();
+  }, [currentPage, pageSize, statusFilter]);
+
+  // Auto-clear messages after 5 seconds
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => setShowSuccess(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  const loadSalesOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await getSalesOrdersAPI(
+        currentPage,
+        pageSize,
+        searchTerm,
+        statusFilter,
+      );
+
+      if (response && response.data) {
+        setSalesOrders(response.data || []);
+        setTotalPages(response.totalPages || 0);
+        setTotalElements(response.total || 0);
+      } else {
+        setSalesOrders([]);
+        setTotalPages(0);
+        setTotalElements(0);
+      }
+    } catch (error) {
+      console.error("Error loading sales orders:", error);
+      setErrorMessage("Failed to load sales orders.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewClick = async (so) => {
+    try {
+      setLoading(true);
+      setViewingSO(so);
+      setShowViewModal(true);
+    } catch (error) {
+      console.error("Error loading SO details:", error);
+      setErrorMessage("Failed to load sales order details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditClick = async (so) => {
+    try {
+      setLoading(true);
+      const fullSO = await getSalesOrderByIdAPI(so.id);
+      setEditingSO(fullSO);
+      setFormMode("edit");
+      setShowFormModal(true);
+    } catch (error) {
+      console.error("Error loading SO details:", error);
+      setErrorMessage("Failed to load sales order details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateClick = () => {
+    setEditingSO(null);
+    setFormMode("create");
+    setShowFormModal(true);
+  };
+
+  const handleFormClose = () => {
+    setShowFormModal(false);
+    setEditingSO(null);
+  };
+
+  const handleViewClose = () => {
+    setShowViewModal(false);
+    setViewingSO(null);
+  };
+
+  const handleFormSuccess = (message) => {
+    setSuccessMessage(message);
+    setShowSuccess(true);
+    loadSalesOrders();
+    handleFormClose();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this sales order?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteSalesOrderAPI(id);
+      setSuccessMessage("Sales order deleted successfully");
+      setShowSuccess(true);
+      loadSalesOrders();
+    } catch (error) {
+      console.error("Delete error:", error);
+      setErrorMessage("Failed to delete sales order.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    const colors = {
+      LOW: "bg-gray-100 text-gray-700 border-gray-200",
+      NORMAL: "bg-blue-100 text-blue-700 border-blue-200",
+      MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      HIGH: "bg-orange-100 text-orange-700 border-orange-200",
+      URGENT: "bg-red-100 text-red-700 border-red-200",
+    };
+    return colors[priority] || colors.NORMAL;
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      DRAFT: "bg-gray-100 text-gray-700",
+      PROCESSING: "bg-blue-100 text-blue-700",
+      APPROVED: "bg-green-100 text-green-700",
+      REJECTED: "bg-red-100 text-red-700",
+      PICKING: "bg-yellow-100 text-yellow-700",
+      SHIPPED: "bg-purple-100 text-purple-700",
+      DELIVERED: "bg-indigo-100 text-indigo-700",
+      CANCELLED: "bg-red-100 text-red-700",
+      COMPLETED: "bg-green-100 text-green-700",
+    };
+    return colors[status] || colors.DRAFT;
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Outbound"
-        description="Manage sales orders from creation through picking, packing, and dispatch."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => exportOrdersExcel(orders ?? [])} disabled={!orders?.length}>
-              <Download className="size-3.5 mr-1.5" /> Export Excel
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setShipSuccess(null);
-                resetShip();
-                setSelectedCourier('');
-                setShipOpen(true);
-              }}
-            >
-              <Ship className="size-3.5 mr-1.5" /> Confirm Shipment
-            </Button>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-3.5 mr-1.5" /> Create Order
-            </Button>
-          </div>
-        }
-      />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Success Modal */}
+        {showSuccess && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowSuccess(false)}
+            />
+            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform animate-scale-up pointer-events-auto border border-gray-200">
+                <div className="text-center">
+                  <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Success!
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-6">{successMessage}</p>
+                  <button
+                    onClick={() => setShowSuccess(false)}
+                    className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard title="Total Orders"    value={stats.total}   icon={ShoppingCart}  kpiVariant="blue"  accentClass="text-blue-500"    iconBg="bg-blue-500/10" />
-        <StatCard title="In Progress"     value={stats.open}    icon={ArrowRight}    kpiVariant="amber" accentClass="text-amber-500"   iconBg="bg-amber-500/10" />
-        <StatCard title="Ready to Ship"   value={stats.packed}  icon={PackageCheck}  kpiVariant="violet" accentClass="text-violet-500" iconBg="bg-violet-500/10" />
-        <StatCard title="Shipped Today"   value={stats.shipped} icon={Truck}         kpiVariant="green" accentClass="text-emerald-500" iconBg="bg-emerald-500/10" />
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 animate-slide-down">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <span className="text-red-800">{errorMessage}</span>
+            <button
+              onClick={() => setErrorMessage("")}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-white">
+                  Sales Orders
+                </h1>
+                <p className="text-blue-100 text-sm mt-1">
+                  WMS Warehouse Management System
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCreateClick}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Sales Order
+                </button>
+                <button
+                  type="button"
+                  onClick={loadSalesOrders}
+                  className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by SO Number or Customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="ALL">All Status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="PICKING">Picking</option>
+                <option value="SHIPPED">Shipped</option>
+                <option value="DELIVERED">Delivered</option>
+                <option value="CANCELLED">Cancelled</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            </div>
+            <div className="text-sm text-gray-500">
+              Showing {salesOrders.length} of {totalElements} orders
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SO Number
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Warehouse
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Items
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="text-center py-8">
+                      <div className="flex justify-center items-center gap-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span className="text-gray-500">Loading...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : salesOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="text-center py-8 text-gray-500">
+                      No sales orders found
+                    </td>
+                  </tr>
+                ) : (
+                  salesOrders.map((so) => (
+                    <tr
+                      key={so.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => handleViewClick(so)}
+                      >
+                        <span className="font-medium text-blue-600 hover:text-blue-800">
+                          {so.soNumber}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {formatDate(so.soDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {so.customerName}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {so.customerCode}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{so.warehouseId}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                          {so.items?.length || 0} items
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          Qty: {so.totalQuantity || 0}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(so.priority)}`}
+                        >
+                          <Flag className="w-3 h-3" />
+                          {so.priority}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(so.status)}`}
+                        >
+                          {so.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewClick(so)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {(so.status === "DRAFT" || so.status === "PROCESSING") && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditClick(so)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {(so.status === "DRAFT" || so.status === "PROCESSING") && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(so.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                              title="Delete"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 0 && (
+            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
+              <div className="text-sm text-gray-500">
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                orders
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm">{currentPage + 1}</span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages - 1}
+                  className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Create/Edit Modal */}
+        {showFormModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleFormClose}
+              />
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+                <SalesOrderForm
+                  mode={formMode}
+                  initialData={editingSO}
+                  onClose={handleFormClose}
+                  onSuccess={handleFormSuccess}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Modal */}
+        {showViewModal && viewingSO && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleViewClose}
+              />
+              <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <SalesOrderDetails
+                  data={viewingSO}
+                  onClose={handleViewClose}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Orders Table */}
-      <Card className="glass-card overflow-hidden rounded-[2rem]">
-        <CardHeader className="border-b border-border/60 py-3 px-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShoppingCart className="size-4 text-primary" />
-              Sales Orders
-            </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Status filter pills */}
-              <div className="flex flex-wrap gap-1">
-                {['ALL', ...STATUS_FLOW].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatusFilter(s)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      statusFilter === s
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                    }`}
-                  >
-                    {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
-                  </button>
-                ))}
-              </div>
-              {/* Search */}
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="h-8 pl-8 pr-8 text-sm w-52"
-                  placeholder="Search customer or order…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {search && (
-                  <button
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    onClick={() => setSearch('')}
-                  >
-                    <X className="size-3.5 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent bg-muted/20">
-                <TableHead>Order #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Flow</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right pr-5">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, i) => (
-                  <TableRow key={i}>
-                    {[...Array(7)].map((__, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : visibleOrders.length ? (
-                visibleOrders.map((order) => {
-                  const statusStr = (order.status ?? order.state ?? '').toUpperCase();
-                  const isExpanded = expandedId === order.id;
-                  const canCancel = !['SHIPPED', 'CANCELLED'].includes(statusStr);
-                  const canShip   = statusStr === 'PACKED';
-
-                  return (
-                    <Fragment key={order.id}>
-                      <TableRow
-                        className="table-row-hover cursor-pointer"
-                        onClick={() => toggleExpand(order.id)}
-                      >
-                        <TableCell className="pl-4">
-                          {isExpanded
-                            ? <ChevronDown className="size-3.5 text-muted-foreground" />
-                            : <ChevronRight className="size-3.5 text-muted-foreground" />}
-                        </TableCell>
-                        <TableCell className="font-bold text-primary">#{order.id}</TableCell>
-                        <TableCell className="font-medium">{order.customerName ?? '—'}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={statusStr || 'OPEN'} />
-                        </TableCell>
-                        <TableCell>
-                          <OrderFlowStep status={statusStr} />
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {order.createdAt ? format(new Date(order.createdAt), 'dd MMM yyyy') : '—'}
-                        </TableCell>
-                        <TableCell className="text-right pr-5" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
-                            {canShip && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs border-violet-500/40 text-violet-600 hover:bg-violet-500/10"
-                                onClick={() => {
-                                  setShipValue('orderId', order.id);
-                                  setShipSuccess(null);
-                                  setSelectedCourier('');
-                                  setShipOpen(true);
-                                }}
-                              >
-                                <Ship className="size-3 mr-1" /> Ship
-                              </Button>
-                            )}
-                            {canCancel && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                                onClick={() => setCancelTarget(order)}
-                              >
-                                <XCircle className="size-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      {isExpanded && (
-                        <TableRow className="bg-transparent hover:bg-transparent">
-                          <TableCell colSpan={7} className="p-0">
-                            <PickTasksRow orderId={order.id} />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </Fragment>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-40 text-center text-muted-foreground">
-                    <ShoppingCart className="mx-auto mb-3 size-8 opacity-30" />
-                    {search || statusFilter !== 'ALL'
-                      ? 'No orders match the current filter.'
-                      : 'No outbound orders yet.'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <TablePagination
-            page={page}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            startItem={startItem}
-            endItem={endItem}
-            onPrev={() => setPage((v) => Math.max(1, v - 1))}
-            onNext={() => setPage((v) => Math.min(totalPages, v + 1))}
-            onFirst={() => setPage(1)}
-            onLast={() => setPage(totalPages)}
-          />
-        </CardContent>
-      </Card>
-
-      {/* ── Create Order Side Sheet ──────────────────────────────────────────── */}
-      <SlideOverForm
-        open={createOpen}
-        onOpenChange={(v) => { setCreateOpen(v); if (!v) resetOrder(); }}
-        title="Create Sales Order"
-        description="Add customer details and SKU lines. Pick tasks are auto-generated."
-      >
-        <form onSubmit={handleOrder((d) => createMutation.mutate(d))} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="customerName">Customer Name</Label>
-            <Input id="customerName" placeholder="e.g. Acme Corp" {...regOrder('customerName')} />
-            {orderErrors.customerName && (
-              <p className="text-xs text-destructive">{orderErrors.customerName.message}</p>
-            )}
-          </div>
-          <Separator />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Order Lines</Label>
-              <Button type="button" size="sm" variant="outline" onClick={() => append({ skuCode: '', quantity: 1 })}>
-                <Plus className="size-3.5 mr-1" /> Add Line
-              </Button>
-            </div>
-            {fields.map((field, i) => (
-              <div key={field.id} className="rounded-xl border border-border/60 p-3 space-y-2 relative">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">SKU Code</Label>
-                    <Input placeholder="e.g. SKU-001" className="h-8 text-sm" {...regOrder(`lines.${i}.skuCode`)} />
-                    {orderErrors.lines?.[i]?.skuCode && (
-                      <p className="text-[10px] text-destructive">{orderErrors.lines[i].skuCode.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Quantity</Label>
-                    <Input type="number" min={1} className="h-8 text-sm" {...regOrder(`lines.${i}.quantity`)} />
-                    {orderErrors.lines?.[i]?.quantity && (
-                      <p className="text-[10px] text-destructive">{orderErrors.lines[i].quantity.message}</p>
-                    )}
-                  </div>
-                </div>
-                {fields.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    className="absolute top-2 right-2 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <SheetFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); resetOrder(); }}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending
-                ? <><Loader2 className="size-3.5 mr-2 animate-spin" /> Creating…</>
-                : <><Plus className="size-3.5 mr-1.5" /> Create Order</>}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SlideOverForm>
-
-      {/* ── Confirm Shipment Sheet ───────────────────────────────────────────── */}
-      <SlideOverForm
-        open={shipOpen}
-        onOpenChange={(v) => {
-          setShipOpen(v);
-          if (!v) { resetShip(); setShipSuccess(null); setSelectedCourier(''); }
-        }}
-        title="Confirm Shipment"
-        description="Enter the AWB number and courier to dispatch the packed order."
-      >
-        {shipSuccess ? (
-          <div className="flex flex-col items-center gap-5 py-8 text-center">
-            <div className="size-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle2 className="size-8 text-emerald-500" />
-            </div>
-            <div>
-              <p className="font-semibold text-lg">Shipment Confirmed!</p>
-              <p className="text-muted-foreground text-sm mt-1">
-                AWB: <span className="font-mono font-bold text-foreground">{shipSuccess.awbNumber}</span>
-              </p>
-              <p className="text-muted-foreground text-sm">
-                Courier: <span className="font-medium text-foreground">{shipSuccess.courierName}</span>
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 w-full">
-              <Button variant="outline" onClick={() => { setShipSuccess(null); resetShip(); setSelectedCourier(''); }}>
-                Confirm Another Shipment
-              </Button>
-              <Button onClick={() => setShipOpen(false)}>Done</Button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleShip((d) => shipMutation.mutate(d))} className="space-y-4">
-            {/* Quick select from packed orders */}
-            {packedOrders.length > 0 && (
-              <div className="space-y-1.5">
-                <Label>Quick Select (Packed Orders)</Label>
-                <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto rounded-xl border border-border/60 p-2">
-                  {packedOrders.map((o) => (
-                    <button
-                      key={o.id}
-                      type="button"
-                      onClick={() => setShipValue('orderId', o.id)}
-                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-muted/60 transition-colors text-left"
-                    >
-                      <span className="font-medium">#{o.id} — {o.customerName}</span>
-                      <Ship className="size-3.5 text-muted-foreground" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="ship-orderId">Order ID</Label>
-              <Input id="ship-orderId" type="number" placeholder="e.g. 42" {...regShip('orderId')} />
-              {shipErrors.orderId && <p className="text-xs text-destructive">{shipErrors.orderId.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ship-awb">AWB Number</Label>
-              <Input id="ship-awb" placeholder="e.g. AWB-20260320-001" className="font-mono" {...regShip('awbNumber')} />
-              {shipErrors.awbNumber && <p className="text-xs text-destructive">{shipErrors.awbNumber.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ship-courier">Courier</Label>
-              <Select
-                value={selectedCourier}
-                onValueChange={(v) => { setSelectedCourier(v); setShipValue('courierName', v); }}
-              >
-                <SelectTrigger id="ship-courier">
-                  <SelectValue placeholder="Select courier…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COURIERS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {shipErrors.courierName && <p className="text-xs text-destructive">{shipErrors.courierName.message}</p>}
-            </div>
-            <SheetFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => setShipOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={shipMutation.isPending}>
-                {shipMutation.isPending
-                  ? <><Loader2 className="size-3.5 mr-2 animate-spin" /> Confirming…</>
-                  : <><Check className="size-3.5 mr-1.5" /> Confirm Shipment</>}
-              </Button>
-            </SheetFooter>
-          </form>
-        )}
-      </SlideOverForm>
-
-      {/* ── Cancel Confirmation Dialog ───────────────────────────────────────── */}
-      <Dialog open={!!cancelTarget} onOpenChange={(v) => !v && setCancelTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel Order #{cancelTarget?.id}?</DialogTitle>
-            <DialogDescription>
-              This will cancel the order for <strong>{cancelTarget?.customerName}</strong> and release reserved
-              inventory. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelTarget(null)}>Keep Order</Button>
-            <Button
-              variant="destructive"
-              disabled={cancelMutation.isPending}
-              onClick={() => cancelMutation.mutate(cancelTarget.id)}
-            >
-              {cancelMutation.isPending && <Loader2 className="size-3.5 mr-2 animate-spin" />}
-              Yes, Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <style jsx>{`
+        @keyframes slide-down {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes scale-up {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
+        }
+        .animate-scale-up {
+          animation: scale-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
