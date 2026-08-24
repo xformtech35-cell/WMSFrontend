@@ -207,7 +207,7 @@ export default function SalesOrderPage() {
   const handleEditClick = async (so) => {
     try {
       setLoading(true);
-      const fullSO = await getSalesOrderByIdAPI(so.id);
+      const fullSO = await getSalesOrderByIdAPI(so.soNumber);
       setEditingSO(fullSO);
       setFormMode("edit");
       setShowFormModal(true);
@@ -540,16 +540,16 @@ export default function SalesOrderPage() {
                               <Edit className="w-4 h-4" />
                             </button>
                           )}
-                          {(so.status === "DRAFT" || so.status === "PROCESSING") && (
+                          {/* {(so.status === "DRAFT" || so.status === "PROCESSING") && ( */}
                             <button
                               type="button"
-                              onClick={() => handleDelete(so.id)}
+                              onClick={() => handleDelete(so.soNumber)}
                               className="text-red-600 hover:text-red-800 transition-colors"
                               title="Delete"
                             >
                               <XCircle className="w-4 h-4" />
                             </button>
-                          )}
+                          {/* )} */}
                         </div>
                       </td>
                     </tr>

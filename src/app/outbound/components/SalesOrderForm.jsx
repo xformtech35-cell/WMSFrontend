@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { createPortal } from "react-dom";
+import { PUT } from "@/components/apiRequest";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -235,7 +236,22 @@ const getItemsAPI = async (page = 0, size = 20, search = "") => {
     };
   }
 };
+const hanldeConfirm = async (id, onSuccess) => {
+  console.log("CONFIRM BUTTON CLICKED", id);
 
+  try {
+    const result = await PUT(
+      `outbound/sales-order/${id}/status?status=PENDING`,
+      {},
+    );
+    if (onSuccess) {
+      onSuccess(`Sales Order updated successfully!`);
+    }
+    console.log("CONFIRM API RESULT:", result);
+  } catch (error) {
+    console.error("CONFIRM API ERROR:", error);
+  }
+};
 const createSalesOrderAPI = async (data) => {
   return apiRequest("/outbound/sales-order", "POST", data);
 };
@@ -711,8 +727,8 @@ export default function SalesOrderForm({
         status: initialData.status || "DRAFT",
       });
 
-      if (initialData.id) {
-        setSavedSOId(initialData.id);
+      if (initialData.soNumber) {
+        setSavedSOId(initialData.soNumber);
       }
 
       // Set selected customer for display
@@ -1327,6 +1343,17 @@ export default function SalesOrderForm({
             >
               Cancel
             </button>
+            {mode === "edit" && (
+              <button
+                type="button"
+                onClick={() => hanldeConfirm(soData.soNumber, onSuccess)}
+                className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700
+                  text-white`}
+              >
+                <Send className="w-4 h-4" />
+                Confirm
+              </button>
+            )}
             <button
               type="submit"
               disabled={submitting}

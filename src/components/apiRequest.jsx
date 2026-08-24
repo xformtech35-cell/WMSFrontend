@@ -48,3 +48,6 @@ export const GET = async (api, data) => {
 export const DELETE = async (api, data) => {
   return apiRequest(api, "DELETE", data);
 };
+export const PUT = async (api, data) => {
+  return apiRequest(api, "PUT", data);
+};
