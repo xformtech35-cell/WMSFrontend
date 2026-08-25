@@ -355,7 +355,7 @@ export default function SalesOrderPage() {
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Sales Orders
+                  Create Pick Task
                 </h1>
                 <p className="text-blue-100 text-sm mt-1">
                   WMS Warehouse Management System

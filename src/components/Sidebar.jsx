@@ -231,6 +231,20 @@ const ALL_MENU_ITEMS = [
     group: "Putaway",
     permission: P.ORDERS_VIEW,
   },
+    {
+    href: "/sales-order-approve",
+    label: "Sales Order Approve",
+    icon: ArrowUpRight,
+    group: "Putaway",
+    permission: P.ORDERS_VIEW,
+  },
+      {
+    href: "/CreatePick",
+    label: "Create Pick Task",
+    icon: ArrowUpRight,
+    group: "Putaway",
+    permission: P.ORDERS_VIEW,
+  },
   {
     href: "/returns",
     label: "Returns / RMA",
