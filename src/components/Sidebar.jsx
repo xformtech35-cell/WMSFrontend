@@ -276,6 +276,14 @@ const ALL_MENU_ITEMS = [
     liveKey: "pendingPicks",
   },
   {
+    href: "/all-confimration",
+    label: "All Confirmation",
+    icon: ScanLine,
+    group: "Fulfillment",
+    permission: P.PICKING_VIEW,
+    liveKey: "pendingPicks",
+  },
+  {
     href: "/trolleys",
     label: "Trolleys",
     icon: Truck,
