@@ -517,7 +517,7 @@ export default function SalesOrderForm({
 }) {
   // Form State
   const [soData, setSoData] = useState({
-    soNumber: `SO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+    soNumber: ``,
     customerCode: "",
     customerName: "",
     warehouseId: "",
