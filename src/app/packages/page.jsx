@@ -41,6 +41,9 @@ import {
   Boxes,
   Weight,
   Ruler,
+  QrCode,
+  PackageOpen,
+  Scale,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -71,7 +74,7 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getPackagesAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -79,9 +82,9 @@ const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = 
     if (searchTerm) params.append("search", searchTerm);
     if (status && status !== "ALL") params.append("status", status);
 
-    const url = `/outbound/pick-confirmations${params.toString() ? `?${params.toString()}` : ""}`;
+    const url = `/outbound/packages${params.toString() ? `?${params.toString()}` : ""}`;
     const response = await api.get(url);
-    console.log("GET pick confirmations response:", response);
+    console.log("GET packages response:", response);
 
     if (response.data) {
       const data = response.data;
@@ -117,32 +120,22 @@ const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = 
       totalPages: response.data?.totalPages || 0,
     };
   } catch (error) {
-    console.error("Error fetching pick confirmations:", error);
+    console.error("Error fetching packages:", error);
     throw error;
   }
 };
 
-const getSalesOrderByIdAPI = async (id) => {
-  return apiRequest(`/outbound/sales-order/${id}`);
+const getPackageByIdAPI = async (id) => {
+  return apiRequest(`/outbound/package/${id}`);
 };
 
-const deleteSalesOrderAPI = async (id) => {
-  return apiRequest(`/outbound/sales-order/${id}`, "DELETE");
+const deletePackageAPI = async (id) => {
+  return apiRequest(`/outbound/package/${id}`, "DELETE");
 };
 
-// Update pick list status
-const updatePickListStatusAPI = async (pickListNumber, status) => {
-  return apiRequest(`/outbound/pick-task/${pickListNumber}/status?status=${status}`, "PATCH");
-};
-
-// Create pick task
-const createPickTaskAPI = async (data) => {
-  return apiRequest("/outbound/pick-task", "POST", data);
-};
-
-// Confirm pick
-const confirmPickAPI = async (data) => {
-  return apiRequest("/outbound/pick-confirmation", "POST", data);
+// Update package status
+const updatePackageStatusAPI = async (packageNumber, status) => {
+  return apiRequest(`/outbound/package/${packageNumber}/status?status=${status}`, "PATCH");
 };
 
 // Create package
@@ -150,11 +143,11 @@ const createPackageAPI = async (data) => {
   return apiRequest("/outbound/package", "POST", data);
 };
 
-export default function PickListPageConfiAll() {
+export default function Packages() {
   const router = useRouter();
 
   // List State
-  const [salesOrders, setSalesOrders] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -167,40 +160,10 @@ export default function PickListPageConfiAll() {
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showPickTaskModal, setShowPickTaskModal] = useState(false);
   const [showPackageModal, setShowPackageModal] = useState(false);
-  const [editingSO, setEditingSO] = useState(null);
-  const [viewingSO, setViewingSO] = useState(null);
-  const [selectedPickList, setSelectedPickList] = useState(null);
-  const [selectedPackageItem, setSelectedPackageItem] = useState(null);
-  const [formMode, setFormMode] = useState("create");
+  const [viewingPackage, setViewingPackage] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-
-  // Pick Task Form State
-  const [pickTaskData, setPickTaskData] = useState({
-    pickListNumber: "",
-    itemCode: "",
-    requiredQuantity: 0,
-    locationBarcode: "",
-    itemBarcode: "",
-    binId: "",
-    batchNumber: "",
-    pickerId: "",
-    pickerName: "",
-    createdBy: "system_user",
-  });
-
-  // Pick Confirmation Form State
-  const [confirmationData, setConfirmationData] = useState({
-    pickTaskNumber: "",
-    itemCode: "",
-    pickedQuantity: 0,
-    shortQuantity: 0,
-    barcode: "",
-    confirmedBy: "",
-  });
 
   // Package Form State
   const [packageData, setPackageData] = useState({
@@ -219,14 +182,14 @@ export default function PickListPageConfiAll() {
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadSalesOrders();
+      loadPackages();
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   // Load data on component mount and when dependencies change
   useEffect(() => {
-    loadSalesOrders();
+    loadPackages();
   }, [currentPage, pageSize, statusFilter]);
 
   // Auto-clear messages after 5 seconds
@@ -244,10 +207,10 @@ export default function PickListPageConfiAll() {
     }
   }, [errorMessage]);
 
-  const loadSalesOrders = async () => {
+  const loadPackages = async () => {
     try {
       setLoading(true);
-      const response = await getSalesOrdersAPI(
+      const response = await getPackagesAPI(
         currentPage,
         pageSize,
         searchTerm,
@@ -255,127 +218,86 @@ export default function PickListPageConfiAll() {
       );
 
       if (response && response.data) {
-        setSalesOrders(response.data || []);
+        setPackages(response.data || []);
         setTotalPages(response.totalPages || 0);
         setTotalElements(response.total || 0);
       } else {
-        setSalesOrders([]);
+        setPackages([]);
         setTotalPages(0);
         setTotalElements(0);
       }
     } catch (error) {
-      console.error("Error loading pick confirmations:", error);
-      setErrorMessage("Failed to load pick confirmations.");
+      console.error("Error loading packages:", error);
+      setErrorMessage("Failed to load packages.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleViewClick = async (so) => {
+  const handleViewClick = async (pkg) => {
     try {
-      setViewingSO(so);
+      setViewingPackage(pkg);
       setShowViewModal(true);
     } catch (error) {
       console.error("Error loading details:", error);
-      setViewingSO(so);
+      setViewingPackage(pkg);
       setShowViewModal(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFormClose = () => {
-    setShowFormModal(false);
-    setEditingSO(null);
   };
 
   const handleViewClose = () => {
     setShowViewModal(false);
-    setViewingSO(null);
-  };
-
-  const handlePickTaskClose = () => {
-    setShowPickTaskModal(false);
-    setSelectedPickList(null);
-    resetPickTaskForm();
-    resetConfirmationForm();
+    setViewingPackage(null);
   };
 
   const handlePackageClose = () => {
     setShowPackageModal(false);
-    setSelectedPackageItem(null);
     resetPackageForm();
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this confirmation?")) {
+    if (!window.confirm("Are you sure you want to delete this package?")) {
       return;
     }
 
     try {
       setLoading(true);
-      await deleteSalesOrderAPI(id);
-      setSuccessMessage("Confirmation deleted successfully");
+      await deletePackageAPI(id);
+      setSuccessMessage("Package deleted successfully");
       setShowSuccess(true);
-      loadSalesOrders();
+      loadPackages();
     } catch (error) {
       console.error("Delete error:", error);
-      setErrorMessage("Failed to delete confirmation.");
+      setErrorMessage("Failed to delete package.");
     } finally {
       setLoading(false);
     }
   };
 
   // Handle status update
-  const handleStatusUpdate = async (pickTaskNumber, status, actionLabel) => {
-    if (!window.confirm(`Are you sure you want to mark this pick task as ${actionLabel}?`)) {
+  const handleStatusUpdate = async (packageNumber, status, actionLabel) => {
+    if (!window.confirm(`Are you sure you want to mark this package as ${actionLabel}?`)) {
       return;
     }
 
     try {
       setUpdatingStatus(true);
-      await updatePickListStatusAPI(pickTaskNumber, status);
-      setSuccessMessage(`Pick task ${pickTaskNumber} marked as ${actionLabel} successfully`);
+      await updatePackageStatusAPI(packageNumber, status);
+      setSuccessMessage(`Package ${packageNumber} marked as ${actionLabel} successfully`);
       setShowSuccess(true);
-      loadSalesOrders();
+      loadPackages();
       
       if (showViewModal) {
         handleViewClose();
       }
     } catch (error) {
       console.error("Status update error:", error);
-      setErrorMessage(error.message || `Failed to update pick task status to ${actionLabel}.`);
+      setErrorMessage(error.message || `Failed to update package status to ${actionLabel}.`);
     } finally {
       setUpdatingStatus(false);
     }
-  };
-
-  // Reset Pick Task Form
-  const resetPickTaskForm = () => {
-    setPickTaskData({
-      pickListNumber: "",
-      itemCode: "",
-      requiredQuantity: 0,
-      locationBarcode: "",
-      itemBarcode: "",
-      binId: "",
-      batchNumber: "",
-      pickerId: "",
-      pickerName: "",
-      createdBy: "system_user",
-    });
-  };
-
-  // Reset Confirmation Form
-  const resetConfirmationForm = () => {
-    setConfirmationData({
-      pickTaskNumber: "",
-      itemCode: "",
-      pickedQuantity: 0,
-      shortQuantity: 0,
-      barcode: "",
-      confirmedBy: "",
-    });
   };
 
   // Reset Package Form
@@ -394,55 +316,10 @@ export default function PickListPageConfiAll() {
     });
   };
 
-  // Handle Confirmation Form Input
-  const handleConfirmationInputChange = (e) => {
-    const { name, value } = e.target;
-    setConfirmationData((prev) => ({ ...prev, [name]: value }));
-  };
-
   // Handle Package Form Input
   const handlePackageInputChange = (e) => {
     const { name, value } = e.target;
     setPackageData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Handle Confirm Pick Submit
-  const handleConfirmPickSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!confirmationData.pickTaskNumber) {
-      setErrorMessage("Pick Task Number is required");
-      return;
-    }
-    if (!confirmationData.itemCode) {
-      setErrorMessage("Item Code is required");
-      return;
-    }
-    if (!confirmationData.pickedQuantity || confirmationData.pickedQuantity <= 0) {
-      setErrorMessage("Picked Quantity must be greater than 0");
-      return;
-    }
-    if (!confirmationData.confirmedBy) {
-      setErrorMessage("Confirmed By is required");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await confirmPickAPI(confirmationData);
-      console.log("Pick Confirmation submitted:", response);
-      
-      setSuccessMessage(`Pick confirmation submitted successfully for ${confirmationData.pickTaskNumber}`);
-      setShowSuccess(true);
-      loadSalesOrders();
-      handlePickTaskClose();
-    } catch (error) {
-      console.error("Pick Confirmation error:", error);
-      setErrorMessage(error.message || "Failed to confirm pick. Please try again.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Handle Create Package Submit
@@ -515,7 +392,7 @@ export default function PickListPageConfiAll() {
       
       setSuccessMessage(`Package created successfully for ${packageData.soNumber}`);
       setShowSuccess(true);
-      loadSalesOrders();
+      loadPackages();
       handlePackageClose();
     } catch (error) {
       console.error("Create Package error:", error);
@@ -525,63 +402,19 @@ export default function PickListPageConfiAll() {
     }
   };
 
-  // Open package modal with pre-filled data from selected confirmation
-  const handleOpenPackageModal = (so) => {
-    setSelectedPackageItem(so);
-    setPackageData({
-      soNumber: so.soNumber || "",
-      pickListNumber: so.pickListNumber || "",
-      itemCode: so.itemCode || "",
-      packedQuantity: so.pickedQuantity || 0,
-      packageType: "BOX",
-      weight: "",
-      length: "",
-      width: "",
-      height: "",
-      packedBy: "",
-    });
-    setShowPackageModal(true);
-  };
-
-  const getPriorityColor = (priority) => {
-    const colors = {
-      LOW: "bg-gray-100 text-gray-700 border-gray-200",
-      NORMAL: "bg-blue-100 text-blue-700 border-blue-200",
-      MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      HIGH: "bg-orange-100 text-orange-700 border-orange-200",
-      URGENT: "bg-red-100 text-red-700 border-red-200",
-    };
-    return colors[priority] || colors.NORMAL;
-  };
-
   const getStatusColor = (status) => {
     const colors = {
       DRAFT: "bg-gray-100 text-gray-700",
-      PROCESSING: "bg-blue-100 text-blue-700",
-      APPROVED: "bg-green-100 text-green-700",
-      REJECTED: "bg-red-100 text-red-700",
       PENDING: "bg-yellow-100 text-yellow-700",
-      PICKING: "bg-yellow-100 text-yellow-700",
-      PICKED: "bg-green-100 text-green-700",
-      RELEASED: "bg-purple-100 text-purple-700",
+      PACKED: "bg-blue-100 text-blue-700",
+      CONFIRMED: "bg-green-100 text-green-700",
       SHIPPED: "bg-purple-100 text-purple-700",
       DELIVERED: "bg-indigo-100 text-indigo-700",
       CANCELLED: "bg-red-100 text-red-700",
+      REJECTED: "bg-red-100 text-red-700",
       COMPLETED: "bg-green-100 text-green-700",
-      CONFIRMED: "bg-blue-100 text-blue-700",
     };
     return colors[status] || colors.DRAFT;
-  };
-
-  const getItemStatusColor = (status) => {
-    const colors = {
-      PENDING: "bg-yellow-100 text-yellow-700",
-      PICKED: "bg-green-100 text-green-700",
-      SHORT: "bg-red-100 text-red-700",
-      CANCELLED: "bg-red-100 text-red-700",
-      CONFIRMED: "bg-blue-100 text-blue-700",
-    };
-    return colors[status] || colors.PENDING;
   };
 
   const handlePageChange = (newPage) => {
@@ -602,16 +435,16 @@ export default function PickListPageConfiAll() {
     });
   };
 
-  // Status action buttons configuration
+  // Status action buttons configuration for packages
   const getStatusActions = (currentStatus) => {
     const actions = {
       PENDING: [
-        { status: "CONFIRMED", label: "Confirm Pick", icon: Check, color: "bg-blue-600 hover:bg-blue-700" },
+        { status: "PACKED", label: "Mark as Packed", icon: Package, color: "bg-blue-600 hover:bg-blue-700" },
+      ],
+      PACKED: [
+        { status: "CONFIRMED", label: "Confirm Package", icon: CheckCircle, color: "bg-green-600 hover:bg-green-700" },
       ],
       CONFIRMED: [
-        { status: "PICKED", label: "Mark as Picked", icon: CheckSquare, color: "bg-green-600 hover:bg-green-700" },
-      ],
-      PICKED: [
         { status: "SHIPPED", label: "Mark as Shipped", icon: Truck, color: "bg-purple-600 hover:bg-purple-700" },
       ],
       SHIPPED: [
@@ -669,20 +502,28 @@ export default function PickListPageConfiAll() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Pick Confirmation Management
+                  Package Management
                 </h1>
-                <p className="text-blue-100 text-sm mt-1">
-                  WMS Warehouse Management System
+                <p className="text-purple-100 text-sm mt-1">
+                  WMS Warehouse Management System - Outbound Packages
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={loadSalesOrders}
+                  onClick={() => setShowPackageModal(true)}
+                  className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Package
+                </button>
+                <button
+                  type="button"
+                  onClick={loadPackages}
                   className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -700,10 +541,10 @@ export default function PickListPageConfiAll() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search by Confirmation #, SO Number or Pick Task..."
+                  placeholder="Search by Package #, SO Number, Item Code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -711,12 +552,12 @@ export default function PickListPageConfiAll() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="ALL">All Status</option>
                 <option value="PENDING">Pending</option>
+                <option value="PACKED">Packed</option>
                 <option value="CONFIRMED">Confirmed</option>
-                <option value="PICKED">Picked</option>
                 <option value="SHIPPED">Shipped</option>
                 <option value="DELIVERED">Delivered</option>
                 <option value="CANCELLED">Cancelled</option>
@@ -724,7 +565,7 @@ export default function PickListPageConfiAll() {
               </select>
             </div>
             <div className="text-sm text-gray-500">
-              Showing {salesOrders.length} of {totalElements} confirmations
+              Showing {packages.length} of {totalElements} packages
             </div>
           </div>
         </div>
@@ -736,10 +577,10 @@ export default function PickListPageConfiAll() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Confirmation #
+                    Package #
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pick Task #
+                    Barcode
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     SO Number
@@ -748,10 +589,13 @@ export default function PickListPageConfiAll() {
                     Item
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Qty
+                    Qty / Type
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Confirmed By
+                    Weight (kg)
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Packed By
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -764,94 +608,102 @@ export default function PickListPageConfiAll() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8">
+                    <td colSpan="9" className="text-center py-8">
                       <div className="flex justify-center items-center gap-2">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                         <span className="text-gray-500">Loading...</span>
                       </div>
                     </td>
                   </tr>
-                ) : salesOrders.length === 0 ? (
+                ) : packages.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8 text-gray-500">
-                      No pick confirmations found
+                    <td colSpan="9" className="text-center py-8 text-gray-500">
+                      No packages found
                     </td>
                   </tr>
                 ) : (
-                  salesOrders.map((so) => (
+                  packages.map((pkg) => (
                     <tr
-                      key={so.id || so.confirmationNumber}
+                      key={pkg.id || pkg.packageNumber}
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td
                         className="px-4 py-3 cursor-pointer"
-                        onClick={() => handleViewClick(so)}
+                        onClick={() => handleViewClick(pkg)}
                       >
-                        <span className="font-medium text-blue-600 hover:text-blue-800">
-                          {so.confirmationNumber || "N/A"}
+                        <span className="font-medium text-purple-600 hover:text-purple-800">
+                          {pkg.packageNumber || "N/A"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {so.pickTaskNumber}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <QrCode className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs font-mono text-gray-600">
+                            {pkg.packageBarcode || "N/A"}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {so.soNumber}
+                        {pkg.soNumber}
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {so.itemCode}
+                          {pkg.itemCode}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {so.itemName}
+                          {pkg.itemName}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div>
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
-                            Picked: {so.pickedQuantity}
+                          <span className="font-medium">{pkg.packedQuantity}</span>
+                          <span className="text-xs text-gray-500 ml-1">units</span>
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          <span className="px-1.5 py-0.5 bg-gray-100 rounded">
+                            {pkg.packageType}
                           </span>
-                          {so.shortQuantity > 0 && (
-                            <span className="ml-1 bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-medium">
-                              Short: {so.shortQuantity}
-                            </span>
-                          )}
                         </div>
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          Required: {so.requiredQuantity}
-                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {pkg.weight ? (
+                          <span className="font-medium">{pkg.weight.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-gray-400">N/A</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {so.confirmedBy || "N/A"}
+                          {pkg.packedBy || "N/A"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {formatDate(so.confirmedDate)}
+                          {formatDate(pkg.packedDate)}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(so.status)}`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pkg.status)}`}
                         >
-                          {so.status}
+                          {pkg.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => handleViewClick(so)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            onClick={() => handleViewClick(pkg)}
+                            className="text-purple-600 hover:text-purple-800 transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleOpenPackageModal(so)}
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Create Package"
+                            onClick={() => handleDelete(pkg.id)}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            title="Delete"
                           >
-                            <Package className="w-4 h-4" />
+                            <XCircle className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -867,7 +719,7 @@ export default function PickListPageConfiAll() {
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
                 Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
-                confirmations
+                packages
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -891,7 +743,7 @@ export default function PickListPageConfiAll() {
         </div>
 
         {/* View/Detail Modal */}
-        {showViewModal && viewingSO && (
+        {showViewModal && viewingPackage && (
           <>
             <div
               className="fixed inset-0 bg-black/50 z-40"
@@ -902,11 +754,11 @@ export default function PickListPageConfiAll() {
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      Pick Confirmation Details
+                      <Package className="w-5 h-5 text-purple-600" />
+                      Package Details
                     </h2>
                     <p className="text-sm text-gray-500">
-                      {viewingSO.confirmationNumber}
+                      {viewingPackage.packageNumber}
                     </p>
                   </div>
                   <button
@@ -918,92 +770,113 @@ export default function PickListPageConfiAll() {
                 </div>
                 
                 <div className="p-6">
+                  {/* Status Actions */}
+                  {getStatusActions(viewingPackage.status).length > 0 && (
+                    <div className="mb-6 flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <span className="text-sm text-gray-600 font-medium mr-2">Actions:</span>
+                      {getStatusActions(viewingPackage.status).map((action) => (
+                        <button
+                          key={action.status}
+                          onClick={() => handleStatusUpdate(viewingPackage.packageNumber, action.status, action.label)}
+                          disabled={updatingStatus}
+                          className={`px-3 py-1.5 rounded-lg text-white text-sm flex items-center gap-1.5 ${action.color} disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+                        >
+                          <action.icon className="w-3.5 h-3.5" />
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Basic Info Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
-                        Confirmation Number
+                        <Hash className="w-3 h-3" />
+                        Package Number
                       </label>
-                      <p className="font-medium text-gray-900">{viewingSO.confirmationNumber}</p>
+                      <p className="font-medium text-gray-900">{viewingPackage.packageNumber}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick Task Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickTaskNumber}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickListNumber}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.soNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                        <QrCode className="w-3 h-3" />
+                        Package Barcode
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm font-mono">{viewingPackage.packageBarcode}</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">Status</label>
                       <p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}>
-                          {viewingSO.status}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingPackage.status)}`}>
+                          {viewingPackage.status}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Confirmed Date</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingSO.confirmedDate)}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
+                      <p className="font-medium text-gray-900">{viewingPackage.soNumber}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
+                      <p className="font-medium text-gray-900">{viewingPackage.pickListNumber}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Package Type</label>
+                      <p className="font-medium text-gray-900">{viewingPackage.packageType}</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">Item Code</label>
-                      <p className="font-medium text-gray-900">{viewingSO.itemCode}</p>
+                      <p className="font-medium text-gray-900">{viewingPackage.itemCode}</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">Item Name</label>
-                      <p className="font-medium text-gray-900">{viewingSO.itemName}</p>
+                      <p className="font-medium text-gray-900">{viewingPackage.itemName}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.requiredQuantity}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Packed Quantity</label>
+                      <p className="font-medium text-gray-900">{viewingPackage.packedQuantity}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Picked Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickedQuantity}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                        <Scale className="w-3 h-3" />
+                        Weight (kg)
+                      </label>
+                      <p className="font-medium text-gray-900">{viewingPackage.weight ? viewingPackage.weight.toFixed(2) : "N/A"}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Short Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.shortQuantity || 0}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                        <Ruler className="w-3 h-3" />
+                        Dimensions (cm)
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingPackage.length || viewingPackage.width || viewingPackage.height ? 
+                          `${viewingPackage.length || 0} × ${viewingPackage.width || 0} × ${viewingPackage.height || 0}` : 
+                          "N/A"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Barcode</label>
-                      <p className="font-medium text-gray-900">{viewingSO.barcode || "N/A"}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Volume</label>
+                      <p className="font-medium text-gray-900">{viewingPackage.volume || "N/A"}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Confirmed By</label>
-                      <p className="font-medium text-gray-900">{viewingSO.confirmedBy}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Packed By</label>
+                      <p className="font-medium text-gray-900">{viewingPackage.packedBy}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Packed Date</label>
+                      <p className="font-medium text-gray-900">{formatDate(viewingPackage.packedDate)}</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">Created At</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingSO.createdAt)}</p>
+                      <p className="font-medium text-gray-900">{formatDate(viewingPackage.createdAt)}</p>
                     </div>
                   </div>
 
-                  {/* Package Action Button in View Modal */}
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      onClick={() => {
-                        handleViewClose();
-                        handleOpenPackageModal(viewingSO);
-                      }}
-                      className="px-4 py-2 rounded-lg flex items-center gap-2 text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-                    >
-                      <Package className="w-4 h-4" />
-                      Create Package
-                    </button>
-                  </div>
-
                   {/* Remarks if any */}
-                  {viewingSO.remarks && (
+                  {viewingPackage.remarks && (
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                       <label className="text-xs text-gray-500 uppercase font-medium">Remarks</label>
-                      <p className="text-sm text-gray-700">{viewingSO.remarks}</p>
+                      <p className="text-sm text-gray-700">{viewingPackage.remarks}</p>
                     </div>
                   )}
                 </div>
@@ -1012,203 +885,8 @@ export default function PickListPageConfiAll() {
           </>
         )}
 
-        {/* Confirmation Modal */}
-        {showPickTaskModal && selectedPickList && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={handlePickTaskClose}
-            />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-600" />
-                      Confirm Pick
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      {selectedPickList?.pickTaskNumber || "Confirm Pick"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handlePickTaskClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <XCircle className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  <form onSubmit={handleConfirmPickSubmit}>
-                    {/* Pick Task Info */}
-                    <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick Task Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickTaskNumber}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickListNumber}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.soNumber}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Item</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.itemCode} - {selectedPickList?.itemName}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.requiredQuantity}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Location</label>
-                          <p className="font-medium text-gray-900 text-sm">{selectedPickList?.locationBarcode || "N/A"}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Form Fields */}
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Pick Task Number *
-                          </label>
-                          <input
-                            type="text"
-                            name="pickTaskNumber"
-                            value={confirmationData.pickTaskNumber}
-                            onChange={handleConfirmationInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                            required
-                            readOnly
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Item Code *
-                          </label>
-                          <input
-                            type="text"
-                            name="itemCode"
-                            value={confirmationData.itemCode}
-                            onChange={handleConfirmationInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                            required
-                            readOnly
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Picked Quantity *
-                          </label>
-                          <input
-                            type="number"
-                            name="pickedQuantity"
-                            value={confirmationData.pickedQuantity}
-                            onChange={handleConfirmationInputChange}
-                            placeholder="Enter picked quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            min="0"
-                            required
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Max: {selectedPickList?.requiredQuantity || 0}
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Short Quantity
-                          </label>
-                          <input
-                            type="number"
-                            name="shortQuantity"
-                            value={confirmationData.shortQuantity}
-                            onChange={handleConfirmationInputChange}
-                            placeholder="Enter short quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            min="0"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Auto-calculated: {Math.max(0, (selectedPickList?.requiredQuantity || 0) - confirmationData.pickedQuantity)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Barcode
-                          </label>
-                          <div className="relative">
-                            <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              name="barcode"
-                              value={confirmationData.barcode}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Scan or enter barcode"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirmed By *
-                          </label>
-                          <div className="relative">
-                            <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              name="confirmedBy"
-                              value={confirmationData.confirmedBy}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Enter confirmer name"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                      <button
-                        type="button"
-                        onClick={handlePickTaskClose}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-6 py-2 rounded-lg flex items-center gap-2 text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Save className="w-4 h-4" />
-                        {loading ? "Confirming..." : "Confirm Pick"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
         {/* Package Creation Modal */}
-        {showPackageModal && selectedPackageItem && (
+        {showPackageModal && (
           <>
             <div
               className="fixed inset-0 bg-black/50 z-40"
@@ -1220,10 +898,10 @@ export default function PickListPageConfiAll() {
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                       <Package className="w-5 h-5 text-purple-600" />
-                      Create Package
+                      Create New Package
                     </h2>
                     <p className="text-sm text-gray-500">
-                      SO: {selectedPackageItem.soNumber} | {selectedPackageItem.itemCode}
+                      Enter package details
                     </p>
                   </div>
                   <button
@@ -1236,36 +914,55 @@ export default function PickListPageConfiAll() {
 
                 <div className="p-6">
                   <form onSubmit={handleCreatePackageSubmit}>
-                    {/* Reference Info */}
-                    <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.soNumber}</p>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            SO Number *
+                          </label>
+                          <input
+                            type="text"
+                            name="soNumber"
+                            value={packageData.soNumber}
+                            onChange={handlePackageInputChange}
+                            placeholder="Enter SO Number"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            required
+                          />
                         </div>
+
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.pickListNumber}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Item</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.itemCode} - {selectedPackageItem.itemName}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Available Quantity</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.pickedQuantity}</p>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Pick List Number *
+                          </label>
+                          <input
+                            type="text"
+                            name="pickListNumber"
+                            value={packageData.pickListNumber}
+                            onChange={handlePackageInputChange}
+                            placeholder="Enter Pick List Number"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            required
+                          />
                         </div>
                       </div>
-                    </div>
-
-                    {/* Form Fields */}
-                    <div className="space-y-4">
-                      {/* Hidden/readonly fields */}
-                      <input type="hidden" name="soNumber" value={packageData.soNumber} />
-                      <input type="hidden" name="pickListNumber" value={packageData.pickListNumber} />
-                      <input type="hidden" name="itemCode" value={packageData.itemCode} />
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Item Code *
+                          </label>
+                          <input
+                            type="text"
+                            name="itemCode"
+                            value={packageData.itemCode}
+                            onChange={handlePackageInputChange}
+                            placeholder="Enter Item Code"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Packed Quantity *
@@ -1278,14 +975,12 @@ export default function PickListPageConfiAll() {
                             placeholder="Enter packed quantity"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             min="1"
-                            max={selectedPackageItem.pickedQuantity}
                             required
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Max: {selectedPackageItem.pickedQuantity}
-                          </p>
                         </div>
+                      </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Package Type *
@@ -1309,9 +1004,7 @@ export default function PickListPageConfiAll() {
                             <option value="OTHER">Other</option>
                           </select>
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             <div className="flex items-center gap-1">
@@ -1328,24 +1021,6 @@ export default function PickListPageConfiAll() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             step="0.01"
                             min="0"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            <div className="flex items-center gap-1">
-                              <Ruler className="w-4 h-4" />
-                              Packed By *
-                            </div>
-                          </label>
-                          <input
-                            type="text"
-                            name="packedBy"
-                            value={packageData.packedBy}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter packer name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            required
                           />
                         </div>
                       </div>
@@ -1398,6 +1073,21 @@ export default function PickListPageConfiAll() {
                             />
                           </div>
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Packed By *
+                        </label>
+                        <input
+                          type="text"
+                          name="packedBy"
+                          value={packageData.packedBy}
+                          onChange={handlePackageInputChange}
+                          placeholder="Enter packer name"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          required
+                        />
                       </div>
                     </div>
 
