@@ -292,6 +292,14 @@ const ALL_MENU_ITEMS = [
     liveKey: "pendingPicks",
   },
   {
+    href: "/labels",
+    label: "Labels",
+    icon: ScanLine,
+    group: "Fulfillment",
+    permission: P.PICKING_VIEW,
+    liveKey: "pendingPicks",
+  },
+  {
     href: "/trolleys",
     label: "Trolleys",
     icon: Truck,
@@ -396,13 +404,7 @@ const ALL_MENU_ITEMS = [
     group: "Admin/Masters",
     permission: P.REPORTS_VIEW,
   },
-  {
-    href: "/labels",
-    label: "Labels",
-    icon: Tag,
-    group: "Admin/Masters",
-    permission: P.LABELS_VIEW,
-  },
+ 
   {
     href: "/users",
     label: "Users",

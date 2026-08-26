@@ -44,8 +44,18 @@ import {
   QrCode,
   PackageOpen,
   Scale,
+  Printer,
+  Download,
+  ExternalLink,
+  MapPin as MapPinIcon,
+  Phone,
+  Mail,
 } from "lucide-react";
 import api from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { downloadImage } from "@/components/downloadImage64";
+import ShippingLabelModal from "./components/ShippingLabelModal";
+import ViewPackageModal from "./components/ViewPackageModal";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -74,7 +84,12 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-const getPackagesAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getPackagesAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -95,7 +110,9 @@ const getPackagesAPI = async (page = 0, size = 10, searchTerm = "", status = "AL
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -135,12 +152,31 @@ const deletePackageAPI = async (id) => {
 
 // Update package status
 const updatePackageStatusAPI = async (packageNumber, status) => {
-  return apiRequest(`/outbound/package/${packageNumber}/status?status=${status}`, "PATCH");
+  return apiRequest(
+    `/outbound/package/${packageNumber}/status?status=${status}`,
+    "PATCH",
+  );
+};
+
+const decodeBase64Text = (base64String) => {
+  if (!base64String) return "";
+
+  try {
+    return atob(base64String);
+  } catch (error) {
+    console.error("Failed to decode label:", error);
+    return "";
+  }
 };
 
 // Create package
 const createPackageAPI = async (data) => {
   return apiRequest("/outbound/package", "POST", data);
+};
+
+// Generate shipping label - returns label data directly
+const generateShippingLabelAPI = async (packageNumber) => {
+  return apiRequest(`/outbound/shipping-label/${packageNumber}`, "POST");
 };
 
 export default function Packages() {
@@ -162,8 +198,11 @@ export default function Packages() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPackageModal, setShowPackageModal] = useState(false);
+  const [showShippingLabelModal, setShowShippingLabelModal] = useState(false);
   const [viewingPackage, setViewingPackage] = useState(null);
+  const [shippingLabel, setShippingLabel] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [generatingLabel, setGeneratingLabel] = useState(false);
 
   // Package Form State
   const [packageData, setPackageData] = useState({
@@ -257,6 +296,11 @@ export default function Packages() {
     resetPackageForm();
   };
 
+  const handleShippingLabelClose = () => {
+    setShowShippingLabelModal(false);
+    setShippingLabel(null);
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this package?")) {
       return;
@@ -278,25 +322,57 @@ export default function Packages() {
 
   // Handle status update
   const handleStatusUpdate = async (packageNumber, status, actionLabel) => {
-    if (!window.confirm(`Are you sure you want to mark this package as ${actionLabel}?`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to mark this package as ${actionLabel}?`,
+      )
+    ) {
       return;
     }
 
     try {
       setUpdatingStatus(true);
       await updatePackageStatusAPI(packageNumber, status);
-      setSuccessMessage(`Package ${packageNumber} marked as ${actionLabel} successfully`);
+      setSuccessMessage(
+        `Package ${packageNumber} marked as ${actionLabel} successfully`,
+      );
       setShowSuccess(true);
       loadPackages();
-      
+
       if (showViewModal) {
         handleViewClose();
       }
     } catch (error) {
       console.error("Status update error:", error);
-      setErrorMessage(error.message || `Failed to update package status to ${actionLabel}.`);
+      setErrorMessage(
+        error.message || `Failed to update package status to ${actionLabel}.`,
+      );
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  // Handle generate shipping label - POST and show modal with response
+  const handleGenerateShippingLabel = async (packageNumber) => {
+    try {
+      setGeneratingLabel(true);
+      const response = await generateShippingLabelAPI(packageNumber);
+      console.log("Shipping label generated:", response);
+
+      // Set the shipping label data from the response
+      setShippingLabel(response);
+      setShowShippingLabelModal(true);
+
+      setSuccessMessage(
+        `Shipping label generated successfully for ${packageNumber}`,
+      );
+      setShowSuccess(true);
+      loadPackages();
+    } catch (error) {
+      console.error("Generate shipping label error:", error);
+      setErrorMessage(error.message || "Failed to generate shipping label.");
+    } finally {
+      setGeneratingLabel(false);
     }
   };
 
@@ -325,7 +401,7 @@ export default function Packages() {
   // Handle Create Package Submit
   const handleCreatePackageSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!packageData.soNumber) {
       setErrorMessage("SO Number is required");
@@ -389,14 +465,18 @@ export default function Packages() {
 
       const response = await createPackageAPI(payload);
       console.log("Package created:", response);
-      
-      setSuccessMessage(`Package created successfully for ${packageData.soNumber}`);
+
+      setSuccessMessage(
+        `Package created successfully for ${packageData.soNumber}`,
+      );
       setShowSuccess(true);
       loadPackages();
       handlePackageClose();
     } catch (error) {
       console.error("Create Package error:", error);
-      setErrorMessage(error.message || "Failed to create package. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to create package. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -415,6 +495,16 @@ export default function Packages() {
       COMPLETED: "bg-green-100 text-green-700",
     };
     return colors[status] || colors.DRAFT;
+  };
+
+  const getLabelStatusColor = (status) => {
+    const colors = {
+      PENDING: "bg-yellow-100 text-yellow-700",
+      GENERATED: "bg-blue-100 text-blue-700",
+      PRINTED: "bg-green-100 text-green-700",
+      CANCELLED: "bg-red-100 text-red-700",
+    };
+    return colors[status] || colors.PENDING;
   };
 
   const handlePageChange = (newPage) => {
@@ -439,19 +529,82 @@ export default function Packages() {
   const getStatusActions = (currentStatus) => {
     const actions = {
       PENDING: [
-        { status: "PACKED", label: "Mark as Packed", icon: Package, color: "bg-blue-600 hover:bg-blue-700" },
+        {
+          status: "PACKED",
+          label: "Mark as Packed",
+          icon: Package,
+          color: "bg-blue-600 hover:bg-blue-700",
+        },
       ],
       PACKED: [
-        { status: "CONFIRMED", label: "Confirm Package", icon: CheckCircle, color: "bg-green-600 hover:bg-green-700" },
+        {
+          status: "CONFIRMED",
+          label: "Confirm Package",
+          icon: CheckCircle,
+          color: "bg-green-600 hover:bg-green-700",
+        },
       ],
       CONFIRMED: [
-        { status: "SHIPPED", label: "Mark as Shipped", icon: Truck, color: "bg-purple-600 hover:bg-purple-700" },
+        {
+          status: "SHIPPED",
+          label: "Mark as Shipped",
+          icon: Truck,
+          color: "bg-purple-600 hover:bg-purple-700",
+        },
       ],
       SHIPPED: [
-        { status: "DELIVERED", label: "Mark as Delivered", icon: CheckCircle, color: "bg-indigo-600 hover:bg-indigo-700" },
+        {
+          status: "DELIVERED",
+          label: "Mark as Delivered",
+          icon: CheckCircle,
+          color: "bg-indigo-600 hover:bg-indigo-700",
+        },
       ],
     };
     return actions[currentStatus] || [];
+  };
+
+  // Decode base64 image
+  const decodeBase64Image = (imageData) => {
+    if (!imageData) return null;
+
+    try {
+      // Already a data URL
+      if (
+        typeof imageData === "string" &&
+        imageData.startsWith("data:image/")
+      ) {
+        return imageData;
+      }
+
+      // Normal base64 string
+      if (typeof imageData === "string") {
+        // Detect common image formats from base64 magic bytes
+        if (imageData.startsWith("/9j/")) {
+          return `data:image/jpeg;base64,${imageData}`;
+        }
+
+        if (imageData.startsWith("iVBORw0KGgo")) {
+          return `data:image/png;base64,${imageData}`;
+        }
+
+        if (imageData.startsWith("R0lGOD")) {
+          return `data:image/gif;base64,${imageData}`;
+        }
+
+        if (imageData.startsWith("UklGR")) {
+          return `data:image/webp;base64,${imageData}`;
+        }
+
+        // Default
+        return `data:image/png;base64,${imageData}`;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error decoding image:", error);
+      return null;
+    }
   };
 
   return (
@@ -595,9 +748,6 @@ export default function Packages() {
                     Weight (kg)
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Packed By
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -608,7 +758,7 @@ export default function Packages() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-8">
+                    <td colSpan="8" className="text-center py-8">
                       <div className="flex justify-center items-center gap-2">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                         <span className="text-gray-500">Loading...</span>
@@ -617,7 +767,7 @@ export default function Packages() {
                   </tr>
                 ) : packages.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-8 text-gray-500">
+                    <td colSpan="8" className="text-center py-8 text-gray-500">
                       No packages found
                     </td>
                   </tr>
@@ -643,9 +793,7 @@ export default function Packages() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {pkg.soNumber}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{pkg.soNumber}</td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
                           {pkg.itemCode}
@@ -656,8 +804,12 @@ export default function Packages() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <div>
-                          <span className="font-medium">{pkg.packedQuantity}</span>
-                          <span className="text-xs text-gray-500 ml-1">units</span>
+                          <span className="font-medium">
+                            {pkg.packedQuantity}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-1">
+                            units
+                          </span>
                         </div>
                         <div className="text-xs text-gray-400">
                           <span className="px-1.5 py-0.5 bg-gray-100 rounded">
@@ -667,18 +819,12 @@ export default function Packages() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {pkg.weight ? (
-                          <span className="font-medium">{pkg.weight.toFixed(2)}</span>
+                          <span className="font-medium">
+                            {pkg.weight.toFixed(2)}
+                          </span>
                         ) : (
                           <span className="text-gray-400">N/A</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {pkg.packedBy || "N/A"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatDate(pkg.packedDate)}
-                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -697,6 +843,19 @@ export default function Packages() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {pkg.status !== "LABELED" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleGenerateShippingLabel(pkg.packageNumber)
+                              }
+                              disabled={generatingLabel}
+                              className="text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-50"
+                              title="Generate Shipping Label"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleDelete(pkg.id)}
@@ -742,378 +901,31 @@ export default function Packages() {
           )}
         </div>
 
-        {/* View/Detail Modal */}
-        {showViewModal && viewingPackage && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={handleViewClose}
-            />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                      <Package className="w-5 h-5 text-purple-600" />
-                      Package Details
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      {viewingPackage.packageNumber}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleViewClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <XCircle className="w-6 h-6" />
-                  </button>
-                </div>
-                
-                <div className="p-6">
-                  {/* Status Actions */}
-                  {getStatusActions(viewingPackage.status).length > 0 && (
-                    <div className="mb-6 flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <span className="text-sm text-gray-600 font-medium mr-2">Actions:</span>
-                      {getStatusActions(viewingPackage.status).map((action) => (
-                        <button
-                          key={action.status}
-                          onClick={() => handleStatusUpdate(viewingPackage.packageNumber, action.status, action.label)}
-                          disabled={updatingStatus}
-                          className={`px-3 py-1.5 rounded-lg text-white text-sm flex items-center gap-1.5 ${action.color} disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
-                        >
-                          <action.icon className="w-3.5 h-3.5" />
-                          {action.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Basic Info Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Hash className="w-3 h-3" />
-                        Package Number
-                      </label>
-                      <p className="font-medium text-gray-900">{viewingPackage.packageNumber}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <QrCode className="w-3 h-3" />
-                        Package Barcode
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm font-mono">{viewingPackage.packageBarcode}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Status</label>
-                      <p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingPackage.status)}`}>
-                          {viewingPackage.status}
-                        </span>
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.soNumber}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.pickListNumber}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Package Type</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.packageType}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Item Code</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.itemCode}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Item Name</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.itemName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Packed Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.packedQuantity}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Scale className="w-3 h-3" />
-                        Weight (kg)
-                      </label>
-                      <p className="font-medium text-gray-900">{viewingPackage.weight ? viewingPackage.weight.toFixed(2) : "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Ruler className="w-3 h-3" />
-                        Dimensions (cm)
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingPackage.length || viewingPackage.width || viewingPackage.height ? 
-                          `${viewingPackage.length || 0} × ${viewingPackage.width || 0} × ${viewingPackage.height || 0}` : 
-                          "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Volume</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.volume || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Packed By</label>
-                      <p className="font-medium text-gray-900">{viewingPackage.packedBy}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Packed Date</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingPackage.packedDate)}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Created At</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingPackage.createdAt)}</p>
-                    </div>
-                  </div>
-
-                  {/* Remarks if any */}
-                  {viewingPackage.remarks && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <label className="text-xs text-gray-500 uppercase font-medium">Remarks</label>
-                      <p className="text-sm text-gray-700">{viewingPackage.remarks}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+       
 
         {/* Package Creation Modal */}
-        {showPackageModal && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={handlePackageClose}
-            />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                      <Package className="w-5 h-5 text-purple-600" />
-                      Create New Package
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      Enter package details
-                    </p>
-                  </div>
-                  <button
-                    onClick={handlePackageClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <XCircle className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  <form onSubmit={handleCreatePackageSubmit}>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            SO Number *
-                          </label>
-                          <input
-                            type="text"
-                            name="soNumber"
-                            value={packageData.soNumber}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter SO Number"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Pick List Number *
-                          </label>
-                          <input
-                            type="text"
-                            name="pickListNumber"
-                            value={packageData.pickListNumber}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter Pick List Number"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Item Code *
-                          </label>
-                          <input
-                            type="text"
-                            name="itemCode"
-                            value={packageData.itemCode}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter Item Code"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Packed Quantity *
-                          </label>
-                          <input
-                            type="number"
-                            name="packedQuantity"
-                            value={packageData.packedQuantity}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter packed quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            min="1"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Package Type *
-                          </label>
-                          <select
-                            name="packageType"
-                            value={packageData.packageType}
-                            onChange={handlePackageInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            required
-                          >
-                            <option value="BOX">Box</option>
-                            <option value="CARTON">Carton</option>
-                            <option value="PALLET">Pallet</option>
-                            <option value="BAG">Bag</option>
-                            <option value="ENVELOPE">Envelope</option>
-                            <option value="TUBE">Tube</option>
-                            <option value="CRATE">Crate</option>
-                            <option value="DRUM">Drum</option>
-                            <option value="BUNDLE">Bundle</option>
-                            <option value="OTHER">Other</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            <div className="flex items-center gap-1">
-                              <Weight className="w-4 h-4" />
-                              Weight (kg)
-                            </div>
-                          </label>
-                          <input
-                            type="number"
-                            name="weight"
-                            value={packageData.weight}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter weight"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <div className="flex items-center gap-1">
-                            <Ruler className="w-4 h-4" />
-                            Dimensions (cm)
-                          </div>
-                        </label>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <label className="text-xs text-gray-500">Length</label>
-                            <input
-                              type="number"
-                              name="length"
-                              value={packageData.length}
-                              onChange={handlePackageInputChange}
-                              placeholder="L"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              step="0.01"
-                              min="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500">Width</label>
-                            <input
-                              type="number"
-                              name="width"
-                              value={packageData.width}
-                              onChange={handlePackageInputChange}
-                              placeholder="W"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              step="0.01"
-                              min="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500">Height</label>
-                            <input
-                              type="number"
-                              name="height"
-                              value={packageData.height}
-                              onChange={handlePackageInputChange}
-                              placeholder="H"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              step="0.01"
-                              min="0"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Packed By *
-                        </label>
-                        <input
-                          type="text"
-                          name="packedBy"
-                          value={packageData.packedBy}
-                          onChange={handlePackageInputChange}
-                          placeholder="Enter packer name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                      <button
-                        type="button"
-                        onClick={handlePackageClose}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-6 py-2 rounded-lg flex items-center gap-2 text-white bg-purple-600 hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Package className="w-4 h-4" />
-                        {loading ? "Creating..." : "Create Package"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </>
+        {showViewModal && viewingPackage && (
+          <ViewPackageModal
+            viewingPackage={viewingPackage}
+            getStatusColor={getStatusColor}
+            getStatusActions={getStatusActions}
+            handleStatusUpdate={handleStatusUpdate}
+            handleGenerateShippingLabel={handleGenerateShippingLabel}
+            handleViewClose={handleViewClose}
+            updatingStatus={updatingStatus}
+            generatingLabel={generatingLabel}
+            formatDate={formatDate}
+          />
+        )}
+        {/* Shipping Label Modal */}
+        {showShippingLabelModal && shippingLabel && (
+          <ShippingLabelModal
+            shippingLabel={shippingLabel}
+            handleShippingLabelClose={handleShippingLabelClose}
+            getLabelStatusColor={getLabelStatusColor}
+            formatDate={formatDate}
+            decodeBase64Image={decodeBase64Image}
+          />
         )}
       </div>
 
