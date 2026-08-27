@@ -45,20 +45,25 @@ import {
   ArrowUpRight,
   ClipboardList,
   RotateCcw,
-  // Related icons
+
+  // Purchase
   FileText,
   FileCheck,
   FileSearch,
   ClipboardCheck,
   ClipboardPen,
-  Clipboard,
+
+  // Inbound
   DoorOpen,
   PackageOpen,
   PackageSearch,
   CircleCheck,
-  CircleX,
+
+  // QR / Barcode
   QrCode,
   ScanBarcode,
+
+  // Warehouse / Masters
   BoxesIcon,
   MapPin,
   Layers,
@@ -73,8 +78,25 @@ import {
   UserCog,
   KeyRound,
   Shield,
-} from "lucide-react";
 
+  // Additional menu icons
+  ShoppingBag,
+  ClipboardPlus,
+  CheckCircle2,
+  PackagePlus,
+  PackageCheck as PackageCheckIcon,
+  ScanSearch,
+  PackageSearch as PackageSearchIcon,
+  ListTodo,
+  Boxes as BoxesIconAlt,
+  Tag as TagIcon,
+  Receipt,
+  Send,
+  Truck as TruckIcon,
+  ClipboardSignature,
+  CircleDot,
+  Warehouse as WarehouseIcon,
+} from "lucide-react";
 const SIDEBAR_MIN = 60;
 const SIDEBAR_COLLAPSED = 60;
 const SIDEBAR_DEFAULT = 260;
@@ -82,6 +104,7 @@ const SIDEBAR_MAX = 380;
 const LS_KEY = "wms-sidebar-width";
 const LS_EXPANDED_KEY = "wms-sidebar-expanded-groups";
 const LS_FAVORITES_KEY = "wms-sidebar-favorites";
+
 
 const ALL_MENU_ITEMS = [
   {
@@ -171,7 +194,7 @@ const ALL_MENU_ITEMS = [
   {
     href: "/grn",
     label: "GRN",
-    icon: FileCheck,
+    icon: Receipt,
     group: "Inbound",
     permission: P.GRN,
   },
@@ -227,21 +250,21 @@ const ALL_MENU_ITEMS = [
   {
     href: "/outbound",
     label: "Outbound",
-    icon: ArrowUpRight,
+    icon: TruckIcon,
     group: "Putaway",
     permission: P.ORDERS_VIEW,
   },
-    {
+  {
     href: "/sales-order-approve",
     label: "Sales Order Approve",
-    icon: ArrowUpRight,
+    icon: CheckCircle2,
     group: "Putaway",
     permission: P.ORDERS_VIEW,
   },
-      {
+  {
     href: "/CreatePick",
     label: "Create Pick Task",
-    icon: ArrowUpRight,
+    icon: ClipboardPlus,
     group: "Putaway",
     permission: P.ORDERS_VIEW,
   },
@@ -270,7 +293,7 @@ const ALL_MENU_ITEMS = [
   {
     href: "/picking-confirmation",
     label: "Picking Confirmation",
-    icon: ScanLine,
+    icon: ClipboardCheck,
     group: "Fulfillment",
     permission: P.PICKING_VIEW,
     liveKey: "pendingPicks",
@@ -278,7 +301,7 @@ const ALL_MENU_ITEMS = [
   {
     href: "/all-confimration",
     label: "All Confirmation",
-    icon: ScanLine,
+    icon: CheckCircle2,
     group: "Fulfillment",
     permission: P.PICKING_VIEW,
     liveKey: "pendingPicks",
@@ -286,7 +309,7 @@ const ALL_MENU_ITEMS = [
   {
     href: "/packages",
     label: "Packages",
-    icon: ScanLine,
+    icon: Package,
     group: "Fulfillment",
     permission: P.PICKING_VIEW,
     liveKey: "pendingPicks",
@@ -294,32 +317,64 @@ const ALL_MENU_ITEMS = [
   {
     href: "/labels",
     label: "Labels",
-    icon: ScanLine,
+    icon: TagIcon,
     group: "Fulfillment",
     permission: P.PICKING_VIEW,
     liveKey: "pendingPicks",
   },
   {
-    href: "/trolleys",
-    label: "Trolleys",
+    href: "/delivery-chalan",
+    label: "Delivery Chalan",
+    icon: FileText,
+    group: "Fulfillment",
+    permission: P.PICKING_VIEW,
+    liveKey: "pendingPicks",
+  },
+  {
+    href: "/dispatch",
+    label: "Dispatch",
+    icon: Send,
+    group: "Fulfillment",
+    permission: P.PICKING_VIEW,
+    liveKey: "pendingPicks",
+  },
+  {
+    href: "/shifment-confirmation",
+    label: "Shifment Confimrations",
+    icon: ClipboardSignature,
+    group: "Fulfillment",
+    permission: P.PICKING_VIEW,
+    liveKey: "pendingPicks",
+  },
+  {
+    href: "/Deliveries",
+    label: "Deliveries",
     icon: Truck,
     group: "Fulfillment",
-    permission: P.TROLLEYS_VIEW,
+    permission: P.PICKING_VIEW,
+    liveKey: "pendingPicks",
   },
-  {
-    href: "/packing",
-    label: "Packing",
-    icon: PackageCheck,
-    group: "Fulfillment",
-    permission: P.PACKING_VIEW,
-  },
-  {
-    href: "/shipping",
-    label: "Shipping",
-    icon: Ship,
-    group: "Fulfillment",
-    permission: P.SHIPPING_VIEW,
-  },
+  // {
+  //   href: "/trolleys",
+  //   label: "Trolleys",
+  //   icon: Truck,
+  //   group: "Fulfillment",
+  //   permission: P.TROLLEYS_VIEW,
+  // },
+  // {
+  //   href: "/packing",
+  //   label: "Packing",
+  //   icon: PackageCheck,
+  //   group: "Fulfillment",
+  //   permission: P.PACKING_VIEW,
+  // },
+  // {
+  //   href: "/shipping",
+  //   label: "Shipping",
+  //   icon: Ship,
+  //   group: "Fulfillment",
+  //   permission: P.SHIPPING_VIEW,
+  // },
   {
     href: "/master/warehouses",
     label: "Warehouse Master",
@@ -376,7 +431,7 @@ const ALL_MENU_ITEMS = [
     group: "Admin/Masters",
     permission: P.MASTER_VIEW,
   },
-   {
+  {
     href: "/master/customer",
     label: "Customers",
     icon: Users,
@@ -404,11 +459,10 @@ const ALL_MENU_ITEMS = [
     group: "Admin/Masters",
     permission: P.REPORTS_VIEW,
   },
- 
   {
     href: "/users",
     label: "Users",
-    icon: Users,
+    icon: UserCog,
     group: "Admin/Masters",
     permission: P.USERS_VIEW,
   },
@@ -434,7 +488,6 @@ const ALL_MENU_ITEMS = [
     permission: null,
   },
 ];
-
 /* ── Enhanced NavItem with favorites and better styling ── */
 const NavItem = memo(function NavItem({
   item,

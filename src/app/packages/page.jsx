@@ -655,7 +655,7 @@ export default function Packages() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
@@ -666,14 +666,7 @@ export default function Packages() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowPackageModal(true)}
-                  className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Package
-                </button>
+                
                 <button
                   type="button"
                   onClick={loadPackages}

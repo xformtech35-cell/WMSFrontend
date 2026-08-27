@@ -56,6 +56,7 @@ import { Button } from "@/components/ui/button";
 import { downloadImage } from "@/components/downloadImage64";
 import ShippingLabelModal from "./components/ShippingLabelModal";
 import ViewPackageModal from "./components/ViewPackageModal";
+import DispatchModal from "./components/DispatchModal";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -218,6 +219,20 @@ export default function Packages() {
     packedBy: "",
   });
 
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+const [dispatchPackage, setDispatchPackage] = useState(null);
+
+// Add this handler function
+const handleDispatchClick = (pkg) => {
+  setDispatchPackage(pkg);
+  setShowDispatchModal(true);
+};
+
+const handleDispatchSuccess = (data) => {
+  setSuccessMessage(`Package ${data.packageNumber} dispatched successfully!`);
+  setShowSuccess(true);
+  loadPackages();
+};
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -564,7 +579,7 @@ export default function Packages() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
@@ -616,13 +631,15 @@ export default function Packages() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Label #
+                  </th>  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Package #
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Barcode
-                  </th>
+                  
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     SO Number
+                  </th> <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Item
@@ -660,18 +677,19 @@ export default function Packages() {
                         onClick={() => handleViewClick(pkg)}
                       >
                         <span className="font-medium text-purple-600 hover:text-purple-800">
+                          {pkg.labelNumber || "N/A"}
+                        </span>
+                      </td> <td
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => handleViewClick(pkg)}
+                      >
+                        <span className="font-medium text-gray-800 hover:text-purple-800">
                           {pkg.packageNumber || "N/A"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <QrCode className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs font-mono text-gray-600">
-                            {pkg.packageBarcode || "N/A"}
-                          </span>
-                        </div>
-                      </td>
+                      
                       <td className="px-4 py-3 text-sm">{pkg.soNumber}</td>
+                      <td className="px-4 py-3 text-sm">{pkg.customerName}</td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
                           {pkg.itemCode}
@@ -684,13 +702,13 @@ export default function Packages() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
-                            type="button"
-                            onClick={() => handleViewClick(pkg)}
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+  type="button"
+  onClick={() => handleDispatchClick(pkg)}
+  className="text-green-600 hover:text-green-800 transition-colors"
+  title="Dispatch Package"
+>
+  <Send className="w-4 h-4" />
+</button>
                           <button
                             type="button"
                             onClick={() =>
@@ -997,6 +1015,17 @@ export default function Packages() {
             decodeBase64Image={decodeBase64Image}
           />
         )}
+{showDispatchModal && dispatchPackage && (
+  <DispatchModal
+    viewingPackage={dispatchPackage}
+    onClose={() => {
+      setShowDispatchModal(false);
+      setDispatchPackage(null);
+    }}
+    onSuccess={handleDispatchSuccess}
+    formatDate={formatDate}
+  />
+)}
       </div>
 
       <style jsx>{`
