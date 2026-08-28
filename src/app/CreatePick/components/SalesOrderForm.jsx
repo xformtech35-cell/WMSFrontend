@@ -1703,7 +1703,7 @@ export default function SalesOrderForm({
             </button>
             {mode === "edit" ? (
               <>
-                <button
+                {/* <button
                   type="button"
                   onClick={() =>
                     hanldeConfirmAndProcess(soData.soNumber, onSuccess)
@@ -1712,7 +1712,7 @@ export default function SalesOrderForm({
                 >
                   <Send className="w-4 h-4" />
                   Approve and Process
-                </button>
+                </button> */}
                 <button
                   type="button"
                   onClick={handleCreatePickList}

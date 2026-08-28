@@ -444,13 +444,13 @@ export default function InboundPage() {
                               <ArrowUpDown className="w-4 h-4" />
                             </button>
                           )} */}
-                          <button
+                          {/* <button
                             type="button"
                             className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                             title="Print"
                           >
                             <Printer className="w-4 h-4" />
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>

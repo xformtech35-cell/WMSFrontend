@@ -41,6 +41,7 @@ import {
   Boxes,
   Weight,
   Ruler,
+  PackagePlus,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -851,7 +852,7 @@ export default function PickListPageConfiAll() {
                             className="text-purple-600 hover:text-purple-800 transition-colors"
                             title="Create Package"
                           >
-                            <Package className="w-4 h-4" />
+                            <PackagePlus  className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -994,7 +995,7 @@ export default function PickListPageConfiAll() {
                       }}
                       className="px-4 py-2 rounded-lg flex items-center gap-2 text-white bg-purple-600 hover:bg-purple-700 transition-colors"
                     >
-                      <Package className="w-4 h-4" />
+                      <PackagePlus  className="w-4 h-4" />
                       Create Package
                     </button>
                   </div>

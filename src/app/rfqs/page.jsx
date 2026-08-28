@@ -26,6 +26,7 @@ import {
   Phone,
   User,
   Building,
+  ClipboardList,
 } from "lucide-react";
 import api from "@/lib/api";
 import RFQDetailPage from "./details/page";
@@ -349,13 +350,13 @@ export default function RFQPage() {
                           type="button"
                           onClick={() => handleNavigateToRFQ(rfq.id)}
                           disabled={navigatingRFQId === rfq.id}
-                          className="text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                          title="View Details"
+                          className="text-blue-600 cursor-pointer hover:text-blue-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          title="Go To RFQs"
                         >
                           {navigatingRFQId === rfq.id ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
                           ) : (
-                            <Eye className="w-4 h-4" />
+                            <ClipboardList className="w-4 h-4" />
                           )}
                         </button>
                       </td>

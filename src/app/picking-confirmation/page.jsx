@@ -975,7 +975,7 @@ export default function PickListPageConfi() {
                   <form onSubmit={handleConfirmPickSubmit}>
                     {/* Pick Task Info */}
                     <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-xs text-gray-500 uppercase font-medium">Pick Task Number</label>
                           <p className="font-medium text-gray-900">{selectedPickList?.pickTaskNumber}</p>
@@ -996,6 +996,7 @@ export default function PickListPageConfi() {
                           <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
                           <p className="font-medium text-gray-900">{selectedPickList?.requiredQuantity} {selectedPickList?.uom}</p>
                         </div>
+                        <br />
                         <div>
                           <label className="text-xs text-gray-500 uppercase font-medium">Location</label>
                           <p className="font-medium text-gray-900 text-sm">{selectedPickList?.locationBarcode}</p>

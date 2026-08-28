@@ -77,7 +77,9 @@ export default function DispatchPage() {
       params.append("size", pageSize);
       if (searchTerm) params.append("search", searchTerm);
 
-      const response = await api.get(`/outbound/dispatches?${params.toString()}`);
+      const response = await api.get(
+        `/outbound/dispatches?${params.toString()}`,
+      );
       console.log("Dispatches response:", response.data);
 
       if (response.data) {
@@ -151,7 +153,9 @@ export default function DispatchPage() {
       shippingMethod: "ROAD",
       vehicleNumber: dispatch.vehicleNumber || "",
       dispatchDate: new Date().toISOString().slice(0, 16),
-      expectedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+      expectedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 16),
       confirmedBy: "",
       remarks: "",
     });
@@ -204,7 +208,9 @@ export default function DispatchPage() {
 
       for (const field of requiredFields) {
         if (!shipmentData[field] || shipmentData[field].trim() === "") {
-          setErrorMessage(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+          setErrorMessage(
+            `Please fill in ${field.replace(/([A-Z])/g, " $1").toLowerCase()}`,
+          );
           setConfirming(false);
           return;
         }
@@ -214,16 +220,23 @@ export default function DispatchPage() {
       const formattedPayload = {
         ...shipmentData,
         dispatchDate: new Date(shipmentData.dispatchDate).toISOString(),
-        expectedDeliveryDate: new Date(shipmentData.expectedDeliveryDate).toISOString(),
+        expectedDeliveryDate: new Date(
+          shipmentData.expectedDeliveryDate,
+        ).toISOString(),
         createdBy: shipmentData.confirmedBy || "system_user",
       };
 
-      const response = await api.post("/outbound/shipment-confirmation", formattedPayload);
+      const response = await api.post(
+        "/outbound/shipment-confirmation",
+        formattedPayload,
+      );
       console.log("Shipment confirmation response:", response.data);
 
-      setSuccessMessage(`Shipment ${shipmentData.dispatchNumber} confirmed successfully!`);
+      setSuccessMessage(
+        `Shipment ${shipmentData.dispatchNumber} confirmed successfully!`,
+      );
       setShowSuccess(true);
-      
+
       setTimeout(() => {
         handleShipmentClose();
         loadDispatches();
@@ -232,9 +245,9 @@ export default function DispatchPage() {
       console.error("Shipment confirmation error:", error);
       setErrorMessage(
         error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Failed to confirm shipment. Please try again."
+          error.response?.data?.error ||
+          error.message ||
+          "Failed to confirm shipment. Please try again.",
       );
     } finally {
       setConfirming(false);
@@ -530,7 +543,10 @@ export default function DispatchPage() {
               className="fixed inset-0 bg-black/50 z-40"
               onClick={handleShipmentClose}
             />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div
+              onClick={handleShipmentClose}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            >
               <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
@@ -539,7 +555,8 @@ export default function DispatchPage() {
                       Confirm Shipment
                     </h2>
                     <p className="text-sm text-gray-500">
-                      {shipmentDispatch.dispatchNumber} - {shipmentDispatch.soNumber}
+                      {shipmentDispatch.dispatchNumber} -{" "}
+                      {shipmentDispatch.soNumber}
                     </p>
                   </div>
                   <button
@@ -559,28 +576,52 @@ export default function DispatchPage() {
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                       <div>
-                        <span className="text-xs text-gray-500 uppercase">Dispatch #</span>
-                        <p className="font-medium text-gray-900">{shipmentDispatch.dispatchNumber}</p>
+                        <span className="text-xs text-gray-500 uppercase">
+                          Dispatch #
+                        </span>
+                        <p className="font-medium text-gray-900">
+                          {shipmentDispatch.dispatchNumber}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-500 uppercase">Package #</span>
-                        <p className="font-medium text-gray-900">{shipmentDispatch.packageNumber}</p>
+                        <span className="text-xs text-gray-500 uppercase">
+                          Package #
+                        </span>
+                        <p className="font-medium text-gray-900">
+                          {shipmentDispatch.packageNumber}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-500 uppercase">SO Number</span>
-                        <p className="font-medium text-gray-900">{shipmentDispatch.soNumber}</p>
+                        <span className="text-xs text-gray-500 uppercase">
+                          SO Number
+                        </span>
+                        <p className="font-medium text-gray-900">
+                          {shipmentDispatch.soNumber}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-500 uppercase">Customer</span>
-                        <p className="font-medium text-gray-900">{shipmentDispatch.customerName}</p>
+                        <span className="text-xs text-gray-500 uppercase">
+                          Customer
+                        </span>
+                        <p className="font-medium text-gray-900">
+                          {shipmentDispatch.customerName}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-500 uppercase">Transporter</span>
-                        <p className="font-medium text-gray-900">{shipmentDispatch.transporter}</p>
+                        <span className="text-xs text-gray-500 uppercase">
+                          Transporter
+                        </span>
+                        <p className="font-medium text-gray-900">
+                          {shipmentDispatch.transporter}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-xs text-gray-500 uppercase">Vehicle</span>
-                        <p className="font-medium text-gray-900">{shipmentDispatch.vehicleNumber}</p>
+                        <span className="text-xs text-gray-500 uppercase">
+                          Vehicle
+                        </span>
+                        <p className="font-medium text-gray-900">
+                          {shipmentDispatch.vehicleNumber}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -733,35 +774,69 @@ export default function DispatchPage() {
 
                 <div className="p-6">
                   {/* Status Banner */}
-                  <div className="mb-6 p-4 rounded-xl border" style={{
-                    backgroundColor: viewingDispatch.status === 'DELIVERED' ? '#f0fdf4' : 
-                                   viewingDispatch.status === 'IN_TRANSIT' ? '#faf5ff' :
-                                   viewingDispatch.status === 'DISPATCHED' ? '#eff6ff' :
-                                   viewingDispatch.status === 'CONFIRMED' ? '#eef2ff' :
-                                   viewingDispatch.status === 'CANCELLED' ? '#fef2f2' : '#fefce8',
-                    borderColor: viewingDispatch.status === 'DELIVERED' ? '#bbf7d0' :
-                                viewingDispatch.status === 'IN_TRANSIT' ? '#e9d5ff' :
-                                viewingDispatch.status === 'DISPATCHED' ? '#bfdbfe' :
-                                viewingDispatch.status === 'CONFIRMED' ? '#c7d2fe' :
-                                viewingDispatch.status === 'CANCELLED' ? '#fecaca' : '#fde68a'
-                  }}>
+                  <div
+                    className="mb-6 p-4 rounded-xl border"
+                    style={{
+                      backgroundColor:
+                        viewingDispatch.status === "DELIVERED"
+                          ? "#f0fdf4"
+                          : viewingDispatch.status === "IN_TRANSIT"
+                            ? "#faf5ff"
+                            : viewingDispatch.status === "DISPATCHED"
+                              ? "#eff6ff"
+                              : viewingDispatch.status === "CONFIRMED"
+                                ? "#eef2ff"
+                                : viewingDispatch.status === "CANCELLED"
+                                  ? "#fef2f2"
+                                  : "#fefce8",
+                      borderColor:
+                        viewingDispatch.status === "DELIVERED"
+                          ? "#bbf7d0"
+                          : viewingDispatch.status === "IN_TRANSIT"
+                            ? "#e9d5ff"
+                            : viewingDispatch.status === "DISPATCHED"
+                              ? "#bfdbfe"
+                              : viewingDispatch.status === "CONFIRMED"
+                                ? "#c7d2fe"
+                                : viewingDispatch.status === "CANCELLED"
+                                  ? "#fecaca"
+                                  : "#fde68a",
+                    }}
+                  >
                     <div className="flex items-center gap-3">
-                      {viewingDispatch.status === 'DELIVERED' && <CheckCircle className="w-6 h-6 text-green-600" />}
-                      {viewingDispatch.status === 'IN_TRANSIT' && <Truck className="w-6 h-6 text-purple-600" />}
-                      {viewingDispatch.status === 'DISPATCHED' && <Send className="w-6 h-6 text-blue-600" />}
-                      {viewingDispatch.status === 'CONFIRMED' && <Check className="w-6 h-6 text-indigo-600" />}
-                      {viewingDispatch.status === 'CANCELLED' && <XCircle className="w-6 h-6 text-red-600" />}
+                      {viewingDispatch.status === "DELIVERED" && (
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                      )}
+                      {viewingDispatch.status === "IN_TRANSIT" && (
+                        <Truck className="w-6 h-6 text-purple-600" />
+                      )}
+                      {viewingDispatch.status === "DISPATCHED" && (
+                        <Send className="w-6 h-6 text-blue-600" />
+                      )}
+                      {viewingDispatch.status === "CONFIRMED" && (
+                        <Check className="w-6 h-6 text-indigo-600" />
+                      )}
+                      {viewingDispatch.status === "CANCELLED" && (
+                        <XCircle className="w-6 h-6 text-red-600" />
+                      )}
                       <div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingDispatch.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingDispatch.status)}`}
+                        >
                           {viewingDispatch.status || "PENDING"}
                         </span>
                         <p className="text-sm text-gray-600 mt-1">
-                          {viewingDispatch.status === 'DELIVERED' && 'Package has been successfully delivered'}
-                          {viewingDispatch.status === 'IN_TRANSIT' && 'Package is currently in transit'}
-                          {viewingDispatch.status === 'DISPATCHED' && 'Package has been dispatched'}
-                          {viewingDispatch.status === 'CONFIRMED' && 'Shipment has been confirmed'}
-                          {viewingDispatch.status === 'CANCELLED' && 'Dispatch has been cancelled'}
-                          {!viewingDispatch.status && 'Dispatch is pending'}
+                          {viewingDispatch.status === "DELIVERED" &&
+                            "Package has been successfully delivered"}
+                          {viewingDispatch.status === "IN_TRANSIT" &&
+                            "Package is currently in transit"}
+                          {viewingDispatch.status === "DISPATCHED" &&
+                            "Package has been dispatched"}
+                          {viewingDispatch.status === "CONFIRMED" &&
+                            "Shipment has been confirmed"}
+                          {viewingDispatch.status === "CANCELLED" &&
+                            "Dispatch has been cancelled"}
+                          {!viewingDispatch.status && "Dispatch is pending"}
                         </p>
                       </div>
                     </div>

@@ -32,6 +32,7 @@ import {
   Warehouse,
   Hash,
   Box,
+  PackageSearch,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -725,9 +726,9 @@ export default function PickListPage() {
                               type="button"
                               onClick={() => handleOpenPickTask(so)}
                               className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                              title="Create Pick Task"
+                              title="Picking"
                             >
-                              <Package className="w-4 h-4" />
+                              <PackageSearch  className="w-4 h-4" />
                             </button>
                           {/* )} */}
                           {(so.status === "DRAFT" || so.status === "PROCESSING" || so.status === "PENDING") && (

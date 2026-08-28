@@ -22,6 +22,7 @@ import {
   User,
   Building,
   MapPin,
+  Check,
 } from "lucide-react";
 import api from "@/lib/api";
 import SalesOrderForm from "./components/SalesOrderForm";
@@ -537,7 +538,7 @@ export default function SalesOrderPage() {
                               className="text-green-600 hover:text-green-800 transition-colors"
                               title="Edit"
                             >
-                              <Edit className="w-4 h-4" />
+                              <Check className="w-4 h-4" />
                             </button>
                           {/* )} */}
                           {/* {(so.status === "DRAFT" || so.status === "PROCESSING") && ( */}

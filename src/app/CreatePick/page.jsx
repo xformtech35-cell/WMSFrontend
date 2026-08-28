@@ -22,6 +22,9 @@ import {
   User,
   Building,
   MapPin,
+  PackagePlus,
+  ListPlus,
+  ClipboardPlus,
 } from "lucide-react";
 import api from "@/lib/api";
 import SalesOrderForm from "./components/SalesOrderForm";
@@ -535,9 +538,9 @@ export default function SalesOrderPage() {
                               type="button"
                               onClick={() => handleEditClick(so)}
                               className="text-green-600 hover:text-green-800 transition-colors"
-                              title="Edit"
+                              title="Create Pick Task"
                             >
-                              <Edit className="w-4 h-4" />
+                              <ClipboardPlus  Plus   className="w-4 h-4" />
                             </button>
                           {/* )} */}
                           {/* {(so.status === "DRAFT" || so.status === "PROCESSING") && ( */}

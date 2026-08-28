@@ -122,6 +122,13 @@ const ALL_MENU_ITEMS = [
     permission: P.PURCHASE_REQUEST,
   },
   {
+    href: "/purchase-rejected",
+    label: "Purchase Rejected",
+    icon: FileText,
+    group: "Purchase",
+    permission: P.PURCHASE_REQUEST,
+  },
+  {
     href: "/purchase-approval",
     label: "PR Approval",
     icon: FileCheck,
@@ -677,9 +684,9 @@ const Sidebar = () => {
     queryKey: ["dashboardKpis-sidebar"],
     queryFn: () => api.get("/dashboard/kpis").then((r) => r.data),
     retry: false,
-    refetchInterval: 20000,
-    staleTime: 30000,
-    gcTime: 5 * 60 * 1000,
+    // refetchInterval: 20000,
+    // staleTime: 30000,
+    // gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 

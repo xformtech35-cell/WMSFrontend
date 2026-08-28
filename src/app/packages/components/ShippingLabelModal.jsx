@@ -335,7 +335,7 @@ const ShippingLabelModal = ({
                   </>
                 )}
               </button>
-              <button
+              {/* <button
                 onClick={handleDownload}
                 disabled={downloading}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed no-print"
@@ -351,7 +351,7 @@ const ShippingLabelModal = ({
                     Download Image
                   </>
                 )}
-              </button>
+              </button> */}
               <button
                 onClick={handleShippingLabelClose}
                 className="text-gray-400 hover:text-gray-600 transition-colors no-print"

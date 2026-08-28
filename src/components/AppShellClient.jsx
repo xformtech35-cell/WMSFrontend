@@ -108,44 +108,44 @@ export default function AppShellClient({ children }) {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [showNotifications]);
 
-  const { data: kpis } = useQuery({
-    queryKey: ["dashboardKpis-header"],
-    queryFn: () => api.get("/dashboard/kpis").then((r) => r.data),
-    retry: false,
-    // refetchInterval: 20000,
-    // staleTime: 30000,
-    // gcTime: 300000,
-    refetchOnWindowFocus: false,
-    enabled: isAuthorized && !isPublicRoute,
-  });
+  // const { data: kpis } = useQuery({
+  //   queryKey: ["dashboardKpis-header"],
+  //   queryFn: () => api.get("/dashboard/kpis").then((r) => r.data),
+  //   retry: false,
+  //   // refetchInterval: 20000,
+  //   // staleTime: 30000,
+  //   // gcTime: 300000,
+  //   refetchOnWindowFocus: false,
+  //   enabled: isAuthorized && !isPublicRoute,
+  // });
 
-  const pendingPicks = kpis?.pendingPicks ?? 0;
-  const openOrders = kpis?.openOrders ?? 0;
-  const binUtilization = Number(kpis?.binUtilizationPct ?? 0);
-  const notifItems = [
-    pendingPicks > 0 && {
-      key: "picks",
-      tone: "amber",
-      title: "Picking queue",
-      detail: `${pendingPicks} task${pendingPicks !== 1 ? "s" : ""} waiting`,
-      href: "/picking",
-    },
-    openOrders > 0 && {
-      key: "orders",
-      tone: "blue",
-      title: "Open orders",
-      detail: `${openOrders} order${openOrders !== 1 ? "s" : ""} need attention`,
-      href: "/orders",
-    },
-    binUtilization > 85 && {
-      key: "bins",
-      tone: "rose",
-      title: "Bin utilization",
-      detail: `${binUtilization.toFixed(1)}% usage across storage`,
-      href: "/dashboard",
-    },
-  ].filter(Boolean);
-  const notifCount = notifItems.length;
+  // const pendingPicks = kpis?.pendingPicks ?? 0;
+  // const openOrders = kpis?.openOrders ?? 0;
+  // const binUtilization = Number(kpis?.binUtilizationPct ?? 0);
+  // const notifItems = [
+  //   pendingPicks > 0 && {
+  //     key: "picks",
+  //     tone: "amber",
+  //     title: "Picking queue",
+  //     detail: `${pendingPicks} task${pendingPicks !== 1 ? "s" : ""} waiting`,
+  //     href: "/picking",
+  //   },
+  //   openOrders > 0 && {
+  //     key: "orders",
+  //     tone: "blue",
+  //     title: "Open orders",
+  //     detail: `${openOrders} order${openOrders !== 1 ? "s" : ""} need attention`,
+  //     href: "/orders",
+  //   },
+  //   binUtilization > 85 && {
+  //     key: "bins",
+  //     tone: "rose",
+  //     title: "Bin utilization",
+  //     detail: `${binUtilization.toFixed(1)}% usage across storage`,
+  //     href: "/dashboard",
+  //   },
+  // ].filter(Boolean);
+  // const notifCount = notifItems.length;
 
   const { connected } = useWebSocketSubscription("/topic/alerts", (msg) => {
     console.log("WS Global Alert:", msg);
@@ -268,16 +268,16 @@ export default function AppShellClient({ children }) {
                 >
                   <div className="relative">
                     <Bell className="size-3.5 text-primary" />
-                    {notifCount > 0 && (
+                    {/* {notifCount > 0 && (
                       <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-bold leading-none text-white shadow-xs">
                         {notifCount}
                       </span>
-                    )}
+                    )} */}
                   </div>
                   <span>Live notifications</span>
                 </button>
 
-                {showNotifications && (
+                {/* {showNotifications && (
                   <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl">
                     <div className="border-b border-border px-4 py-3">
                       <p className="text-sm font-semibold">Notifications</p>
@@ -322,7 +322,7 @@ export default function AppShellClient({ children }) {
                       Syncs with dashboard KPIs every 20 seconds.
                     </div>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </div>

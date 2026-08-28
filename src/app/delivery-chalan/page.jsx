@@ -33,7 +33,9 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
 
     const result = response.data;
     if (result && result.success === false) {
-      throw new Error(result?.message || `API request failed: ${response.status}`);
+      throw new Error(
+        result?.message || `API request failed: ${response.status}`,
+      );
     }
     return result?.data || result;
   } catch (error) {
@@ -42,7 +44,7 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
       error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        "API request failed"
+        "API request failed",
     );
   }
 };
@@ -68,7 +70,9 @@ const getDeliveryChallansAPI = async (page = 0, size = 10, searchTerm = "") => {
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -182,7 +186,11 @@ export default function DeliveryChallan() {
   const loadChallans = async () => {
     try {
       setLoading(true);
-      const response = await getDeliveryChallansAPI(currentPage, pageSize, searchTerm);
+      const response = await getDeliveryChallansAPI(
+        currentPage,
+        pageSize,
+        searchTerm,
+      );
 
       if (response && response.data) {
         setChallans(response.data || []);
@@ -233,13 +241,15 @@ export default function DeliveryChallan() {
       setLoading(true);
       const data = await getDeliveryChallanByIdAPI(challan.challanNumber);
       const challanData = data || challan;
-      
+
       setEditingChallan(challanData);
       setIsEditMode(true);
-      
+
       // Populate form with existing data
       setFormData({
-        shipmentNumber: challanData.shipmentNumber || `SHP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`,
+        shipmentNumber:
+          challanData.shipmentNumber ||
+          `SHP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(Math.floor(Math.random() * 1000000)).padStart(6, "0")}`,
         transporter: challanData.transporter || "",
         vehicleNumber: challanData.vehicleNumber || "",
         driverName: challanData.driverName || "",
@@ -247,7 +257,7 @@ export default function DeliveryChallan() {
         remarks: challanData.remarks || "",
         packages: challanData.packages || [],
       });
-      
+
       setShowModal(true);
     } catch (error) {
       console.error("Error loading challan for edit:", error);
@@ -258,7 +268,9 @@ export default function DeliveryChallan() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this delivery challan?")) {
+    if (
+      !window.confirm("Are you sure you want to delete this delivery challan?")
+    ) {
       return;
     }
 
@@ -278,7 +290,7 @@ export default function DeliveryChallan() {
 
   const resetForm = () => {
     setFormData({
-      shipmentNumber: `SHP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`,
+      shipmentNumber: `SHP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(Math.floor(Math.random() * 1000000)).padStart(6, "0")}`,
       transporter: "",
       vehicleNumber: "",
       driverName: "",
@@ -299,20 +311,25 @@ export default function DeliveryChallan() {
     e.preventDefault();
 
     if (formData.packages.length === 0) {
-      setErrorMessage("Please add at least one package to the delivery challan.");
+      setErrorMessage(
+        "Please add at least one package to the delivery challan.",
+      );
       return;
     }
 
     try {
       setSubmitting(true);
-      
+
       const submitData = {
         ...formData,
         createdBy: "system_user",
       };
 
       if (isEditMode && editingChallan) {
-        await updateDeliveryChallanAPI(editingChallan.challanNumber, submitData);
+        await updateDeliveryChallanAPI(
+          editingChallan.challanNumber,
+          submitData,
+        );
         setSuccessMessage("Delivery challan updated successfully!");
       } else {
         await createDeliveryChallanAPI(submitData);
@@ -329,8 +346,6 @@ export default function DeliveryChallan() {
       setSubmitting(false);
     }
   };
-
-
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -356,14 +371,19 @@ export default function DeliveryChallan() {
         {/* Success Modal */}
         {showSuccess && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowSuccess(false)} />
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowSuccess(false)}
+            />
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform animate-scale-up pointer-events-auto border border-gray-200">
                 <div className="text-center">
                   <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Success!</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Success!
+                  </h3>
                   <p className="text-sm text-gray-600 mb-6">{successMessage}</p>
                   <button
                     onClick={() => setShowSuccess(false)}
@@ -396,7 +416,9 @@ export default function DeliveryChallan() {
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Delivery Challans</h1>
+                <h1 className="text-2xl font-bold text-white">
+                  Delivery Challans
+                </h1>
                 <p className="text-blue-100 text-sm mt-1">
                   WMS Warehouse Management System - Delivery Challan Management
                 </p>
@@ -494,7 +516,10 @@ export default function DeliveryChallan() {
                   </tr>
                 ) : (
                   challans.map((challan) => (
-                    <tr key={challan.id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={challan.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       <td className="px-4 py-3">
                         <span className="font-medium text-blue-600">
                           {challan.challanNumber || "N/A"}
@@ -505,8 +530,12 @@ export default function DeliveryChallan() {
                           {challan.shipmentNumber || "N/A"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">{challan.transporter || "N/A"}</td>
-                      <td className="px-4 py-3 text-sm">{challan.vehicleNumber || "N/A"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {challan.transporter || "N/A"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {challan.vehicleNumber || "N/A"}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
                           <Package className="w-3 h-3" />
@@ -514,18 +543,27 @@ export default function DeliveryChallan() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          challan.status === 'CREATED' ? 'bg-green-100 text-green-700' :
-                          challan.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                          challan.status === 'SHIPPED' ? 'bg-purple-100 text-purple-700' :
-                          challan.status === 'DELIVERED' ? 'bg-indigo-100 text-indigo-700' :
-                          challan.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            challan.status === "CREATED"
+                              ? "bg-green-100 text-green-700"
+                              : challan.status === "PENDING"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : challan.status === "SHIPPED"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : challan.status === "DELIVERED"
+                                    ? "bg-indigo-100 text-indigo-700"
+                                    : challan.status === "CANCELLED"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
                           {challan.status || "DRAFT"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">{formatDate(challan.createdAt)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {formatDate(challan.createdAt)}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
@@ -544,7 +582,7 @@ export default function DeliveryChallan() {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                         
+
                           <button
                             type="button"
                             onClick={() => handleDelete(challan.id)}
@@ -566,7 +604,8 @@ export default function DeliveryChallan() {
           {totalPages > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
-                Page {currentPage + 1} of {totalPages} | Total: {totalElements} challans
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                challans
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -592,17 +631,27 @@ export default function DeliveryChallan() {
         {/* Add/Edit Modal */}
         {showModal && (
           <>
-            <div className="fixed inset-0 bg-black/50 z-40" onClick={handleModalClose} />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={handleModalClose}
+            />
+            <div
+              onClick={handleModalClose}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            >
               <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                       <FileText className="w-5 h-5 text-blue-600" />
-                      {isEditMode ? "Edit Delivery Challan" : "Create New Delivery Challan"}
+                      {isEditMode
+                        ? "Edit Delivery Challan"
+                        : "Create New Delivery Challan"}
                     </h2>
                     <p className="text-sm text-gray-500">
-                      {isEditMode ? "Update existing delivery challan" : "Add a new delivery challan to the system"}
+                      {isEditMode
+                        ? "Update existing delivery challan"
+                        : "Add a new delivery challan to the system"}
                     </p>
                   </div>
                   <button
@@ -630,7 +679,10 @@ export default function DeliveryChallan() {
         {/* View Modal */}
         {showViewModal && (
           <>
-            <div className="fixed inset-0 bg-black/50 z-40" onClick={handleViewClose} />
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={handleViewClose}
+            />
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <DeliveryChallanView
                 viewingChallan={viewingChallan}
