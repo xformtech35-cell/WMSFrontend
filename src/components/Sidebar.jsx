@@ -128,6 +128,20 @@ const ALL_MENU_ITEMS = [
     group: "Purchase",
     permission: P.PURCHASE_REQUEST,
   },
+   {
+    href: "/purchase-return-request",
+    label: "Purchase Return Request",
+    icon: FileText,
+    group: "Purchase",
+    permission: P.PURCHASE_REQUEST,
+  },
+  {
+    href: "/purchase-return-orders",
+    label: "Purchase Return Orders",
+    icon: FileText,
+    group: "Purchase",
+    permission: P.PURCHASE_REQUEST,
+  },
   {
     href: "/purchase-approval",
     label: "PR Approval",

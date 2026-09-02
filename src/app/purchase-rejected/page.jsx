@@ -27,6 +27,7 @@ import {
   Info,
 } from "lucide-react";
 import api from "@/lib/api";
+import PurchaseReturnUpdateForm from "./components/PurchaseReturnUpdateForm";
 
 // API Functions
 const apiRequest = async (endpoint, method = "GET", data = null) => {
@@ -417,6 +418,21 @@ export default function PurchaseReturnPage() {
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [selectedPRForReturn, setSelectedPRForReturn] = useState(null);
 
+   const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [selectedReturnId, setSelectedReturnId] = useState(null);
+
+  const handleUpdateClick = (returnId) => {
+    setSelectedReturnId(returnId);
+    setShowUpdateForm(true);
+  };
+
+  const handleUpdateSuccess = (updatedData) => {
+    console.log('Return updated:', updatedData);
+    setShowUpdateForm(false);
+    // Refresh the list
+    loadPurchaseReturns();
+  };
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -664,7 +680,7 @@ export default function PurchaseReturnPage() {
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Purchase Returns
+                  Purchase Rejected
                 </h1>
                 <p className="text-green-100 text-sm mt-1">
                   WMS Warehouse Management System
@@ -808,14 +824,9 @@ export default function PurchaseReturnPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdateClick(returnData)}
-                            className="text-purple-600 cursor-pointer hover:text-purple-800 transition-colors"
-                            title="Update Status"
-                          >
-                            <RotateCw className="w-4 h-4" />
-                          </button>
+                          <button onClick={() => handleUpdateClick(returnData.id)}>
+        <Edit className="w-4 h-4" />
+      </button>
                         </div>
                       </td>
                     </tr>
@@ -853,148 +864,14 @@ export default function PurchaseReturnPage() {
           )}
         </div>
 
-        {/* Status Update Modal */}
-        {showStatusModal && selectedReturn && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen p-4">
-              <div
-                className="fixed inset-0 bg-black/50"
-                onClick={handleStatusModalClose}
-              />
-              <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Update Status
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      {selectedReturn.returnNumber} - {selectedReturn.supplierName}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleStatusModalClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    disabled={updatingStatus}
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Current Status
-                      </label>
-                      <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedReturn.status)}`}
-                        >
-                          {selectedReturn.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        New Status *
-                      </label>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        disabled={updatingStatus}
-                      >
-                        <option value="">Select Status</option>
-                        <option value="DRAFT">Draft</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="PROCESSING">Processing</option>
-                        <option value="APPROVED">Approved</option>
-                        <option value="REJECTED">Rejected</option>
-                        <option value="COMPLETED">Completed</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Remarks{" "}
-                        {selectedStatus === "REJECTED" && (
-                          <span className="text-red-500">*</span>
-                        )}
-                      </label>
-                      <textarea
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        rows="3"
-                        placeholder={
-                          selectedStatus === "REJECTED"
-                            ? "Please provide reason for rejection..."
-                            : "Optional remarks..."
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        disabled={updatingStatus}
-                      />
-                      {selectedStatus === "REJECTED" && (
-                        <p className="text-xs text-red-500 mt-1">
-                          Remarks are required when rejecting
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                      <p>
-                        <span className="font-medium">Supplier:</span>{" "}
-                        {selectedReturn.supplierName}
-                      </p>
-                      <p>
-                        <span className="font-medium">PO Number:</span>{" "}
-                        {selectedReturn.poNumber}
-                      </p>
-                      <p>
-                        <span className="font-medium">Total Items:</span>{" "}
-                        {selectedReturn.lines?.length || 0}
-                      </p>
-                      <p>
-                        <span className="font-medium">Total Amount:</span>{" "}
-                        {formatCurrency(selectedReturn.totalAmount)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex gap-3 pt-4 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={handleStatusUpdate}
-                      disabled={updatingStatus || !selectedStatus}
-                      className="flex-1 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {updatingStatus ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4" />
-                          Update Status
-                        </>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleStatusModalClose}
-                      disabled={updatingStatus}
-                      className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
+       
+ {showUpdateForm && (
+        <PurchaseReturnUpdateForm
+          returnId={selectedReturnId}
+          onClose={() => setShowUpdateForm(false)}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
         {/* View Modal */}
         {showViewModal && viewingReturn && (
           <PurchaseReturnView
