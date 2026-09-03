@@ -27,6 +27,9 @@ import {
   Percent,
   Check,
   X,
+  ThumbsUp,
+  ThumbsDown,
+  Users,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -93,6 +96,28 @@ const pickItemsAPI = async (orderId, lines) => {
   return apiRequest(`/vendor-returns/orders/${orderId}/pick`, "PATCH", lines);
 };
 
+// QC items API
+const qcItemsAPI = async (orderId, qcData) => {
+  return apiRequest(`/vendor-returns/orders/${orderId}/qc`, "PATCH", qcData);
+};
+
+// Fetch users API
+const fetchUsersAPI = async () => {
+  try {
+    const response = await api.get("/users");
+    const data =
+      response.data?.data?.content ||
+      response.data?.content ||
+      response.data?.data ||
+      response.data ||
+      [];
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return [];
+  }
+};
+
 // Main Component
 export default function VendorReturnPicklistsPage() {
   const [picklists, setPicklists] = useState([]);
@@ -116,6 +141,14 @@ export default function VendorReturnPicklistsPage() {
   const [selectedPicklist, setSelectedPicklist] = useState(null);
   const [selectedLines, setSelectedLines] = useState([]);
   const [pickingItems, setPickingItems] = useState(false);
+
+  // State for QC modal
+  const [showQcModal, setShowQcModal] = useState(false);
+  const [qcPicklist, setQcPicklist] = useState(null);
+  const [qcData, setQcData] = useState([]);
+  const [qcSubmitting, setQcSubmitting] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Load data on component mount and when dependencies change
   useEffect(() => {
@@ -144,6 +177,25 @@ export default function VendorReturnPicklistsPage() {
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
+
+  // Fetch users when QC modal opens
+  useEffect(() => {
+    if (showQcModal) {
+      loadUsers();
+    }
+  }, [showQcModal]);
+
+  const loadUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const userList = await fetchUsersAPI();
+      setUsers(userList);
+    } catch (error) {
+      console.error("Error loading users:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   const loadPicklists = async () => {
     try {
@@ -190,15 +242,17 @@ export default function VendorReturnPicklistsPage() {
     setSelectedPicklist(picklist);
     setSelectedOrderId(picklist.id);
     // Initialize with all lines selected by default
-    setSelectedLines(picklist.items?.map(item => ({ lineId: item.id })) || []);
+    setSelectedLines(
+      picklist.items?.map((item) => ({ lineId: item.id })) || [],
+    );
     setShowPickModal(true);
   };
 
   const handleLineToggle = (lineId) => {
-    setSelectedLines(prev => {
-      const exists = prev.some(item => item.lineId === lineId);
+    setSelectedLines((prev) => {
+      const exists = prev.some((item) => item.lineId === lineId);
       if (exists) {
-        return prev.filter(item => item.lineId !== lineId);
+        return prev.filter((item) => item.lineId !== lineId);
       } else {
         return [...prev, { lineId }];
       }
@@ -207,7 +261,9 @@ export default function VendorReturnPicklistsPage() {
 
   const handleSelectAllLines = () => {
     if (!selectedPicklist?.items) return;
-    const allLineIds = selectedPicklist.items.map(item => ({ lineId: item.id }));
+    const allLineIds = selectedPicklist.items.map((item) => ({
+      lineId: item.id,
+    }));
     setSelectedLines(allLineIds);
   };
 
@@ -224,14 +280,14 @@ export default function VendorReturnPicklistsPage() {
     try {
       setPickingItems(true);
       await pickItemsAPI(selectedOrderId, selectedLines);
-      
+
       setSuccessMessage(`Successfully picked ${selectedLines.length} item(s)!`);
       setShowSuccess(true);
       setShowPickModal(false);
       setSelectedPicklist(null);
       setSelectedOrderId(null);
       setSelectedLines([]);
-      
+
       // Reload picklists
       await loadPicklists();
     } catch (error) {
@@ -239,6 +295,76 @@ export default function VendorReturnPicklistsPage() {
       setErrorMessage(`Failed to pick items: ${error.message}`);
     } finally {
       setPickingItems(false);
+    }
+  };
+
+  // QC Handlers
+  const handleQcClick = (picklist) => {
+    setQcPicklist(picklist);
+    // Initialize QC data for each item
+    const initialQcData =
+      picklist.items?.map((item) => ({
+        lineId: item.id,
+        qcQuantity: item.pickedQuantity || 0,
+        passed: true,
+        verifiedBy: null,
+        remarks: "",
+      })) || [];
+    setQcData(initialQcData);
+    setShowQcModal(true);
+  };
+
+  const handleQcLineChange = (index, field, value) => {
+    const updatedQcData = [...qcData];
+    updatedQcData[index] = {
+      ...updatedQcData[index],
+      [field]: value,
+    };
+    setQcData(updatedQcData);
+  };
+
+  const handleQcSelectAll = (passed) => {
+    const updatedQcData = qcData.map((item) => ({
+      ...item,
+      passed: passed,
+    }));
+    setQcData(updatedQcData);
+  };
+
+  const handleSubmitQc = async () => {
+    if (!qcPicklist) return;
+
+    // Validate
+    for (const item of qcData) {
+      if (!item.verifiedBy) {
+        setErrorMessage("Please select a verifier for all items.");
+        return;
+      }
+      if (item.qcQuantity < 0) {
+        setErrorMessage("QC Quantity cannot be negative.");
+        return;
+      }
+    }
+
+    try {
+      setQcSubmitting(true);
+      await qcItemsAPI(qcPicklist.id, qcData);
+
+      setSuccessMessage(
+        `Successfully completed QC for ${qcData.length} item(s)!`,
+      );
+      setShowSuccess(true);
+      setShowQcModal(false);
+      setQcPicklist(null);
+      setQcData([]);
+
+      // Reload picklists
+      await loadPicklists();
+    } catch (error) {
+      console.error("Error submitting QC:", error);
+      setErrorMessage(`Failed to submit QC: ${error.message}`);
+    } finally {
+      setQcSubmitting(false);
     }
   };
 
@@ -294,6 +420,17 @@ export default function VendorReturnPicklistsPage() {
       CANCELLED: "Cancelled",
     };
     return names[status] || status || "Pending";
+  };
+
+  const getUserDisplayName = (user) => {
+    return (
+      user.name ||
+      user.fullName ||
+      user.username ||
+      [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+      user.email ||
+      `User ${user.id}`
+    );
   };
 
   const handlePageChange = (newPage) => {
@@ -576,14 +713,15 @@ export default function VendorReturnPicklistsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {picklist.status !== "COMPLETED" && picklist.status !== "CANCELLED" && picklist.status !== "PENDING_QC" && (
+
+                          {picklist.status === "PENDING_QC" && (
                             <button
                               type="button"
-                              onClick={() => handlePickClick(picklist)}
-                              className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
-                              title="Pick Items"
+                              onClick={() => handleQcClick(picklist)}
+                              className="text-purple-600 cursor-pointer hover:text-purple-800 transition-colors"
+                              title="QC Items"
                             >
-                              <Check className="w-4 h-4" />
+                              <ThumbsUp className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -666,7 +804,9 @@ export default function VendorReturnPicklistsPage() {
               <div className="p-6 max-h-[70vh] overflow-y-auto">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    Select items to pick: <span className="font-medium">{selectedLines.length}</span> selected
+                    Select items to pick:{" "}
+                    <span className="font-medium">{selectedLines.length}</span>{" "}
+                    selected
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -693,7 +833,10 @@ export default function VendorReturnPicklistsPage() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                           <input
                             type="checkbox"
-                            checked={selectedLines.length === selectedPicklist.items?.length}
+                            checked={
+                              selectedLines.length ===
+                              selectedPicklist.items?.length
+                            }
                             onChange={(e) => {
                               if (e.target.checked) {
                                 handleSelectAllLines();
@@ -736,10 +879,15 @@ export default function VendorReturnPicklistsPage() {
                           <td className="px-3 py-2">
                             <input
                               type="checkbox"
-                              checked={selectedLines.some(line => line.lineId === item.id)}
+                              checked={selectedLines.some(
+                                (line) => line.lineId === item.id,
+                              )}
                               onChange={() => handleLineToggle(item.id)}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              disabled={item.status === "PICKED" || item.status === "PACKED"}
+                              disabled={
+                                item.status === "PICKED" ||
+                                item.status === "PACKED"
+                              }
                             />
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-500">
@@ -806,6 +954,237 @@ export default function VendorReturnPicklistsPage() {
                     <>
                       <Check className="w-4 h-4" />
                       Pick Selected ({selectedLines.length})
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* QC Modal */}
+        {showQcModal && qcPicklist && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
+            <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl my-4">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-t-xl">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <ThumbsUp className="w-5 h-5 text-purple-600" />
+                    Quality Check (QC)
+                  </h2>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-sm text-blue-600 font-medium">
+                      {qcPicklist.pickListNumber}
+                    </span>
+                    <span className="text-xs text-gray-400">|</span>
+                    <span className="text-sm text-gray-500">
+                      {qcPicklist.vroNumber}
+                    </span>
+                    <span className="text-xs text-gray-400">|</span>
+                    <span className="text-sm text-gray-500">
+                      Supplier: {qcPicklist.supplierName}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQcModal(false);
+                    setQcPicklist(null);
+                    setQcData([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Review QC for all items
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleQcSelectAll(true)}
+                      className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
+                    >
+                      <ThumbsUp className="w-3 h-3" />
+                      Pass All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQcSelectAll(false)}
+                      className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors flex items-center gap-1"
+                    >
+                      <ThumbsDown className="w-3 h-3" />
+                      Fail All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          #
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Item Code
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Item Name
+                        </th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          Picked Qty
+                        </th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          QC Qty
+                        </th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                          Pass/Fail
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Verified By
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Remarks
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {qcPicklist.items?.map((item, index) => {
+                        const qcItem = qcData[index] || {};
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs text-gray-500">
+                              {index + 1}
+                            </td>
+                            <td className="px-3 py-2 font-medium text-gray-800">
+                              {item.itemCode}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600">
+                              {item.itemName}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {item.pickedQuantity || 0}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <input
+                                type="number"
+                                value={qcItem.qcQuantity || 0}
+                                onChange={(e) =>
+                                  handleQcLineChange(
+                                    index,
+                                    "qcQuantity",
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-20 px-2 py-1 text-right border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                min="0"
+                                max={item.pickedQuantity || 0}
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleQcLineChange(index, "passed", true)
+                                  }
+                                  className={`p-1 rounded ${qcItem.passed !== false ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}
+                                >
+                                  <ThumbsUp className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleQcLineChange(index, "passed", false)
+                                  }
+                                  className={`p-1 rounded ${qcItem.passed === false ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-400"}`}
+                                >
+                                  <ThumbsDown className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <select
+                                value={qcItem.verifiedBy || ""}
+                                onChange={(e) =>
+                                  handleQcLineChange(
+                                    index,
+                                    "verifiedBy",
+                                    e.target.value
+                                      ? Number(e.target.value)
+                                      : null,
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                disabled={loadingUsers}
+                              >
+                                <option value="">Select Verifier</option>
+                                {users.map((user) => (
+                                  <option key={user.id} value={user.id}>
+                                    {getUserDisplayName(user)}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="text"
+                                value={qcItem.remarks || ""}
+                                onChange={(e) =>
+                                  handleQcLineChange(
+                                    index,
+                                    "remarks",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                placeholder="QC remarks..."
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4 rounded-b-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQcModal(false);
+                    setQcPicklist(null);
+                    setQcData([]);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitQc}
+                  disabled={qcSubmitting}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {qcSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Submitting QC...
+                    </>
+                  ) : (
+                    <>
+                      <ThumbsUp className="w-4 h-4" />
+                      Submit QC
                     </>
                   )}
                 </button>

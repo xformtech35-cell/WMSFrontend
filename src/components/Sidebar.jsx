@@ -157,6 +157,13 @@ const ALL_MENU_ITEMS = [
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
+    {
+    href: "/return-quality-check",
+    label: "Return Quality Check",
+    icon: FileText,
+    group: "Purchase Rejected/Return",
+    permission: P.PURCHASE_REQUEST,
+  },
   {
     href: "/purchase-approval",
     label: "PR Approval",
