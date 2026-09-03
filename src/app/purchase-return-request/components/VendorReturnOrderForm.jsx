@@ -56,6 +56,7 @@ const VendorReturnOrderForm = ({
         totalAmount: (line.unitPrice || 0) * (line.requestedQuantity || line.approvedQuantity || 0),
         batchNumber: line.batchNumber || "",
         expiryDate: line.expiryDate || "",
+        rejectedArea: line.rejectedArea || "",
       }));
       setFormData(prev => ({ ...prev, lines: initialLines }));
     }
@@ -224,6 +225,7 @@ const VendorReturnOrderForm = ({
           totalAmount: parseFloat(line.totalAmount) || 0,
           batchNumber: line.batchNumber || "",
           expiryDate: line.expiryDate || "",
+          rejectedArea: line.rejectedArea || "",
         }))
       };
 

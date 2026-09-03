@@ -25,6 +25,8 @@ import {
   Boxes,
   Clock,
   Percent,
+  Check,
+  X,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -80,7 +82,15 @@ const getPicklistsAPI = async (
     params.append("status", status);
   }
 
-  return apiRequest(`/vendor-returns/picklists/search?${params.toString()}`, "POST");
+  return apiRequest(
+    `/vendor-returns/picklists/search?${params.toString()}`,
+    "POST",
+  );
+};
+
+// Pick items API
+const pickItemsAPI = async (orderId, lines) => {
+  return apiRequest(`/vendor-returns/orders/${orderId}/pick`, "PATCH", lines);
 };
 
 // Main Component
@@ -99,6 +109,13 @@ export default function VendorReturnPicklistsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingPicklist, setViewingPicklist] = useState(null);
+
+  // State for pick modal
+  const [showPickModal, setShowPickModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [selectedPicklist, setSelectedPicklist] = useState(null);
+  const [selectedLines, setSelectedLines] = useState([]);
+  const [pickingItems, setPickingItems] = useState(false);
 
   // Load data on component mount and when dependencies change
   useEffect(() => {
@@ -167,6 +184,62 @@ export default function VendorReturnPicklistsPage() {
   const handleViewClose = () => {
     setShowViewModal(false);
     setViewingPicklist(null);
+  };
+
+  const handlePickClick = (picklist) => {
+    setSelectedPicklist(picklist);
+    setSelectedOrderId(picklist.id);
+    // Initialize with all lines selected by default
+    setSelectedLines(picklist.items?.map(item => ({ lineId: item.id })) || []);
+    setShowPickModal(true);
+  };
+
+  const handleLineToggle = (lineId) => {
+    setSelectedLines(prev => {
+      const exists = prev.some(item => item.lineId === lineId);
+      if (exists) {
+        return prev.filter(item => item.lineId !== lineId);
+      } else {
+        return [...prev, { lineId }];
+      }
+    });
+  };
+
+  const handleSelectAllLines = () => {
+    if (!selectedPicklist?.items) return;
+    const allLineIds = selectedPicklist.items.map(item => ({ lineId: item.id }));
+    setSelectedLines(allLineIds);
+  };
+
+  const handleDeselectAllLines = () => {
+    setSelectedLines([]);
+  };
+
+  const handleSubmitPick = async () => {
+    if (!selectedOrderId || selectedLines.length === 0) {
+      setErrorMessage("Please select at least one item to pick.");
+      return;
+    }
+
+    try {
+      setPickingItems(true);
+      await pickItemsAPI(selectedOrderId, selectedLines);
+      
+      setSuccessMessage(`Successfully picked ${selectedLines.length} item(s)!`);
+      setShowSuccess(true);
+      setShowPickModal(false);
+      setSelectedPicklist(null);
+      setSelectedOrderId(null);
+      setSelectedLines([]);
+      
+      // Reload picklists
+      await loadPicklists();
+    } catch (error) {
+      console.error("Error picking items:", error);
+      setErrorMessage(`Failed to pick items: ${error.message}`);
+    } finally {
+      setPickingItems(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -253,8 +326,13 @@ export default function VendorReturnPicklistsPage() {
 
   const renderProgressBar = (progress) => {
     const percentage = Math.round(progress || 0);
-    const color = percentage === 100 ? "bg-green-500" : percentage > 50 ? "bg-blue-500" : "bg-yellow-500";
-    
+    const color =
+      percentage === 100
+        ? "bg-green-500"
+        : percentage > 50
+          ? "bg-blue-500"
+          : "bg-yellow-500";
+
     return (
       <div className="w-24">
         <div className="flex justify-between text-xs text-gray-500 mb-0.5">
@@ -402,9 +480,6 @@ export default function VendorReturnPicklistsPage() {
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Qty
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Progress
-                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Priority
                   </th>
@@ -474,11 +549,6 @@ export default function VendorReturnPicklistsPage() {
                         {picklist.totalQuantity || 0}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-center">
-                          {renderProgressBar(picklist.pickingProgress)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(picklist.priority)}`}
                         >
@@ -497,14 +567,26 @@ export default function VendorReturnPicklistsPage() {
                         {formatDateShort(picklist.assignedAt)}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => handleViewClick(picklist)}
-                          className="text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewClick(picklist)}
+                            className="text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {picklist.status !== "COMPLETED" && picklist.status !== "CANCELLED" && (
+                            <button
+                              type="button"
+                              onClick={() => handlePickClick(picklist)}
+                              className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
+                              title="Pick Items"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -517,7 +599,8 @@ export default function VendorReturnPicklistsPage() {
           {totalPages > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
-                Page {currentPage + 1} of {totalPages} | Total: {totalElements} picklists
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                picklists
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -539,6 +622,197 @@ export default function VendorReturnPicklistsPage() {
             </div>
           )}
         </div>
+
+        {/* Pick Modal */}
+        {showPickModal && selectedPicklist && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
+            <div className="w-full max-w-4xl rounded-xl bg-white shadow-2xl my-4">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-green-50 to-green-100 rounded-t-xl">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Check className="w-5 h-5 text-green-600" />
+                    Pick Items
+                  </h2>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-sm text-blue-600 font-medium">
+                      {selectedPicklist.pickListNumber}
+                    </span>
+                    <span className="text-xs text-gray-400">|</span>
+                    <span className="text-sm text-gray-500">
+                      {selectedPicklist.vroNumber}
+                    </span>
+                    <span className="text-xs text-gray-400">|</span>
+                    <span className="text-sm text-gray-500">
+                      Supplier: {selectedPicklist.supplierName}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPickModal(false);
+                    setSelectedPicklist(null);
+                    setSelectedOrderId(null);
+                    setSelectedLines([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Select items to pick: <span className="font-medium">{selectedLines.length}</span> selected
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllLines}
+                      className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeselectAllLines}
+                      className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          <input
+                            type="checkbox"
+                            checked={selectedLines.length === selectedPicklist.items?.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                handleSelectAllLines();
+                              } else {
+                                handleDeselectAllLines();
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          #
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Item Code
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Item Name
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Location
+                        </th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          Order Qty
+                        </th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          Picked
+                        </th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          Remaining
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {selectedPicklist.items?.map((item, index) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedLines.some(line => line.lineId === item.id)}
+                              onChange={() => handleLineToggle(item.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              disabled={item.status === "PICKED" || item.status === "PACKED"}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-500">
+                            {index + 1}
+                          </td>
+                          <td className="px-3 py-2 font-medium text-gray-800">
+                            {item.itemCode}
+                          </td>
+                          <td className="px-3 py-2 text-gray-600">
+                            {item.itemName}
+                          </td>
+                          <td className="px-3 py-2 text-gray-500">
+                            {item.pickLocation}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            {item.orderQuantity}
+                          </td>
+                          <td className="px-3 py-2 text-right text-green-600">
+                            {item.pickedQuantity}
+                          </td>
+                          <td className="px-3 py-2 text-right text-orange-600">
+                            {item.remainingQuantity}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}
+                            >
+                              {getItemStatusDisplayName(item.status)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4 rounded-b-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPickModal(false);
+                    setSelectedPicklist(null);
+                    setSelectedOrderId(null);
+                    setSelectedLines([]);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitPick}
+                  disabled={pickingItems || selectedLines.length === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {pickingItems ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Picking...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Pick Selected ({selectedLines.length})
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* View Modal */}
         {showViewModal && viewingPicklist && (
@@ -575,28 +849,26 @@ export default function VendorReturnPicklistsPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-xs text-gray-500">Supplier</div>
-                    <div className="font-medium text-sm">{viewingPicklist.supplierName}</div>
-                    <div className="text-xs text-gray-400">{viewingPicklist.supplierCode}</div>
+                    <div className="font-medium text-sm">
+                      {viewingPicklist.supplierName}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {viewingPicklist.supplierCode}
+                    </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-xs text-gray-500">Assigned To</div>
-                    <div className="font-medium text-sm">{viewingPicklist.assignedTo || "Unassigned"}</div>
+                    <div className="font-medium text-sm">
+                      {viewingPicklist.assignedTo || "Unassigned"}
+                    </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-xs text-gray-500">Status</div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block mt-1 ${getStatusColor(viewingPicklist.status)}`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium inline-block mt-1 ${getStatusColor(viewingPicklist.status)}`}
+                    >
                       {getStatusDisplayName(viewingPicklist.status)}
                     </span>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-500">Progress</div>
-                    <div className="font-medium text-sm">{Math.round(viewingPicklist.pickingProgress || 0)}%</div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                      <div
-                        className={`${viewingPicklist.pickingProgress === 100 ? 'bg-green-500' : 'bg-blue-500'} h-1.5 rounded-full`}
-                        style={{ width: `${viewingPicklist.pickingProgress || 0}%` }}
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -610,28 +882,60 @@ export default function VendorReturnPicklistsPage() {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Code</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Order Qty</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Picked</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Remaining</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            #
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Item Code
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Item Name
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Location
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Order Qty
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Picked
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Remaining
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Status
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {viewingPicklist.items?.map((item, index) => (
                           <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-xs text-gray-500">{index + 1}</td>
-                            <td className="px-3 py-2 font-medium text-gray-800">{item.itemCode}</td>
-                            <td className="px-3 py-2 text-gray-600">{item.itemName}</td>
-                            <td className="px-3 py-2 text-gray-500">{item.pickLocation}</td>
-                            <td className="px-3 py-2 text-right">{item.orderQuantity}</td>
-                            <td className="px-3 py-2 text-right text-green-600">{item.pickedQuantity}</td>
-                            <td className="px-3 py-2 text-right text-orange-600">{item.remainingQuantity}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500">
+                              {index + 1}
+                            </td>
+                            <td className="px-3 py-2 font-medium text-gray-800">
+                              {item.itemCode}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600">
+                              {item.itemName}
+                            </td>
+                            <td className="px-3 py-2 text-gray-500">
+                              {item.pickLocation}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {item.orderQuantity}
+                            </td>
+                            <td className="px-3 py-2 text-right text-green-600">
+                              {item.pickedQuantity}
+                            </td>
+                            <td className="px-3 py-2 text-right text-orange-600">
+                              {item.remainingQuantity}
+                            </td>
                             <td className="px-3 py-2">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}
+                              >
                                 {getItemStatusDisplayName(item.status)}
                               </span>
                             </td>
