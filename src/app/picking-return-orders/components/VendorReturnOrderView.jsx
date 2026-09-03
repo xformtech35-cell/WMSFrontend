@@ -346,11 +346,18 @@ const VendorReturnOrderView = ({ data, onClose }) => {
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Order Qty
                       </th>
-                      
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rejected Area
+                        Picked
                       </th>
-                      
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        QC
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Packed
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Dispatched
+                      </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Unit Price
                       </th>
@@ -378,10 +385,18 @@ const VendorReturnOrderView = ({ data, onClose }) => {
                         <td className="px-4 py-3 text-sm text-right">
                           {line.orderQuantity}
                         </td>
-                       <td className="px-4 py-3 text-sm text-right">
-                          {line.rejectedArea|| "-"}
+                        <td className="px-4 py-3 text-sm text-right">
+                          {line.pickedQuantity || 0}
                         </td>
-                      
+                        <td className="px-4 py-3 text-sm text-right">
+                          {line.qcQuantity || 0}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {line.packedQuantity || 0}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {line.dispatchedQuantity || 0}
+                        </td>
                         <td className="px-4 py-3 text-sm text-right">
                           {formatCurrency(line.unitPrice)}
                         </td>

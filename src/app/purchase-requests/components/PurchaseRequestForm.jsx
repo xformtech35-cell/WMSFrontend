@@ -92,7 +92,11 @@ const getSuppliersAPI = async () => {
 const getWarehousesAPI = async () => {
   try {
     const response = await api.get("/warehouses");
-    const data = response.data?.data?.content || response.data?.content || response.data || [];
+    const data =
+      response.data?.data?.content ||
+      response.data?.content ||
+      response.data ||
+      [];
     return data;
   } catch (error) {
     console.warn("Failed to fetch warehouses, using fallback data");
@@ -100,7 +104,12 @@ const getWarehousesAPI = async () => {
       { id: 1, warehouseId: "WH-001", name: "Mumbai WH", location: "Mumbai" },
       { id: 2, warehouseId: "WH-002", name: "Pune WH", location: "Pune" },
       { id: 3, warehouseId: "WH-003", name: "Delhi WH", location: "Delhi" },
-      { id: 4, warehouseId: "WH-004", name: "Bangalore WH", location: "Bangalore" },
+      {
+        id: 4,
+        warehouseId: "WH-004",
+        name: "Bangalore WH",
+        location: "Bangalore",
+      },
       { id: 5, warehouseId: "WH-005", name: "Chennai WH", location: "Chennai" },
     ];
   }
@@ -171,11 +180,48 @@ export default function PurchaseRequestForm({
   const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showItemSelector, setShowItemSelector] = useState(false);
+  const [users, setUsers] = useState([]);
 
+  const [userSearch, setUserSearch] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+
+  const fetchMasterData = async () => {
+    try {
+      const [usersRes] = await Promise.all([
+        api.get("/users").catch(() => ({ data: [] })),
+      ]);
+
+      setUsers(
+        usersRes.data?.data?.content ||
+          usersRes.data?.content ||
+          usersRes.data ||
+          [],
+      );
+    } catch (error) {
+      console.error("Error fetching master data:", error);
+    }
+  };
+  const filteredUsers = users.filter((user) => {
+    const search = userSearch.toLowerCase();
+
+    const name =
+      user.name ||
+      user.fullName ||
+      user.username ||
+      user.firstName + " " + (user.lastName || "");
+
+    const email = user.email || "";
+
+    return (
+      name.toLowerCase().includes(search) ||
+      email.toLowerCase().includes(search)
+    );
+  });
   // Load suppliers and warehouses on mount
   useEffect(() => {
     loadSuppliers();
     loadWarehouses();
+    fetchMasterData();
   }, []);
 
   // Load initial data for edit mode
@@ -222,6 +268,7 @@ export default function PurchaseRequestForm({
           `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
         prDate: initialData.prDate || new Date().toISOString().split("T")[0],
         requestedBy: initialData.requestedBy || "",
+
         department: initialData.department || "",
         warehouse: initialData.warehouse || "",
         priority: initialData.priority || "NORMAL",
@@ -229,7 +276,7 @@ export default function PurchaseRequestForm({
         remarks: initialData.remarks || "",
         status: initialData.status || "draft",
       });
-
+      setUserSearch(initialData.requestedBy || "");
       // Set saved PR ID for updates
       if (initialData.id) {
         setSavedPRId(initialData.id);
@@ -285,13 +332,34 @@ export default function PurchaseRequestForm({
     setItems(updatedItems);
   };
 
+  // const handleSelectItemFromModal = (selectedItem) => {
+  //   const newId = Math.max(...items.map((i) => i.id), 0) + 1;
+  //   const newItem = {
+  //     id: newId,
+  //     itemId: selectedItem.itemId,
+  //     itemCode: selectedItem.itemCode,
+  //     itemName: selectedItem.itemName,
+  //     description: selectedItem.description || "",
+  //     uom: selectedItem.uom || "Nos",
+  //     requestedQty: 1,
+  //     currentStock: selectedItem.currentStock || 0,
+  //     reason: "",
+  //     unitPrice: selectedItem.unitPrice || 0,
+  //     category: selectedItem.category || "",
+  //     brand: selectedItem.brand || "",
+  //     supplierId: selectedItem.supplierId || null,
+  //     gstRate: selectedItem.gstRate || 0,
+  //     gstHsnCode: selectedItem.gstHsnCode || "",
+  //     isGstApplicable: selectedItem.isGstApplicable || false,
+  //   };
+  //   setItems([...items, newItem]);
+  // };
   const handleSelectItemFromModal = (selectedItem) => {
-    const newId = Math.max(...items.map((i) => i.id), 0) + 1;
     const newItem = {
-      id: newId,
+      id: items.length === 1 && !items[0].itemName ? items[0].id : Date.now(),
       itemId: selectedItem.itemId,
-      itemCode: selectedItem.itemCode,
-      itemName: selectedItem.itemName,
+      itemCode: selectedItem.itemCode || "",
+      itemName: selectedItem.itemName || "",
       description: selectedItem.description || "",
       uom: selectedItem.uom || "Nos",
       requestedQty: 1,
@@ -305,9 +373,16 @@ export default function PurchaseRequestForm({
       gstHsnCode: selectedItem.gstHsnCode || "",
       isGstApplicable: selectedItem.isGstApplicable || false,
     };
-    setItems([...items, newItem]);
-  };
 
+    // If first row is empty, use it instead of creating row 2
+    if (items.length === 1 && !items[0].itemName) {
+      setItems([newItem]);
+    } else {
+      setItems((prevItems) => [...prevItems, newItem]);
+    }
+
+    setShowItemSelector(false);
+  };
   const addItem = () => {
     setShowItemSelector(true);
   };
@@ -361,7 +436,7 @@ export default function PurchaseRequestForm({
       priority: prData.priority,
       requiredDate: prData.requiredDate,
       remarks: prData.remarks || null,
-      
+
       supplierId: selectedSupplier ? parseInt(selectedSupplier) : null,
       items: items.map((item) => ({
         itemId: item.itemId || null,
@@ -427,8 +502,11 @@ export default function PurchaseRequestForm({
 
       if (mode === "edit" && purchaseRequestId) {
         requestData = prepareRequestData();
-        await updatePurchaseRequestAPI(purchaseRequestId, {...requestData, status:'PENDING'});
-        
+        await updatePurchaseRequestAPI(purchaseRequestId, {
+          ...requestData,
+          status: "PENDING",
+        });
+
         if (onSuccess) {
           onSuccess(
             `Purchase Request updated successfully with ${prData.priority} priority!`,
@@ -554,20 +632,82 @@ export default function PurchaseRequestForm({
                   </div>
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Requested By *
                   </label>
+
                   <div className="relative">
                     <input
                       type="text"
-                      name="requestedBy"
-                      value={prData.requestedBy}
-                      onChange={handleInputChange}
+                      value={userSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setUserSearch(value);
+                        setShowUserDropdown(true);
+
+                        setPrData((prev) => ({
+                          ...prev,
+                          requestedBy: value,
+                        }));
+                      }}
+                      onFocus={() => setShowUserDropdown(true)}
+                      onBlur={() => {
+                        // Small delay so click on dropdown option works
+                        setTimeout(() => setShowUserDropdown(false), 150);
+                      }}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter requester name"
+                      placeholder="Search user..."
                       required
+                      autoComplete="off"
                     />
+
+                    {showUserDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredUsers.length > 0 ? (
+                          filteredUsers.map((user) => {
+                            const name =
+                              user.name ||
+                              user.fullName ||
+                              user.username ||
+                              `${user.firstName || ""} ${user.lastName || ""}`.trim();
+
+                            return (
+                              <button
+                                key={user.id}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setUserSearch(name);
+
+                                  setPrData((prev) => ({
+                                    ...prev,
+                                    requestedBy: name,
+                                  }));
+
+                                  setShowUserDropdown(false);
+                                }}
+                                className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
+                              >
+                                <div className="font-medium text-gray-800">
+                                  {name}
+                                </div>
+
+                                {user.email && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {user.email}
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No users found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -609,13 +749,19 @@ export default function PurchaseRequestForm({
                     >
                       <option value="">Select Warehouse</option>
                       {warehouses.map((warehouse) => (
-                        <option key={warehouse.id} value={warehouse.name || warehouse.warehouseId}>
-                          {warehouse.name} ({warehouse.warehouseId}) - {warehouse.location || ""}
+                        <option
+                          key={warehouse.id}
+                          value={warehouse.name || warehouse.warehouseId}
+                        >
+                          {warehouse.name} ({warehouse.warehouseId}) -{" "}
+                          {warehouse.location || ""}
                         </option>
                       ))}
                     </select>
                     {isLoadingWarehouses && (
-                      <p className="text-xs text-gray-400 mt-1">Loading warehouses...</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Loading warehouses...
+                      </p>
                     )}
                   </div>
                 </div>
@@ -636,7 +782,9 @@ export default function PurchaseRequestForm({
                       <option value="NORMAL">Normal - Regular Priority</option>
                       <option value="MEDIUM">Medium - Moderate Priority</option>
                       <option value="HIGH">High - Urgent Requirement</option>
-                      <option value="URGENT">Urgent - Critical/Immediate</option>
+                      <option value="URGENT">
+                        Urgent - Critical/Immediate
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -713,7 +861,7 @@ export default function PurchaseRequestForm({
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Current Stock
                     </th>
-                    
+
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Reason
                     </th>
@@ -820,20 +968,18 @@ export default function PurchaseRequestForm({
                           placeholder="0"
                         />
                       </td>
-                   
+
                       <td className="px-4 py-3">
-                         <input
+                        <input
                           type="text"
                           value={item.reason}
                           onChange={(e) =>
-                                                        handleItemChange(item.id, "reason", e.target.value)
-
+                            handleItemChange(item.id, "reason", e.target.value)
                           }
                           className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                           placeholder="Reason"
                           required
                         />
-                       
                       </td>
                       <td className="px-4 py-3">
                         <button

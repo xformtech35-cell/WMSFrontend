@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import {
+  Plus,
   Eye,
+  Edit,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -12,20 +14,29 @@ import {
   Building2,
   Flag,
   CheckCircle,
+  Save,
+  X,
+  Send,
+  RotateCw,
+  ArrowLeftRight,
+  FileText,
   Package,
   Calendar,
+  User,
   CreditCard,
-  FileText,
-  ArrowLeftRight,
-  Truck,
-  Printer,
-  Download,
-  RotateCw,
+  Info,
+  Clock,
+  Shield,
+  AlertTriangle,
+  Check,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import api from "@/lib/api";
-import VendorReturnOrderView from "./components/VendorReturnOrderView";
+import VendorReturnView from "./components/VendorReturnView";
+import VendorReturnOrderForm from "./components/VendorReturnOrderForm";
 
-// API Functions
+// API Functions (keep all your API functions here)
 const apiRequest = async (
   endpoint,
   method = "GET",
@@ -58,8 +69,8 @@ const apiRequest = async (
   }
 };
 
-// API function for vendor return orders
-const getVendorReturnOrdersAPI = async (
+// API function for vendor return requests
+const getVendorReturnRequestsAPI = async (
   page = 0,
   size = 10,
   searchTerm = "",
@@ -77,74 +88,107 @@ const getVendorReturnOrdersAPI = async (
     params.append("status", status);
   }
 
-  return apiRequest(`/vendor-returns/orders?${params.toString()}`, "GET");
-};
-const generatePickListAPI = async (orderId, assignTo) => {
   return apiRequest(
-    `/vendor-returns/orders/${orderId}/generate-picklist?assignTo=${assignTo}`,
-    "POST",
-    null,
+    `/vendor-returns/requests/search?${params.toString()}`,
+    "GET",
   );
 };
-const getVendorReturnOrderByIdAPI = async (id) => {
-  return apiRequest(`/vendor-returns/orders/${id}`);
+
+const getVendorReturnRequestByIdAPI = async (id) => {
+  return apiRequest(`/vendor-returns/requests/${id}`);
+};
+
+// Approve API - Send approvedBy as userId
+const approveVendorReturnAPI = async (id, approvedBy) => {
+  const requestBody = {
+    approvedBy: approvedBy,
+  };
+  return apiRequest(
+    `/vendor-returns/requests/${id}/approve`,
+    "PATCH",
+    null,
+    requestBody,
+  );
+};
+
+// Reject API - Send rejectedBy as userId and rejectionReason
+const rejectVendorReturnAPI = async (id, rejectedBy, rejectionReason) => {
+  const requestBody = {
+    rejectedBy: rejectedBy,
+    rejectionReason: rejectionReason || "",
+  };
+  return apiRequest(
+    `/vendor-returns/requests/${id}/reject`,
+    "PATCH",
+    null,
+    requestBody,
+  );
 };
 
 // Main Component
-export default function VendorReturnOrdersPage() {
-  const [orders, setOrders] = useState([]);
+export default function VendorReturnRequestPage() {
+  // List State
+  const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
+  // Users State
+  const [users, setUsers] = useState([]);
+
+  // UI State
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingOrder, setViewingOrder] = useState(null);
+  const [viewingReturn, setViewingReturn] = useState(null);
+  // Add to state
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [selectedReturnForOrder, setSelectedReturnForOrder] = useState(null);
 
-  const [users, setUsers] = useState([]);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [assignTo, setAssignTo] = useState("");
-  const [assignSearch, setAssignSearch] = useState("");
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get("/users");
-
-      const data =
-        response.data?.data?.content ||
-        response.data?.content ||
-        response.data?.data ||
-        response.data ||
-        [];
-
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      setUsers([]);
-    }
-  };
-
-  // Load data on component mount and when dependencies change
-  useEffect(() => {
-    loadOrders();
-  }, [currentPage, pageSize, statusFilter]);
+  // Fetch users on mount
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get("/users");
+      const userData =
+        response.data?.data?.content ||
+        response.data?.content ||
+        response.data ||
+        [];
+      setUsers(userData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      // Fallback: Try alternative endpoints
+      try {
+        const fallbackResponse = await api.get("/users/all");
+        setUsers(fallbackResponse.data?.data || fallbackResponse.data || []);
+      } catch (fallbackError) {
+        console.error("Error fetching users from fallback:", fallbackError);
+        setUsers([]);
+      }
+    }
+  };
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadOrders();
+      loadReturns();
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Load data on component mount and when dependencies change
+  useEffect(() => {
+    loadReturns();
+  }, [currentPage, pageSize, statusFilter]);
 
   // Auto-clear messages after 5 seconds
   useEffect(() => {
@@ -160,11 +204,31 @@ export default function VendorReturnOrdersPage() {
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
+  // Add handler functions
+  const handleCreateOrder = (returnData) => {
+    setSelectedReturnForOrder(returnData);
+    setShowOrderForm(true);
+  };
 
-  const loadOrders = async () => {
+  const handleOrderFormClose = () => {
+    setShowOrderForm(false);
+    setSelectedReturnForOrder(null);
+  };
+
+  const handleOrderSuccess = (response) => {
+    setSuccessMessage("Vendor return order created successfully!");
+    setShowSuccess(true);
+    loadReturns(); // Refresh the list
+  };
+
+  const handleOrderError = (error) => {
+    setErrorMessage(error || "Failed to create vendor return order");
+  };
+
+  const loadReturns = async () => {
     try {
       setLoading(true);
-      const response = await getVendorReturnOrdersAPI(
+      const response = await getVendorReturnRequestsAPI(
         currentPage,
         pageSize,
         searchTerm,
@@ -172,76 +236,35 @@ export default function VendorReturnOrdersPage() {
       );
 
       if (response && response.content) {
-        setOrders(response.content || []);
+        setReturns(response.content || []);
         setTotalPages(response.totalPages || 0);
         setTotalElements(response.totalElements || 0);
       } else if (Array.isArray(response)) {
-        setOrders(response);
+        setReturns(response);
         setTotalPages(Math.ceil(response.length / pageSize) || 0);
         setTotalElements(response.length || 0);
       } else {
-        setOrders([]);
+        setReturns([]);
         setTotalPages(0);
         setTotalElements(0);
       }
     } catch (error) {
-      console.error("Error loading vendor return orders:", error);
-      setErrorMessage("Failed to load vendor return orders.");
+      console.error("Error loading vendor returns:", error);
+      setErrorMessage("Failed to load vendor return requests.");
     } finally {
       setLoading(false);
     }
   };
-  const handleGeneratePickList = (order) => {
-    setSelectedOrder(order);
-    setAssignTo("");
-    setAssignSearch("");
-    setShowAssignModal(true);
-  };
 
-  const handleAssignPickList = async () => {
-    if (!selectedOrder) {
-      setErrorMessage("Order not selected.");
-      return;
-    }
-
-    if (!assignTo.trim()) {
-      setErrorMessage("Please select a user.");
-      return;
-    }
-
+  const handleViewClick = async (returnData) => {
     try {
       setLoading(true);
-
-      await generatePickListAPI(selectedOrder.id, assignTo.trim());
-
-      setShowAssignModal(false);
-      setSelectedOrder(null);
-      setAssignTo("");
-      setAssignSearch("");
-
-      setSuccessMessage(
-        `Pick list generated successfully for ${selectedOrder.vroNumber}.`,
-      );
-      setShowSuccess(true);
-
-      await loadOrders();
-    } catch (error) {
-      console.error("Error generating pick list:", error);
-
-      setErrorMessage(error.message || "Failed to generate pick list.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleViewClick = async (orderData) => {
-    try {
-      setLoading(true);
-      const fullOrder = await getVendorReturnOrderByIdAPI(orderData.id);
-      setViewingOrder(fullOrder);
+      const fullReturn = await getVendorReturnRequestByIdAPI(returnData.id);
+      setViewingReturn(fullReturn);
       setShowViewModal(true);
     } catch (error) {
-      console.error("Error loading order details:", error);
-      setErrorMessage("Failed to load vendor return order details.");
+      console.error("Error loading return details:", error);
+      setErrorMessage("Failed to load vendor return details.");
     } finally {
       setLoading(false);
     }
@@ -249,22 +272,56 @@ export default function VendorReturnOrdersPage() {
 
   const handleViewClose = () => {
     setShowViewModal(false);
-    setViewingOrder(null);
+    setViewingReturn(null);
+  };
+
+  // Approve Handler
+  const handleApprove = async (id, approvedBy) => {
+    try {
+      const response = await approveVendorReturnAPI(id, approvedBy);
+      setSuccessMessage(`Vendor return request ${id} approved successfully!`);
+      setShowSuccess(true);
+      setShowViewModal(false);
+      loadReturns();
+      return response;
+    } catch (error) {
+      console.error("Error approving request:", error);
+      setErrorMessage(`Failed to approve: ${error.message}`);
+      throw error;
+    }
+  };
+
+  // Reject Handler
+  const handleReject = async (id, rejectedBy, rejectionReason) => {
+    try {
+      const response = await rejectVendorReturnAPI(
+        id,
+        rejectedBy,
+        rejectionReason,
+      );
+      setSuccessMessage(`Vendor return request ${id} rejected.`);
+      setShowSuccess(true);
+      setShowViewModal(false);
+      loadReturns();
+      return response;
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+      setErrorMessage(`Failed to reject: ${error.message}`);
+      throw error;
+    }
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      CREATED: "bg-gray-100 text-gray-700",
-      PENDING_PICKING: "bg-yellow-100 text-yellow-700",
-      PENDING_QC: "bg-blue-100 text-blue-700",
-      PENDING_PACKING: "bg-purple-100 text-purple-700",
-      PENDING_DISPATCH: "bg-orange-100 text-orange-700",
-      DISPATCHED: "bg-green-100 text-green-700",
-      RECEIVED: "bg-teal-100 text-teal-700",
-      COMPLETED: "bg-green-100 text-green-700",
-      CANCELLED: "bg-red-100 text-red-700",
+      DRAFT: "bg-gray-100 text-gray-700",
+      PENDING: "bg-yellow-100 text-yellow-700",
+      PENDING_APPROVAL: "bg-yellow-100 text-yellow-700",
+      APPROVED: "bg-green-100 text-green-700",
+      REJECTED: "bg-red-100 text-red-700",
+      COMPLETED: "bg-purple-100 text-purple-700",
+      PROCESSING: "bg-blue-100 text-blue-700",
     };
-    return colors[status] || colors.CREATED;
+    return colors[status] || colors.DRAFT;
   };
 
   const getPriorityColor = (priority) => {
@@ -307,21 +364,6 @@ export default function VendorReturnOrdersPage() {
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "₹0.00";
     return `₹${Number(amount).toFixed(2)}`;
-  };
-
-  const getStatusDisplayName = (status) => {
-    const names = {
-      CREATED: "Created",
-      PENDING_PICKING: "Pending Picking",
-      PENDING_QC: "Pending QC",
-      PENDING_PACKING: "Pending Packing",
-      PENDING_DISPATCH: "Pending Dispatch",
-      DISPATCHED: "Dispatched",
-      RECEIVED: "Received",
-      COMPLETED: "Completed",
-      CANCELLED: "Cancelled",
-    };
-    return names[status] || status;
   };
 
   return (
@@ -376,7 +418,7 @@ export default function VendorReturnOrdersPage() {
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Vendor Return Orders
+                  Reject Return Requests Approval
                 </h1>
                 <p className="text-green-100 text-sm mt-1">
                   WMS Warehouse Management System
@@ -385,7 +427,7 @@ export default function VendorReturnOrdersPage() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={loadOrders}
+                  onClick={loadReturns}
                   className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -402,7 +444,7 @@ export default function VendorReturnOrdersPage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search by Order Number, Request Number, or Supplier..."
+                  placeholder="Search by Request Number, PO Number, or Supplier..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -418,20 +460,18 @@ export default function VendorReturnOrdersPage() {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="ALL">All Status</option>
-                <option value="CREATED">Created</option>
-                <option value="PENDING_PICKING">Pending Picking</option>
-                <option value="PENDING_QC">Pending QC</option>
-                <option value="PENDING_PACKING">Pending Packing</option>
-                <option value="PENDING_DISPATCH">Pending Dispatch</option>
-                <option value="DISPATCHED">Dispatched</option>
-                <option value="RECEIVED">Received</option>
+                <option value="DRAFT">Draft</option>
+                <option value="PENDING">Pending</option>
+                <option value="PENDING_APPROVAL">Pending Approval</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
                 <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
+                <option value="PROCESSING">Processing</option>
               </select>
             </div>
 
             <div className="text-sm text-gray-500">
-              Showing {orders.length} of {totalElements} orders
+              Showing {returns.length} of {totalElements} requests
             </div>
           </div>
         </div>
@@ -443,13 +483,13 @@ export default function VendorReturnOrdersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order No.
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Request No.
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order Date
+                    Request Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PO Number
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Supplier
@@ -460,11 +500,8 @@ export default function VendorReturnOrdersPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Priority
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Items
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -477,93 +514,91 @@ export default function VendorReturnOrdersPage() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="10" className="text-center py-8">
+                    <td colSpan="9" className="text-center py-8">
                       <div className="flex justify-center items-center gap-2">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                         <span className="text-gray-500">Loading...</span>
                       </div>
                     </td>
                   </tr>
-                ) : orders.length === 0 ? (
+                ) : returns.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="text-center py-8 text-gray-500">
-                      No vendor return orders found
+                    <td colSpan="9" className="text-center py-8 text-gray-500">
+                      No vendor return requests found
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order) => (
+                  returns.map((returnData) => (
                     <tr
-                      key={order.id}
+                      key={returnData.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td
                         className="px-4 py-3 cursor-pointer"
-                        onClick={() => handleViewClick(order)}
+                        onClick={() => handleViewClick(returnData)}
                       >
                         <span className="font-medium text-blue-600 hover:text-blue-800">
-                          {order.vroNumber}
+                          {returnData.returnRequestNumber}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className="text-gray-600">
-                          {order.returnRequestNumber}
+                        {formatDate(returnData.requestDate)}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs">
+                          {returnData.poNumber}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {formatDate(order.orderDate)}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {order.supplierName}
+                        {returnData.supplierName}
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getReturnTypeColor(order.returnType)}`}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getReturnTypeColor(returnData.returnType)}`}
                         >
                           <ArrowLeftRight className="w-3 h-3" />
-                          {order.returnType?.replace("_", " ")}
+                          {returnData.returnType?.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(order.priority)}`}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(returnData.priority)}`}
                         >
                           <Flag className="w-3 h-3" />
-                          {order.priority}
+                          {returnData.priority}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        {order.lines?.length || 0}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-green-600">
-                        {formatCurrency(order.totalAmount)}
+                      <td className="px-4 py-3 text-sm text-center">
+                        {returnData.lines?.length || 0}
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(returnData.status)}`}
                         >
-                          {getStatusDisplayName(order.status)}
+                          {returnData.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleViewClick(order)}
+                            onClick={() => handleViewClick(returnData)}
                             className="text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {!order.pickListGenerated && (
+                          {/* {(returnData.status === "APPROVED" ||
+                            returnData.status === "COMPLETED") && (
                             <button
                               type="button"
-                              onClick={() => handleGeneratePickList(order)}
+                              onClick={() => handleCreateOrder(returnData)}
                               className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
-                              title="Generate Pick List"
+                              title="Create Order"
                             >
-                              <Printer className="w-4 h-4" />
+                              <Package className="w-4 h-4" />
                             </button>
-                          )}
+                          )} */}
                         </div>
                       </td>
                     </tr>
@@ -578,7 +613,7 @@ export default function VendorReturnOrdersPage() {
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
                 Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
-                orders
+                requests
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -601,194 +636,23 @@ export default function VendorReturnOrdersPage() {
           )}
         </div>
 
-        {/* View Modal */}
-        {showViewModal && viewingOrder && (
-          <VendorReturnOrderView
-            data={viewingOrder}
+        {/* View Modal - Using the separated component */}
+        {showViewModal && viewingReturn && (
+          <VendorReturnView
+            data={viewingReturn}
             onClose={handleViewClose}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            users={users}
           />
         )}
-        {/* Generate Pick List Modal */}
-        {showAssignModal && selectedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b px-6 py-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Generate Pick List
-                  </h2>
-
-                  <p className="mt-1 text-sm text-gray-500">
-                    Order: {selectedOrder.vroNumber}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setSelectedOrder(null);
-                    setAssignTo("");
-                    setAssignSearch("");
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6">
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Assign To
-                </label>
-
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={assignSearch}
-                    onChange={(e) => {
-                      setAssignSearch(e.target.value);
-                      setAssignTo("");
-                      setShowUserDropdown(true);
-                    }}
-                    onBlur={() => {
-                      // Small delay allows click on dropdown item
-                      setTimeout(() => setShowUserDropdown(false), 200);
-                    }}
-                    onFocus={() => setShowUserDropdown(true)}
-                    placeholder="Search user..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  />
-
-                  {showUserDropdown && (
-                    <div className="absolute z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                      {users
-                        .filter((user) => {
-                          const name =
-                            user.name ||
-                            user.fullName ||
-                            user.username ||
-                            [user.firstName, user.lastName]
-                              .filter(Boolean)
-                              .join(" ");
-
-                          const email = user.email || "";
-                          const search = assignSearch.toLowerCase().trim();
-
-                          if (!search) {
-                            return true;
-                          }
-
-                          return (
-                            String(name).toLowerCase().includes(search) ||
-                            String(email).toLowerCase().includes(search)
-                          );
-                        })
-                        .map((user) => {
-                          const name =
-                            user.name ||
-                            user.fullName ||
-                            user.username ||
-                            [user.firstName, user.lastName]
-                              .filter(Boolean)
-                              .join(" ");
-
-                          return (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                              }}
-                              onClick={() => {
-                                setAssignTo(String(name));
-                                setAssignSearch(String(name));
-                                setShowUserDropdown(false);
-                              }}
-                              className="block w-full border-b px-4 py-3 text-left hover:bg-blue-50 last:border-b-0"
-                            >
-                              <div className="font-medium text-gray-800">
-                                {name}
-                              </div>
-
-                              {user.email && (
-                                <div className="text-xs text-gray-500">
-                                  {user.email}
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-
-                      {users.filter((user) => {
-                        const name =
-                          user.name ||
-                          user.fullName ||
-                          user.username ||
-                          [user.firstName, user.lastName]
-                            .filter(Boolean)
-                            .join(" ");
-
-                        const email = user.email || "";
-                        const search = assignSearch.toLowerCase().trim();
-
-                        if (!search) {
-                          return true;
-                        }
-
-                        return (
-                          String(name).toLowerCase().includes(search) ||
-                          String(email).toLowerCase().includes(search)
-                        );
-                      }).length === 0 && (
-                        <div className="px-4 py-3 text-sm text-gray-500">
-                          No users found
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected User */}
-                {assignTo && (
-                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                    <div className="text-xs text-blue-600">Assigned To</div>
-
-                    <div className="text-sm font-semibold text-blue-800">
-                      {assignTo}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setSelectedOrder(null);
-                    setAssignTo("");
-                    setAssignSearch("");
-                  }}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleAssignPickList}
-                  disabled={!assignTo || loading}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? "Generating..." : "Generate Pick List"}
-                </button>
-              </div>
-            </div>
-          </div>
+        {showOrderForm && selectedReturnForOrder && (
+          <VendorReturnOrderForm
+            returnRequest={selectedReturnForOrder}
+            onClose={handleOrderFormClose}
+            onSuccess={handleOrderSuccess}
+            onError={handleOrderError}
+          />
         )}
       </div>
 
