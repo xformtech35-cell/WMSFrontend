@@ -1561,7 +1561,7 @@ export default function QRCodeGeneratorPage() {
                       previewQr.displayBin,
                     ]
                       .filter(Boolean)
-                      .join(" → ")}
+                      .join("/")}
                   </p>
                 </div>
                 <div className="flex gap-2 w-full">

@@ -89,7 +89,7 @@ export default function QRCodeHistoryTable({
                 QR ID
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-               Date
+                Date
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 GRN Number
@@ -121,10 +121,11 @@ export default function QRCodeHistoryTable({
                 h.displayZone || h.zone,
                 h.displayAisle || h.aisle,
                 h.displayRack || h.rack,
+                h.displayLevel || h.level,
                 h.displayBin || h.binId,
               ]
                 .filter(Boolean)
-                .join(" → ");
+                .join("/");
 
               return (
                 <tr

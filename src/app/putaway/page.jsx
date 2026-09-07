@@ -90,33 +90,33 @@ export default function PutawayPage() {
   // State for selected GRN in form
   const [selectedGrnForPutaway, setSelectedGrnForPutaway] = useState("");
   const [grnItems, setGrnItems] = useState([]);
-// Add these state variables
-const [grnPagination, setGrnPagination] = useState({
-  page: 0,
-  size: 10,
-  totalPages: 0,
-  totalItems: 0,
-  startItem: 0,
-  endItem: 0,
-});
-const [isGrnLoading, setIsGrnLoading] = useState(false);
-const [grnSearchQuery, setGrnSearchQuery] = useState("");
-const [debouncedGrnSearch, setDebouncedGrnSearch] = useState("");
+  // Add these state variables
+  const [grnPagination, setGrnPagination] = useState({
+    page: 0,
+    size: 10,
+    totalPages: 0,
+    totalItems: 0,
+    startItem: 0,
+    endItem: 0,
+  });
+  const [isGrnLoading, setIsGrnLoading] = useState(false);
+  const [grnSearchQuery, setGrnSearchQuery] = useState("");
+  const [debouncedGrnSearch, setDebouncedGrnSearch] = useState("");
 
-// Add debounce for search
-// Add debounce for search
-useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedGrnSearch(grnSearchQuery);
-    if (open) {
-      fetchApprovedGRNsWithPagination(0, grnSearchQuery);
-    }
-  }, 500);
-  return () => clearTimeout(timer);
-}, [grnSearchQuery, open]);
+  // Add debounce for search
+  // Add debounce for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedGrnSearch(grnSearchQuery);
+      if (open) {
+        fetchApprovedGRNsWithPagination(0, grnSearchQuery);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [grnSearchQuery, open]);
   // Fetch data on component mount
   useEffect(() => {
-          fetchApprovedGRNsWithPagination(0, grnSearchQuery);
+    fetchApprovedGRNsWithPagination(0, grnSearchQuery);
 
     fetchMasterData();
   }, []);
@@ -136,107 +136,98 @@ useEffect(() => {
       console.error("Error fetching master data:", error);
     }
   };
-// Fetch GRNs with pagination
-// Fetch GRNs with pagination
-const fetchApprovedGRNsWithPagination = async (
-  page = 0,
-  searchQuery = ""
-) => {
-  try {
-    setIsGrnLoading(true);
+  // Fetch GRNs with pagination
+  // Fetch GRNs with pagination
+  const fetchApprovedGRNsWithPagination = async (
+    page = 0,
+    searchQuery = "",
+  ) => {
+    try {
+      setIsGrnLoading(true);
 
-    const params = new URLSearchParams();
+      const params = new URLSearchParams();
 
-    params.append("page", String(page));
-    params.append("size", String(grnPagination.size));
-    params.append("barcodeGenerate", "true");
+      params.append("page", String(page));
+      params.append("size", String(grnPagination.size));
+      params.append("barcodeGenerate", "true");
 
-    if (searchQuery.trim()) {
-      params.append("search", searchQuery.trim());
+      if (searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+      }
+
+      const response = await api.get(
+        `/inbound/grn-status/APPROVED?${params.toString()}`,
+      );
+
+      console.log("GRN API RESPONSE:", response.data);
+
+      // Your API response:
+      // response.data.data.content
+      const content = response.data?.data?.content || [];
+
+      console.log("GRN CONTENT:", content);
+
+      setGrns(content);
+
+      const totalElements = response.data?.data?.totalElements || 0;
+
+      const totalPages = response.data?.data?.totalPages || 0;
+
+      setGrnPagination((prev) => ({
+        ...prev,
+        page,
+        totalPages,
+        totalItems: totalElements,
+        startItem: totalElements > 0 ? page * prev.size + 1 : 0,
+        endItem:
+          totalElements > 0
+            ? Math.min((page + 1) * prev.size, totalElements)
+            : 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching GRNs:", error);
+      console.error("GRN error response:", error.response?.data);
+
+      setGrns([]);
+
+      toast.error("Failed to load GRNs.");
+    } finally {
+      setIsGrnLoading(false);
     }
+  };
 
-    const response = await api.get(
-      `/inbound/grn-status/APPROVED?${params.toString()}`
-    );
+  // Handle GRN search (called from react-select)
+  const handleGrnSearch = (searchTerm) => {
+    setGrnSearchQuery(searchTerm);
+  };
 
-    console.log("GRN API RESPONSE:", response.data);
+  // Handle GRN page change for infinite scroll
+  const handleGrnPageChange = (newPage) => {
+    if (newPage >= 0 && newPage < grnPagination.totalPages) {
+      fetchApprovedGRNsWithPagination(newPage, grnSearchQuery);
+    }
+  };
 
-    // Your API response:
-    // response.data.data.content
-    const content = response.data?.data?.content || [];
-
-    console.log("GRN CONTENT:", content);
-
-    setGrns(content);
-
-    const totalElements =
-      response.data?.data?.totalElements || 0;
-
-    const totalPages =
-      response.data?.data?.totalPages || 0;
-
-    setGrnPagination((prev) => ({
-      ...prev,
-      page,
-      totalPages,
-      totalItems: totalElements,
-      startItem:
-        totalElements > 0
-          ? page * prev.size + 1
-          : 0,
-      endItem:
-        totalElements > 0
-          ? Math.min(
-              (page + 1) * prev.size,
-              totalElements
-            )
-          : 0,
-    }));
-
-  } catch (error) {
-    console.error("Error fetching GRNs:", error);
-    console.error("GRN error response:", error.response?.data);
-
-    setGrns([]);
-
-    toast.error("Failed to load GRNs.");
-  } finally {
-    setIsGrnLoading(false);
-  }
-};
-
-// Handle GRN search (called from react-select)
-const handleGrnSearch = (searchTerm) => {
-  setGrnSearchQuery(searchTerm);
-};
-
-// Handle GRN page change for infinite scroll
-const handleGrnPageChange = (newPage) => {
-  if (newPage >= 0 && newPage < grnPagination.totalPages) {
-    fetchApprovedGRNsWithPagination(newPage, grnSearchQuery);
-  }
-};
-
-// Update openCreate
-const openCreate = () => {
-  setSelectedGrn(null);
-  setSelectedGrnForPutaway("");
-  setGrnItems([]);
-  setFormData({
-    grnNumber: "",
-    warehouseId: "",
-    assignedTo: "",
-    receivingArea: "",
-    rockId: "",
-    createdBy: "admin",
-    lines: [],
-  });
-  setFormErrors({});
-  setOpen(true);
-  // Reset search and load GRNs
-  setGrnSearchQuery("");
-  fetchApprovedGRNsWithPagination(0, "");
-};
+  // Update openCreate
+  const openCreate = () => {
+    setSelectedGrn(null);
+    setSelectedGrnForPutaway("");
+    setGrnItems([]);
+    setFormData({
+      grnNumber: "",
+      warehouseId: "",
+      assignedTo: "",
+      receivingArea: "",
+      rockId: "",
+      createdBy: "admin",
+      lines: [],
+    });
+    setFormErrors({});
+    setOpen(true);
+    // Reset search and load GRNs
+    setGrnSearchQuery("");
+    fetchApprovedGRNsWithPagination(0, "");
+  };
   const fetchApprovedGRNsList = async (searchQuery = "") => {
     try {
       setIsLoading(true);
@@ -366,10 +357,11 @@ const openCreate = () => {
           line.zone,
           line.aisle,
           line.rack,
+          line.level,
           line.binId,
         ]
           .filter(Boolean)
-          .join(" → ");
+          .join("/");
 
         return {
           id: line.id,
@@ -662,29 +654,29 @@ const openCreate = () => {
       </div>
 
       {/* Putaway Form - Custom Modal */}
-     <PutawayFormModal
-  open={open}
-  onClose={handleClose}
-  grns={grns}
-  users={users}
-  selectedGrnForPutaway={selectedGrnForPutaway}
-  selectedGrn={selectedGrn}
-  grnItems={grnItems}
-  formData={formData}
-  formErrors={formErrors}
-  isSubmitting={isSubmitting}
-  onGrnSelect={handleGrnSelect}
-  onToggleItemSelection={toggleItemSelection}
-  onAddSelectedItems={addSelectedItemsToLines}
-  onRemoveLine={removeLine}
-  onInputChange={handleInputChange}
-  onLineChange={handleLineChange}
-  onSubmit={handleSubmit}
-  grnPagination={grnPagination}
-  onGrnPageChange={handleGrnPageChange}
-  onGrnSearch={handleGrnSearch}
-  isGrnLoading={isGrnLoading}
-/>
+      <PutawayFormModal
+        open={open}
+        onClose={handleClose}
+        grns={grns}
+        users={users}
+        selectedGrnForPutaway={selectedGrnForPutaway}
+        selectedGrn={selectedGrn}
+        grnItems={grnItems}
+        formData={formData}
+        formErrors={formErrors}
+        isSubmitting={isSubmitting}
+        onGrnSelect={handleGrnSelect}
+        onToggleItemSelection={toggleItemSelection}
+        onAddSelectedItems={addSelectedItemsToLines}
+        onRemoveLine={removeLine}
+        onInputChange={handleInputChange}
+        onLineChange={handleLineChange}
+        onSubmit={handleSubmit}
+        grnPagination={grnPagination}
+        onGrnPageChange={handleGrnPageChange}
+        onGrnSearch={handleGrnSearch}
+        isGrnLoading={isGrnLoading}
+      />
       {/* Putaway Details View - Custom Modal */}
       <PutawayDetailsModal
         open={viewDetailsOpen}
@@ -791,7 +783,6 @@ const openCreate = () => {
                   ))}
                 </select>
               </div>
-
             </div>
           )}
         </div>

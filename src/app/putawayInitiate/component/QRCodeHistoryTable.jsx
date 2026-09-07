@@ -127,7 +127,7 @@ export default function QRCodeHistoryTable({
                 h.displayBin || h.binId,
               ]
                 .filter(Boolean)
-                .join(" → ");
+                .join("/");
 
               return (
                 <tr

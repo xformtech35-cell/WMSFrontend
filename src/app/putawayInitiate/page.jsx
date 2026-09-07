@@ -1041,7 +1041,7 @@ export default function PutawayInitiate() {
                   <div>
                     <Label className="text-xs text-gray-500">Warehouse</Label>
                     <Input
-                      value={selectedQrForPutaway.warehouseId || "-"}
+                      value={selectedQrForPutaway.warehouseId || "/"}
                       readOnly
                       className="bg-white border-0 text-sm"
                     />
@@ -1049,7 +1049,7 @@ export default function PutawayInitiate() {
                   <div>
                     <Label className="text-xs text-gray-500">Zone</Label>
                     <Input
-                      value={selectedQrForPutaway.zone || "-"}
+                      value={selectedQrForPutaway.zone || "/"}
                       readOnly
                       className="bg-white border-0 text-sm"
                     />
@@ -1057,7 +1057,7 @@ export default function PutawayInitiate() {
                   <div>
                     <Label className="text-xs text-gray-500">Aisle</Label>
                     <Input
-                      value={selectedQrForPutaway.aisle || "-"}
+                      value={selectedQrForPutaway.aisle || "/"}
                       readOnly
                       className="bg-white border-0 text-sm"
                     />
@@ -1065,7 +1065,7 @@ export default function PutawayInitiate() {
                   <div>
                     <Label className="text-xs text-gray-500">Rack</Label>
                     <Input
-                      value={selectedQrForPutaway.rack || "-"}
+                      value={selectedQrForPutaway.rack || "/"}
                       readOnly
                       className="bg-white border-0 text-sm"
                     />
@@ -1073,7 +1073,7 @@ export default function PutawayInitiate() {
                   <div>
                     <Label className="text-xs text-gray-500">Level</Label>
                     <Input
-                      value={selectedQrForPutaway.level || "-"}
+                      value={selectedQrForPutaway.level || "/"}
                       readOnly
                       className="bg-white border-0 text-sm"
                     />
@@ -1081,7 +1081,7 @@ export default function PutawayInitiate() {
                   <div>
                     <Label className="text-xs text-gray-500">Bin</Label>
                     <Input
-                      value={selectedQrForPutaway.binId || "-"}
+                      value={selectedQrForPutaway.binId || "/"}
                       readOnly
                       className="bg-white border-0 text-sm font-medium text-blue-600"
                     />
@@ -1114,8 +1114,9 @@ export default function PutawayInitiate() {
                       selectedQrForPutaway.zone,
                       selectedQrForPutaway.aisle,
                       selectedQrForPutaway.rack,
+                      selectedQrForPutaway.level,
                       selectedQrForPutaway.binId,
-                    ].filter(Boolean).length === 0 && "-"}
+                    ].filter(Boolean).length === 0 && "/"}
                   </div>
                 </div>
               </div>
@@ -1348,7 +1349,7 @@ export default function PutawayInitiate() {
                       previewQr.displayBin,
                     ]
                       .filter(Boolean)
-                      .join(" → ")}
+                      .join("/")}
                   </p>
                 </div>
                 <div className="flex gap-2 w-full">

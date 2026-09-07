@@ -353,7 +353,7 @@ export default function InventoryStockPage() {
               </button>
               <button
                 type="button"
-               onClick={() => router.push("/inventory/transfer-history")}
+                onClick={() => router.push("/inventory/transfer-history")}
                 className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
@@ -444,32 +444,32 @@ export default function InventoryStockPage() {
                       Warehouse
                     </Label>
                     <p className="font-medium">
-                      {selectedItem.warehouseId || "-"}
+                      {selectedItem.warehouseId || "/"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
                       Zone
                     </Label>
-                    <p className="font-medium">{selectedItem.zone || "-"}</p>
+                    <p className="font-medium">{selectedItem.zone || "/"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
                       Aisle
                     </Label>
-                    <p className="font-medium">{selectedItem.aisle || "-"}</p>
+                    <p className="font-medium">{selectedItem.aisle || "/"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
                       Rack
                     </Label>
-                    <p className="font-medium">{selectedItem.rack || "-"}</p>
+                    <p className="font-medium">{selectedItem.rack || "/"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
                       Level
                     </Label>
-                    <p className="font-medium">{selectedItem.level || "-"}</p>
+                    <p className="font-medium">{selectedItem.level || "/"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
@@ -789,7 +789,7 @@ export default function InventoryStockPage() {
                     item.binId,
                   ]
                     .filter(Boolean)
-                    .join(" → ");
+                    .join("/");
 
                   return (
                     <tr

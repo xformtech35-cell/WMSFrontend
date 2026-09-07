@@ -37,7 +37,12 @@ import VendorReturnView from "./components/VendorReturnView";
 import VendorReturnOrderForm from "./components/VendorReturnOrderForm";
 
 // API Functions (keep all your API functions here)
-const apiRequest = async (endpoint, method = "GET", data = null, params = null) => {
+const apiRequest = async (
+  endpoint,
+  method = "GET",
+  data = null,
+  params = null,
+) => {
   try {
     const response = await api.request({
       url: endpoint,
@@ -93,7 +98,6 @@ const getVendorReturnRequestByIdAPI = async (id) => {
   return apiRequest(`/vendor-returns/requests/${id}`);
 };
 
-
 // Approve API - Send approvedBy as userId
 const approveVendorReturnAPI = async (id, approvedBy) => {
   const requestBody = {
@@ -142,9 +146,9 @@ export default function VendorReturnRequestPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingReturn, setViewingReturn] = useState(null);
-// Add to state
-const [showOrderForm, setShowOrderForm] = useState(false);
-const [selectedReturnForOrder, setSelectedReturnForOrder] = useState(null);
+  // Add to state
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [selectedReturnForOrder, setSelectedReturnForOrder] = useState(null);
 
   // Fetch users on mount
   useEffect(() => {
@@ -200,26 +204,26 @@ const [selectedReturnForOrder, setSelectedReturnForOrder] = useState(null);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
-// Add handler functions
-const handleCreateOrder = (returnData) => {
-  setSelectedReturnForOrder(returnData);
-  setShowOrderForm(true);
-};
+  // Add handler functions
+  const handleCreateOrder = (returnData) => {
+    setSelectedReturnForOrder(returnData);
+    setShowOrderForm(true);
+  };
 
-const handleOrderFormClose = () => {
-  setShowOrderForm(false);
-  setSelectedReturnForOrder(null);
-};
+  const handleOrderFormClose = () => {
+    setShowOrderForm(false);
+    setSelectedReturnForOrder(null);
+  };
 
-const handleOrderSuccess = (response) => {
-  setSuccessMessage("Vendor return order created successfully!");
-  setShowSuccess(true);
-  loadReturns(); // Refresh the list
-};
+  const handleOrderSuccess = (response) => {
+    setSuccessMessage("Vendor return order created successfully!");
+    setShowSuccess(true);
+    loadReturns(); // Refresh the list
+  };
 
-const handleOrderError = (error) => {
-  setErrorMessage(error || "Failed to create vendor return order");
-};
+  const handleOrderError = (error) => {
+    setErrorMessage(error || "Failed to create vendor return order");
+  };
 
   const loadReturns = async () => {
     try {
@@ -457,12 +461,12 @@ const handleOrderError = (error) => {
               >
                 <option value="ALL">All Status</option>
                 <option value="DRAFT">Draft</option>
-                <option value="PENDING">Pending</option>
+                {/* <option value="PENDING">Pending</option> */}
                 <option value="PENDING_APPROVAL">Pending Approval</option>
                 <option value="APPROVED">Approved</option>
                 <option value="REJECTED">Rejected</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="PROCESSING">Processing</option>
+                {/* <option value="COMPLETED">Completed</option>
+                <option value="PROCESSING">Processing</option> */}
               </select>
             </div>
 
@@ -584,16 +588,17 @@ const handleOrderError = (error) => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                           {(returnData.status === "APPROVED" || returnData.status === "COMPLETED") && (
-      <button
-        type="button"
-        onClick={() => handleCreateOrder(returnData)}
-        className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
-        title="Create Order"
-      >
-        <Package className="w-4 h-4" />
-      </button>
-    )}
+                          {(returnData.status === "APPROVED" ||
+                            returnData.status === "COMPLETED") && (
+                            <button
+                              type="button"
+                              onClick={() => handleCreateOrder(returnData)}
+                              className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
+                              title="Create Order"
+                            >
+                              <Package className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -642,13 +647,13 @@ const handleOrderError = (error) => {
           />
         )}
         {showOrderForm && selectedReturnForOrder && (
-  <VendorReturnOrderForm
-    returnRequest={selectedReturnForOrder}
-    onClose={handleOrderFormClose}
-    onSuccess={handleOrderSuccess}
-    onError={handleOrderError}
-  />
-)}
+          <VendorReturnOrderForm
+            returnRequest={selectedReturnForOrder}
+            onClose={handleOrderFormClose}
+            onSuccess={handleOrderSuccess}
+            onError={handleOrderError}
+          />
+        )}
       </div>
 
       <style jsx>{`

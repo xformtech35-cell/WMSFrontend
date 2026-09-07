@@ -1074,7 +1074,7 @@ export const WarehouseHierarchy = ({
                 text-slate-500
               "
             >
-              Warehouse → Zone → Aisle → Rack → Bin
+              Warehouse → Zone → Aisle → Rack → Level → Bin
             </CardDescription>
           </div>
 

@@ -69,9 +69,7 @@ export default function PutawayDetailsModal({
                 </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">
-                  Status
-                </Label>
+                <Label className="text-xs text-muted-foreground">Status</Label>
                 <StatusBadge status={selectedPutaway.status || "PENDING"} />
               </div>
               <div>
@@ -142,10 +140,11 @@ export default function PutawayDetailsModal({
                           line.suggestedZone,
                           line.suggestedAisle,
                           line.suggestedRack,
+                          line.suggestedLevel,
                           line.suggestedBin,
                         ]
                           .filter(Boolean)
-                          .join(" → ");
+                          .join("/");
 
                         return (
                           <TableRow key={idx}>
@@ -158,7 +157,6 @@ export default function PutawayDetailsModal({
                             <TableCell>{line.itemName || "-"}</TableCell>
                             <TableCell>{location || "-"}</TableCell>
                             <TableCell>{line.status || "-"}</TableCell>
-
                           </TableRow>
                         );
                       })}

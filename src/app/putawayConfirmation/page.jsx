@@ -255,7 +255,7 @@ export default function PutawayConfirmationPage() {
           line.binId,
         ]
           .filter(Boolean)
-          .join(" → ");
+          .join("/");
 
         return {
           id: line.id,
@@ -705,8 +705,6 @@ export default function PutawayConfirmationPage() {
                   ))}
                 </select>
               </div>
-
-            
             </div>
           )}
         </div>

@@ -105,7 +105,6 @@ const LS_KEY = "wms-sidebar-width";
 const LS_EXPANDED_KEY = "wms-sidebar-expanded-groups";
 const LS_FAVORITES_KEY = "wms-sidebar-favorites";
 
-
 const ALL_MENU_ITEMS = [
   {
     href: "/dashboard",
@@ -128,21 +127,21 @@ const ALL_MENU_ITEMS = [
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
-   {
+  {
     href: "/return-request-approval",
     label: "Return Request Approval",
     icon: FileText,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
-   {
+  {
     href: "/purchase-return-request",
     label: "Purchase Return Request",
     icon: FileText,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
-  
+
   {
     href: "/purchase-return-orders",
     label: "Purchase Return Orders",
@@ -150,14 +149,14 @@ const ALL_MENU_ITEMS = [
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
-   {
+  {
     href: "/picking-return-orders",
     label: "Picking Return Orders",
     icon: FileText,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
-    {
+  {
     href: "/return-quality-check",
     label: "Return Quality Check",
     icon: FileText,
@@ -367,7 +366,7 @@ const ALL_MENU_ITEMS = [
   },
   {
     href: "/delivery-chalan",
-    label: "Delivery Chalan",
+    label: "Delivery Challans",
     icon: FileText,
     group: "Fulfillment",
     permission: P.PICKING_VIEW,
@@ -383,7 +382,7 @@ const ALL_MENU_ITEMS = [
   },
   {
     href: "/shifment-confirmation",
-    label: "Shifment Confimrations",
+    label: "Shipment Confirmations",
     icon: ClipboardSignature,
     group: "Fulfillment",
     permission: P.PICKING_VIEW,

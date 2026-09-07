@@ -237,6 +237,7 @@ export default function PutawayExicutePage() {
           line.zone,
           line.aisle,
           line.rack,
+          line.level,
           line.binId,
         ]
           .filter(Boolean)
@@ -493,7 +494,7 @@ export default function PutawayExicutePage() {
       toast.error(
         error.response?.data?.message ||
           error.response?.data?.detail ||
-          "Failed to execute putaway."
+          "Failed to execute putaway.",
       );
       throw error;
     }
@@ -590,8 +591,6 @@ export default function PutawayExicutePage() {
         selectedPutaway={selectedPutaway}
       />
 
-      
-
       {/* Putaway History Search and Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
         <div className="flex flex-col gap-3">
@@ -687,8 +686,6 @@ export default function PutawayExicutePage() {
                   ))}
                 </select>
               </div>
-
-             
             </div>
           )}
         </div>
@@ -797,7 +794,8 @@ export default function PutawayExicutePage() {
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
                           item.stage === "COMPLETED" || item.stage === "PLACED"
                             ? "bg-green-100 text-green-700 border-green-200"
-                            : item.stage === "IN_PROGRESS" || item.stage === "PICKED"
+                            : item.stage === "IN_PROGRESS" ||
+                                item.stage === "PICKED"
                               ? "bg-blue-100 text-blue-700 border-blue-200"
                               : "bg-yellow-100 text-yellow-700 border-yellow-200"
                         }`}

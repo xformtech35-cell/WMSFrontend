@@ -461,12 +461,12 @@ export default function VendorReturnRequestPage() {
               >
                 <option value="ALL">All Status</option>
                 <option value="DRAFT">Draft</option>
-                <option value="PENDING">Pending</option>
+                {/* <option value="PENDING">Pending</option> */}
                 <option value="PENDING_APPROVAL">Pending Approval</option>
                 <option value="APPROVED">Approved</option>
                 <option value="REJECTED">Rejected</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="PROCESSING">Processing</option>
+                {/* <option value="COMPLETED">Completed</option>
+                <option value="PROCESSING">Processing</option> */}
               </select>
             </div>
 
