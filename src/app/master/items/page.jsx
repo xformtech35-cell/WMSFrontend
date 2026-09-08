@@ -49,7 +49,7 @@ const getItemsAPI = async (page = 0, size = 10, searchTerm = "") => {
   const params = new URLSearchParams({
     page,
     size,
-    sort: "id,desc"
+    sort: "id,desc",
   });
   if (searchTerm) {
     params.append("search", searchTerm);
@@ -75,7 +75,7 @@ export default function ItemsPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  
+
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -83,7 +83,7 @@ export default function ItemsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingItem, setViewingItem] = useState(null);
-  
+
   // Form Modal State
   const [showFormModal, setShowFormModal] = useState(false);
   const [formMode, setFormMode] = useState("create");
@@ -138,6 +138,12 @@ export default function ItemsPage() {
     setShowFormModal(true);
   };
 
+  const handleimportClick = () => {
+    setFormMode("import");
+    setEditingItemId(null);
+    setShowFormModal(true);
+  };
+
   const handleEditClick = (item) => {
     setFormMode("edit");
     setEditingItemId(item.id);
@@ -146,7 +152,7 @@ export default function ItemsPage() {
 
   const handleDeleteClick = async (id) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
-    
+
     try {
       setLoading(true);
       await deleteItemAPI(id);
@@ -211,14 +217,19 @@ export default function ItemsPage() {
         {/* Success Modal */}
         {showSuccess && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowSuccess(false)} />
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowSuccess(false)}
+            />
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
               <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 transform animate-scale-up pointer-events-auto border border-gray-200">
                 <div className="text-center">
                   <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Success!</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Success!
+                  </h3>
                   <p className="text-sm text-gray-600 mb-6">{successMessage}</p>
                   <button
                     onClick={() => setShowSuccess(false)}
@@ -248,10 +259,12 @@ export default function ItemsPage() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">Item Management</h1>
+                <h1 className="text-2xl font-bold text-white">
+                  Item Management
+                </h1>
                 <p className="text-purple-100 text-sm mt-1">
                   Manage inventory items and products
                 </p>
@@ -268,10 +281,19 @@ export default function ItemsPage() {
                 <button
                   type="button"
                   onClick={handleCreateClick}
-                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
                 >
                   <Plus className="w-4 h-4" />
                   New Item
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleimportClick}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Import Item
                 </button>
                 <button
                   type="button"
@@ -359,33 +381,49 @@ export default function ItemsPage() {
                   </tr>
                 ) : (
                   items.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 cursor-pointer" onClick={() => handleViewClick(item)}>
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => handleViewClick(item)}
+                      >
                         <span className="font-medium text-blue-600 hover:text-blue-800">
                           {item.itemCode}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">{item.itemName}</td>
-                      <td className="px-4 py-3 text-sm">{item.category || "-"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {item.category || "-"}
+                      </td>
                       <td className="px-4 py-3 text-sm">{item.uom}</td>
                       <td className="px-4 py-3 text-sm text-right">
                         ₹{item.unitPrice?.toFixed(2) || "0.00"}
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
-                        <span className={`${item.currentStock <= item.minStockLevel ? "text-red-600 font-medium" : ""}`}>
+                        <span
+                          className={`${item.currentStock <= item.minStockLevel ? "text-red-600 font-medium" : ""}`}
+                        >
                           {item.currentStock || 0}
                         </span>
                         {item.currentStock <= item.minStockLevel && (
-                          <span className="ml-1 text-xs text-red-500">(Low)</span>
+                          <span className="ml-1 text-xs text-red-500">
+                            (Low)
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {item.isGstApplicable ? `${item.gstRate}%` : "N/A"}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          item.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            item.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
                           {item.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
@@ -428,7 +466,8 @@ export default function ItemsPage() {
           {totalPages > 0 && (
             <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-500">
-                Page {currentPage + 1} of {totalPages} | Total: {totalElements} items
+                Page {currentPage + 1} of {totalPages} | Total: {totalElements}{" "}
+                items
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -438,9 +477,7 @@ export default function ItemsPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-sm">
-                  {currentPage + 1}
-                </span>
+                <span className="text-sm">{currentPage + 1}</span>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages - 1}
@@ -466,12 +503,19 @@ export default function ItemsPage() {
         {showViewModal && viewingItem && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={handleViewClose} />
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={handleViewClose}
+              />
               <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Item Details</h2>
-                    <p className="text-sm text-gray-500">{viewingItem.itemCode}</p>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Item Details
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {viewingItem.itemCode}
+                    </p>
                   </div>
                   <button
                     onClick={handleViewClose}
@@ -484,76 +528,140 @@ export default function ItemsPage() {
                 <div className="p-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-500">Item Code</label>
-                      <p className="text-sm font-medium text-gray-900">{viewingItem.itemCode}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Item Name</label>
-                      <p className="text-sm font-medium text-gray-900">{viewingItem.itemName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Category</label>
-                      <p className="text-sm text-gray-700">{viewingItem.category || "-"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Brand</label>
-                      <p className="text-sm text-gray-700">{viewingItem.brand || "-"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">UOM</label>
-                      <p className="text-sm text-gray-700">{viewingItem.uom}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Unit Price</label>
-                      <p className="text-sm text-gray-700">₹{viewingItem.unitPrice?.toFixed(2) || "0.00"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Current Stock</label>
-                      <p className="text-sm text-gray-700">{viewingItem.currentStock || 0}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Min Stock Level</label>
-                      <p className="text-sm text-gray-700">{viewingItem.minStockLevel || 0}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">Reorder Level</label>
-                      <p className="text-sm text-gray-700">{viewingItem.reorderLevel || 0}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500">GST Rate</label>
-                      <p className="text-sm text-gray-700">
-                        {viewingItem.isGstApplicable ? `${viewingItem.gstRate}%` : "Not Applicable"}
+                      <label className="text-xs font-medium text-gray-500">
+                        Item Code
+                      </label>
+                      <p className="text-sm font-medium text-gray-900">
+                        {viewingItem.itemCode}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500">GST HSN Code</label>
-                      <p className="text-sm text-gray-700">{viewingItem.gstHsnCode || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500">
+                        Item Name
+                      </label>
+                      <p className="text-sm font-medium text-gray-900">
+                        {viewingItem.itemName}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500">Supplier ID</label>
-                      <p className="text-sm text-gray-700">{viewingItem.supplierId || "-"}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs font-medium text-gray-500">Description</label>
-                      <p className="text-sm text-gray-700">{viewingItem.description || "-"}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs font-medium text-gray-500">Notes</label>
-                      <p className="text-sm text-gray-700">{viewingItem.notes || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500">
+                        Category
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.category || "-"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500">Status</label>
+                      <label className="text-xs font-medium text-gray-500">
+                        Brand
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.brand || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        UOM
+                      </label>
+                      <p className="text-sm text-gray-700">{viewingItem.uom}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        Unit Price
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        ₹{viewingItem.unitPrice?.toFixed(2) || "0.00"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        Current Stock
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.currentStock || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        Min Stock Level
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.minStockLevel || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        Reorder Level
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.reorderLevel || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        GST Rate
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.isGstApplicable
+                          ? `${viewingItem.gstRate}%`
+                          : "Not Applicable"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        GST HSN Code
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.gstHsnCode || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        Supplier ID
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.supplierId || "-"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-gray-500">
+                        Description
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.description || "-"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-gray-500">
+                        Notes
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingItem.notes || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">
+                        Status
+                      </label>
                       <p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          viewingItem.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            viewingItem.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
                           {viewingItem.isActive ? "Active" : "Inactive"}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500">Created At</label>
-                      <p className="text-sm text-gray-700">{formatDate(viewingItem.createdAt)}</p>
+                      <label className="text-xs font-medium text-gray-500">
+                        Created At
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {formatDate(viewingItem.createdAt)}
+                      </p>
                     </div>
                   </div>
 
@@ -574,15 +682,31 @@ export default function ItemsPage() {
 
       <style jsx>{`
         @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes scale-up {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
-        .animate-slide-down { animation: slide-down 0.3s ease-out; }
-        .animate-scale-up { animation: scale-up 0.3s ease-out; }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
+        }
+        .animate-scale-up {
+          animation: scale-up 0.3s ease-out;
+        }
       `}</style>
     </div>
   );
