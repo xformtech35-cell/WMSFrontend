@@ -26,7 +26,12 @@ import api from "@/lib/api";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 
 // API Functions
-const getSuppliersAPI = async (page = 0, size = 10, search = "", isActive = null) => {
+const getSuppliersAPI = async (
+  page = 0,
+  size = 10,
+  search = "",
+  isActive = null,
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -192,7 +197,7 @@ export default function SuppliersPage() {
         currentPage,
         pageSize,
         searchTerm,
-        isActiveFilter
+        isActiveFilter,
       );
       console.log("Loaded suppliers:", result);
 
@@ -298,9 +303,19 @@ export default function SuppliersPage() {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    let newValue = type === "checkbox" ? checked : value;
+
+    // Apply formatting for specific fields
+    if (name === "gstNumber") {
+      newValue = value.toUpperCase().slice(0, 15);
+    } else if (name === "phone") {
+      newValue = value.slice(0, 12);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: newValue,
     }));
   };
 
@@ -979,6 +994,7 @@ export default function SuppliersPage() {
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
+                    maxLength={12}
                   />
                 </div>
 
@@ -1006,6 +1022,7 @@ export default function SuppliersPage() {
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter GST number"
+                    maxLength={15}
                   />
                 </div>
 
