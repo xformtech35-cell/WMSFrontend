@@ -48,7 +48,12 @@ import { CREATE, DELETE, update } from "@/components/apiRequest";
 import StatusBadge from "@/components/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { downloadImage } from "@/components/downloadImage64";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 async function exportBinsExcel(items) {
   await exportWmsWorkbook({
@@ -86,7 +91,12 @@ async function exportBinsExcel(items) {
       { header: "Zone", key: "zone", width: 24 },
       { header: "Warehouse", key: "warehouse", width: 28 },
       { header: "Full Location", key: "fullLocation", width: 40 },
-      { header: "Stock Quantity", key: "stockQuantity", width: 16, align: "right" },
+      {
+        header: "Stock Quantity",
+        key: "stockQuantity",
+        width: 16,
+        align: "right",
+      },
       { header: "Item Types", key: "itemTypes", width: 16, align: "right" },
     ],
     rows: items.map((b) => ({
@@ -109,7 +119,10 @@ async function exportBinsExcel(items) {
       status: b.status ?? "AVAILABLE",
       level: b.levelName || b.level?.levelId || b.level?.name || "",
       rack: b.rackName || b.level?.rack?.rackId || b.level?.rack?.name || "",
-      aisle: b.level?.rack?.aisle?.aisleNumber || b.level?.rack?.aisle?.aisleId || "",
+      aisle:
+        b.level?.rack?.aisle?.aisleNumber ||
+        b.level?.rack?.aisle?.aisleId ||
+        "",
       zone: b.level?.rack?.aisle?.zone?.name ?? "",
       warehouse: b.level?.rack?.aisle?.zone?.warehouse?.name ?? "",
       fullLocation: b.fullLocation || "",
@@ -270,8 +283,11 @@ export default function BinsPage() {
     if (formData.minCapacity && parseFloat(formData.minCapacity) < 0) {
       errors.minCapacity = "Min capacity cannot be negative";
     }
-    if (formData.minCapacity && formData.maxCapacity && 
-        parseFloat(formData.minCapacity) > parseFloat(formData.maxCapacity)) {
+    if (
+      formData.minCapacity &&
+      formData.maxCapacity &&
+      parseFloat(formData.minCapacity) > parseFloat(formData.maxCapacity)
+    ) {
       errors.minCapacity = "Min capacity cannot exceed max capacity";
     }
 
@@ -307,7 +323,9 @@ export default function BinsPage() {
       heightCm: parseFloat(formData.heightCm),
       unit: formData.unit || "cm",
       maxWeightG: parseFloat(formData.maxWeightG),
-      minCapacity: formData.minCapacity ? parseFloat(formData.minCapacity) : null,
+      minCapacity: formData.minCapacity
+        ? parseFloat(formData.minCapacity)
+        : null,
       maxCapacity: parseFloat(formData.maxCapacity),
       capacityUnit: formData.capacityUnit || "pic",
       status: formData.status,
@@ -501,10 +519,14 @@ export default function BinsPage() {
   // Helper function to get status color for text
   const getStatusColor = (status) => {
     switch (status) {
-      case "AVAILABLE": return "text-green-600";
-      case "FULL": return "text-yellow-600";
-      case "BLOCKED": return "text-red-600";
-      default: return "text-gray-600";
+      case "AVAILABLE":
+        return "text-green-600";
+      case "FULL":
+        return "text-yellow-600";
+      case "BLOCKED":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
     }
   };
 
@@ -556,6 +578,7 @@ export default function BinsPage() {
                     </div>
                   )}
                 </div>
+
                 <div className="w-full space-y-1 text-sm">
                   <p>
                     <strong>Barcode:</strong> {selectedBin.barcode || "-"}
@@ -565,37 +588,10 @@ export default function BinsPage() {
                     {selectedBin.fullLocation || "-"}
                   </p>
                   <p>
-                    <strong>Warehouse:</strong>{" "}
-                    {selectedBin.level?.rack?.aisle?.zone?.warehouse?.name ||
-                      selectedBin.level?.rack?.aisle?.zone?.warehouse?.warehouseId ||
-                      "-"}
+                    <strong>Rack:</strong> {selectedBin.rackName || "-"}
                   </p>
                   <p>
-                    <strong>Zone:</strong>{" "}
-                    {selectedBin.level?.rack?.aisle?.zone?.name ||
-                      selectedBin.level?.rack?.aisle?.zone?.zoneId ||
-                      "-"}
-                  </p>
-                  <p>
-                    <strong>Aisle:</strong>{" "}
-                    {selectedBin.level?.rack?.aisle?.aisleNumber ||
-                      selectedBin.level?.rack?.aisle?.aisleId ||
-                      "-"}
-                  </p>
-                  <p>
-                    <strong>Rack:</strong>{" "}
-                    {selectedBin.rackName ||
-                      selectedBin.level?.rack?.rackId ||
-                      selectedBin.level?.rack?.name ||
-                      "-"}
-                  </p>
-                  <p>
-                    <strong>Level:</strong>{" "}
-                    {selectedBin.levelName ||
-                      selectedBin.level?.levelId ||
-                      selectedBin.level?.name ||
-                      "-"}
-                    {selectedBin.level?.levelNumber && ` (#${selectedBin.level.levelNumber})`}
+                    <strong>Level:</strong> {selectedBin.levelName || "-"}
                   </p>
                   <p>
                     <strong>Status:</strong>{" "}
@@ -637,12 +633,26 @@ export default function BinsPage() {
                   </p>
                   <p>
                     <strong>Utilization:</strong>{" "}
-                    {selectedBin.utilizationPercentage || 0}%
+                    {selectedBin.stockSummary?.utilizationPercentage || 0}%
                   </p>
+
+                  {/* Stock Summary Section */}
                   {selectedBin.stockSummary && (
                     <>
                       <hr className="my-2" />
-                      <p className="font-medium">Stock Summary</p>
+                      <p className="font-medium">Stock Summary**</p>
+                      <p>
+                        <strong>Total Items:</strong>{" "}
+                        {selectedBin.stockSummary.totalItems || 0}
+                      </p>
+                      <p>
+                        <strong>Available Items:</strong>{" "}
+                        {selectedBin.stockSummary.availableItems || 0}
+                      </p>
+                      <p>
+                        <strong>Occupied Items:</strong>{" "}
+                        {selectedBin.stockSummary.occupiedItems || 0}
+                      </p>
                       <p>
                         <strong>Total Quantity:</strong>{" "}
                         {selectedBin.stockSummary.totalQuantity || 0}
@@ -650,10 +660,6 @@ export default function BinsPage() {
                       <p>
                         <strong>Stock In:</strong>{" "}
                         {selectedBin.stockSummary.stockin || 0}
-                      </p>
-                      <p>
-                        <strong>Available:</strong>{" "}
-                        {selectedBin.stockSummary.availableSlots || 0}
                       </p>
                       <p>
                         <strong>Reserved:</strong>{" "}
@@ -664,16 +670,178 @@ export default function BinsPage() {
                         {selectedBin.stockSummary.inTransitQuantity || 0}
                       </p>
                       <p>
+                        <strong>Available Slots:</strong>{" "}
+                        {selectedBin.stockSummary.availableSlots || 0}
+                      </p>
+                      <p>
+                        <strong>Occupied Slots:</strong>{" "}
+                        {selectedBin.stockSummary.occupiedSlots || 0}
+                      </p>
+                      <p>
                         <strong>Unique Items:</strong>{" "}
                         {selectedBin.stockSummary.uniqueItemsCount || 0}
                       </p>
                       <p>
-                        <strong>Has Stock:</strong>{" "}
-                        {selectedBin.stockSummary.hasStock ? "Yes" : "No"}
+                        <strong>Stock Status:</strong>{" "}
+                        <span
+                          className={`font-medium ${
+                            selectedBin.stockSummary.stockStatus === "EMPTY"
+                              ? "text-gray-500"
+                              : selectedBin.stockSummary.stockStatus === "LOW"
+                                ? "text-yellow-600"
+                                : selectedBin.stockSummary.stockStatus ===
+                                    "NORMAL"
+                                  ? "text-green-600"
+                                  : selectedBin.stockSummary.stockStatus ===
+                                      "HIGH"
+                                    ? "text-orange-600"
+                                    : selectedBin.stockSummary.stockStatus ===
+                                        "FULL"
+                                      ? "text-red-600"
+                                      : "text-gray-600"
+                          }`}
+                        >
+                          {selectedBin.stockSummary.stockStatus || "UNKNOWN"}
+                        </span>
                       </p>
+                      <p>
+                        <strong>Has Stock:</strong>{" "}
+                        {selectedBin.stockSummary.hasStock ? "✅ Yes" : "❌ No"}
+                      </p>
+                      <p>
+                        <strong>Is Available:</strong>{" "}
+                        {selectedBin.stockSummary.isAvailable
+                          ? "✅ Yes"
+                          : "❌ No"}
+                      </p>
+                      <p>
+                        <strong>Is Full:</strong>{" "}
+                        {selectedBin.stockSummary.isFull ? "✅ Yes" : "❌ No"}
+                      </p>
+
+                      {/* ✅ FIXED: ITEMS LIST - Properly parsing and displaying items */}
+                      {(() => {
+                        let itemsArray = selectedBin.stockSummary.items || [];
+
+                        // If items is a string, try to parse it
+                        if (typeof itemsArray === "string") {
+                          try {
+                            itemsArray = JSON.parse(itemsArray);
+                          } catch (e) {
+                            console.error("Error parsing items:", e);
+                            itemsArray = [];
+                          }
+                        }
+
+                        // Ensure it's an array
+                        if (!Array.isArray(itemsArray)) {
+                          itemsArray = [];
+                        }
+
+                        return itemsArray.length > 0 ? (
+                          <>
+                            <hr className="my-2" />
+                            <p className="font-medium">
+                              Items in Bin ({itemsArray.length})
+                            </p>
+                            <div className="max-h-48 overflow-y-auto border rounded-md p-2 bg-gray-50 space-y-2">
+                              {itemsArray.map((item, index) => (
+                                <div
+                                  key={index}
+                                  className="text-xs border border-gray-200 rounded p-2 bg-white"
+                                >
+                                  <div className="grid grid-cols-2 gap-1">
+                                    <p className="col-span-2 font-semibold text-blue-600">
+                                      #{index + 1}{" "}
+                                      {item.itemName || "Unnamed Item"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Code:</span>{" "}
+                                      {item.itemCode || "-"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Name:</span>{" "}
+                                      {item.itemName || "-"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">
+                                        Quantity:
+                                      </span>{" "}
+                                      {item.quantity || 0}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">
+                                        Available:
+                                      </span>{" "}
+                                      {item.availableQuantity || 0}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">
+                                        Reserved:
+                                      </span>{" "}
+                                      {item.reservedQuantity || 0}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">UOM:</span>{" "}
+                                      {item.uom || "-"}
+                                    </p>
+                                    {item.batchNumber && (
+                                      <p className="col-span-2">
+                                        <span className="font-medium">
+                                          Batch:
+                                        </span>{" "}
+                                        {item.batchNumber}
+                                      </p>
+                                    )}
+                                    {item.unitPrice !== null &&
+                                      item.unitPrice !== undefined && (
+                                        <p>
+                                          <span className="font-medium">
+                                            Unit Price:
+                                          </span>{" "}
+                                          ₹{item.unitPrice}
+                                        </p>
+                                      )}
+                                    {item.totalValue !== null &&
+                                      item.totalValue !== undefined && (
+                                        <p>
+                                          <span className="font-medium">
+                                            Total Value:
+                                          </span>{" "}
+                                          ₹{item.totalValue}
+                                        </p>
+                                      )}
+                                    {item.expiryDate && (
+                                      <p className="col-span-2">
+                                        <span className="font-medium">
+                                          Expiry:
+                                        </span>{" "}
+                                        {item.expiryDate}
+                                      </p>
+                                    )}
+                                    {item.mfgDate && (
+                                      <p className="col-span-2">
+                                        <span className="font-medium">
+                                          MFG:
+                                        </span>{" "}
+                                        {item.mfgDate}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-gray-500 text-xs italic">
+                            No items in this bin
+                          </p>
+                        );
+                      })()}
                     </>
                   )}
                 </div>
+
                 <div className="flex gap-2 w-full">
                   <Button
                     className="flex-1"
@@ -682,6 +850,13 @@ export default function BinsPage() {
                   >
                     <Download className="mr-1.5 size-3.5" />
                     Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setBarcodeDialogOpen(false)}
+                  >
+                    Close
                   </Button>
                 </div>
               </>
@@ -1088,10 +1263,16 @@ export default function BinsPage() {
                   const width = b.widthCm ?? b.width_cm;
                   const height = b.heightCm ?? b.height_cm;
                   const maxWeight = b.maxWeightG ?? b.max_weight_g;
-                  const utilization = b.utilizationPercentage ?? b.utilization ?? b.utilizationPct ?? 0;
-                  const volume = b.volumeCm3 || (length && width && height
-                    ? (length * width * height).toLocaleString()
-                    : "-");
+                  const utilization =
+                    b.utilizationPercentage ??
+                    b.utilization ??
+                    b.utilizationPct ??
+                    0;
+                  const volume =
+                    b.volumeCm3 ||
+                    (length && width && height
+                      ? (length * width * height).toLocaleString()
+                      : "-");
                   const unit = b.unit || "cm";
                   const hasStock = b.stockSummary?.hasStock || false;
                   const totalQuantity = b.stockSummary?.totalQuantity || 0;
@@ -1102,16 +1283,20 @@ export default function BinsPage() {
 
                   // Build location hierarchy
                   const locationParts = [
-                    b.level?.rack?.aisle?.zone?.warehouse?.warehouseId || b.level?.rack?.aisle?.zone?.warehouse?.name,
-                    b.level?.rack?.aisle?.zone?.zoneId || b.level?.rack?.aisle?.zone?.name,
-                    b.level?.rack?.aisle?.aisleId || b.level?.rack?.aisle?.aisleNumber,
+                    b.level?.rack?.aisle?.zone?.warehouse?.warehouseId ||
+                      b.level?.rack?.aisle?.zone?.warehouse?.name,
+                    b.level?.rack?.aisle?.zone?.zoneId ||
+                      b.level?.rack?.aisle?.zone?.name,
+                    b.level?.rack?.aisle?.aisleId ||
+                      b.level?.rack?.aisle?.aisleNumber,
                     b.rackName || b.level?.rack?.rackId || b.level?.rack?.name,
                     b.levelName || b.level?.levelId || b.level?.name,
                   ].filter(Boolean);
-                  
-                  const locationDisplay = locationParts.length > 0 
-                    ? locationParts.join(" › ")
-                    : b.fullLocation?.split("-").pop() || "-";
+
+                  const locationDisplay =
+                    locationParts.length > 0
+                      ? locationParts.join(" › ")
+                      : b.fullLocation?.split("-").pop() || "-";
 
                   return (
                     <TableRow key={b.id} className="table-row-hover">
@@ -1127,19 +1312,40 @@ export default function BinsPage() {
                             <TooltipTrigger asChild>
                               <span className="cursor-help flex items-center gap-1">
                                 <MapPin className="size-3 text-muted-foreground" />
-                                {locationDisplay.length > 30 
+                                {locationDisplay.length > 30
                                   ? locationDisplay.slice(0, 30) + "..."
                                   : locationDisplay}
                               </span>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
                               <div className="space-y-0.5 text-xs">
-                                <p><strong>Full Location:</strong> {b.fullLocation || "N/A"}</p>
-                                <p><strong>Warehouse:</strong> {b.level?.rack?.aisle?.zone?.warehouse?.name || "-"}</p>
-                                <p><strong>Zone:</strong> {b.level?.rack?.aisle?.zone?.name || "-"}</p>
-                                <p><strong>Aisle:</strong> {b.level?.rack?.aisle?.aisleNumber || b.level?.rack?.aisle?.aisleId || "-"}</p>
-                                <p><strong>Rack:</strong> {b.rackName || b.level?.rack?.rackId || "-"}</p>
-                                <p><strong>Level:</strong> {b.levelName || b.level?.levelId || "-"}</p>
+                                <p>
+                                  <strong>Full Location:</strong>{" "}
+                                  {b.fullLocation || "N/A"}
+                                </p>
+                                <p>
+                                  <strong>Warehouse:</strong>{" "}
+                                  {b.level?.rack?.aisle?.zone?.warehouse
+                                    ?.name || "-"}
+                                </p>
+                                <p>
+                                  <strong>Zone:</strong>{" "}
+                                  {b.level?.rack?.aisle?.zone?.name || "-"}
+                                </p>
+                                <p>
+                                  <strong>Aisle:</strong>{" "}
+                                  {b.level?.rack?.aisle?.aisleNumber ||
+                                    b.level?.rack?.aisle?.aisleId ||
+                                    "-"}
+                                </p>
+                                <p>
+                                  <strong>Rack:</strong>{" "}
+                                  {b.rackName || b.level?.rack?.rackId || "-"}
+                                </p>
+                                <p>
+                                  <strong>Level:</strong>{" "}
+                                  {b.levelName || b.level?.levelId || "-"}
+                                </p>
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -1169,17 +1375,25 @@ export default function BinsPage() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <div className="space-y-0.5 text-xs">
-                                <p><strong>Min Capacity:</strong> {minCapacity || "N/A"} {capacityUnit}</p>
-                                <p><strong>Max Capacity:</strong> {maxCapacity || "N/A"} {capacityUnit}</p>
-                                <p><strong>Unit:</strong> {capacityUnit}</p>
+                                <p>
+                                  <strong>Min Capacity:</strong>{" "}
+                                  {minCapacity || "N/A"} {capacityUnit}
+                                </p>
+                                <p>
+                                  <strong>Max Capacity:</strong>{" "}
+                                  {maxCapacity || "N/A"} {capacityUnit}
+                                </p>
+                                <p>
+                                  <strong>Unit:</strong> {capacityUnit}
+                                </p>
                               </div>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {typeof volume === 'number' || !isNaN(volume) 
-                          ? `${volume} ${unit}³` 
+                        {typeof volume === "number" || !isNaN(volume)
+                          ? `${volume} ${unit}³`
                           : "-"}
                       </TableCell>
                       <TableCell className="min-w-44">
@@ -1215,17 +1429,33 @@ export default function BinsPage() {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="space-y-0.5 text-xs">
-                                  <p><strong>Stock In:</strong> {b.stockSummary?.stockin || 0} units</p>
-                                  <p><strong>Available:</strong> {b.stockSummary?.availableSlots || 0}</p>
-                                  <p><strong>Reserved:</strong> {b.stockSummary?.reservedQuantity || 0}</p>
-                                  <p><strong>In Transit:</strong> {b.stockSummary?.inTransitQuantity || 0}</p>
-                                  <p><strong>Item Types:</strong> {uniqueItems}</p>
+                                  <p>
+                                    <strong>Stock In:</strong>{" "}
+                                    {b.stockSummary?.stockin || 0} units
+                                  </p>
+                                  <p>
+                                    <strong>Available:</strong>{" "}
+                                    {b.stockSummary?.availableSlots || 0}
+                                  </p>
+                                  <p>
+                                    <strong>Reserved:</strong>{" "}
+                                    {b.stockSummary?.reservedQuantity || 0}
+                                  </p>
+                                  <p>
+                                    <strong>In Transit:</strong>{" "}
+                                    {b.stockSummary?.inTransitQuantity || 0}
+                                  </p>
+                                  <p>
+                                    <strong>Item Types:</strong> {uniqueItems}
+                                  </p>
                                 </div>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Empty</span>
+                          <span className="text-xs text-muted-foreground">
+                            Empty
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
@@ -1241,9 +1471,10 @@ export default function BinsPage() {
                             rounded-md
                             transition-all duration-200
                             cursor-pointer
-                            ${b.barcodeImage 
-                              ? "bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white hover:ring-blue-600 hover:shadow-sm"
-                              : "opacity-50 cursor-not-allowed"
+                            ${
+                              b.barcodeImage
+                                ? "bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white hover:ring-blue-600 hover:shadow-sm"
+                                : "opacity-50 cursor-not-allowed"
                             }
                           `}
                         >

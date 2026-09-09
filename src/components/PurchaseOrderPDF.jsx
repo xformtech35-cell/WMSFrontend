@@ -210,7 +210,7 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
   if (!po) return null;
 
   const companyDetails = {
-    name: "YOUR COMPANY NAME",
+    name: "Xform Technologies Pvt. Ltd.",
     address: "123 Business Street, City, State - 123456",
     phone: "+91 98765 43210",
     email: "info@yourcompany.com",

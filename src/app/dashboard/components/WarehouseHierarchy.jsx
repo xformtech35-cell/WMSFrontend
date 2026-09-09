@@ -47,74 +47,82 @@ const getDisplayName = (item, fallback) => {
   return item.name || item.description || fallback;
 };
 
-// Shows:
-// 1 2 3 ... last
-// when there are more than 4 records.
+// Shows: 1 2 3 ... last when there are more than 4 records.
 const getItemsForMapping = (items = []) => {
-  if (items.length <= 4) {
-    return items.map((item, index) => ({
+  // ✅ FIX: Ensure items is always an array
+  const safeItems = Array.isArray(items) ? items : [];
+
+  if (safeItems.length <= 4) {
+    return safeItems.map((item, index) => ({
       item,
       index,
     }));
   }
 
   return [
-    ...items.slice(0, 3).map((item, index) => ({
+    ...safeItems.slice(0, 3).map((item, index) => ({
       item,
       index,
     })),
-
     {
       ellipsis: true,
       index: 3,
     },
-
     {
-      item: items[items.length - 1],
-      index: items.length - 1,
+      item: safeItems[safeItems.length - 1],
+      index: safeItems.length - 1,
     },
   ];
 };
 
-const getTotalBins = (zone) =>
-  (zone?.aisles || []).reduce(
+const getTotalBins = (zone) => {
+  if (!zone) return 0;
+
+  const aisles = Array.isArray(zone?.aisles) ? zone.aisles : [];
+
+  return aisles.reduce(
     (zoneTotal, aisle) =>
       zoneTotal +
-      (aisle?.racks || []).reduce(
+      (Array.isArray(aisle?.racks) ? aisle.racks : []).reduce(
         (aisleTotal, rack) =>
           aisleTotal +
-          (rack?.levels || []).reduce(
-            (levelTotal, level) => levelTotal + (level?.bins?.length || 0),
+          (Array.isArray(rack?.levels) ? rack.levels : []).reduce(
+            (levelTotal, level) =>
+              levelTotal + (Array.isArray(level?.bins) ? level.bins.length : 0),
             0,
           ),
         0,
       ),
     0,
   );
+};
 
-const getRackBins = (rack) =>
-  (rack?.levels || []).reduce(
-    (bins, level) => [...bins, ...(level?.bins || [])],
+const getRackBins = (rack) => {
+  if (!rack) return [];
+
+  const levels = Array.isArray(rack?.levels) ? rack.levels : [];
+
+  return levels.reduce(
+    (bins, level) => [
+      ...bins,
+      ...(Array.isArray(level?.bins) ? level.bins : []),
+    ],
     [],
   );
+};
 
 const getStatusDotClass = (status) => {
   switch (status) {
     case "AVAILABLE":
       return "bg-emerald-500";
-
     case "OCCUPIED":
       return "bg-blue-500";
-
     case "RESERVED":
       return "bg-amber-500";
-
     case "FULL":
       return "bg-red-500";
-
     case "MAINTENANCE":
       return "bg-gray-500";
-
     default:
       return "bg-gray-300";
   }
@@ -125,6 +133,8 @@ const getStatusDotClass = (status) => {
 // -----------------------------------------------------------------------------
 
 const MappingBin = ({ bin, onSelect }) => {
+  if (!bin) return null;
+
   const binCode = bin?.barcode || bin?.binId || "-";
 
   return (
@@ -186,8 +196,9 @@ const MappingBin = ({ bin, onSelect }) => {
 // -----------------------------------------------------------------------------
 
 const MappingRack = ({ rack, rackIndex, onSelect }) => {
-  const bins = getRackBins(rack);
+  if (!rack) return null;
 
+  const bins = getRackBins(rack);
   const rackCode = getCode(rack, `R${String(rackIndex + 1).padStart(2, "0")}`);
 
   const handleRackSelect = () => {
@@ -272,7 +283,10 @@ const MappingRack = ({ rack, rackIndex, onSelect }) => {
 // -----------------------------------------------------------------------------
 
 const MappingAisle = ({ aisle, aisleIndex, onSelect }) => {
-  const rackEntries = getItemsForMapping(aisle?.racks || []);
+  if (!aisle) return null;
+
+  const racks = Array.isArray(aisle?.racks) ? aisle.racks : [];
+  const rackEntries = getItemsForMapping(racks);
 
   const aisleCode = getCode(
     aisle,
@@ -363,10 +377,12 @@ const MappingAisle = ({ aisle, aisleIndex, onSelect }) => {
 // -----------------------------------------------------------------------------
 
 const MappingZone = ({ zone, zoneIndex, onSelect }) => {
-  const aisleEntries = getItemsForMapping(zone?.aisles || []);
+  if (!zone) return null;
+
+  const aisles = Array.isArray(zone?.aisles) ? zone.aisles : [];
+  const aisleEntries = getItemsForMapping(aisles);
 
   const zoneCode = getCode(zone, `Z${String(zoneIndex + 1).padStart(2, "0")}`);
-
   const totalBins = getTotalBins(zone);
 
   const handleZoneSelect = () => {
@@ -444,7 +460,7 @@ const MappingZone = ({ zone, zoneIndex, onSelect }) => {
             sm:block
           "
         >
-          {zone?.aisles?.length || 0} aisles
+          {aisles.length} aisles
           {" · "}
           {totalBins} bins
         </span>
@@ -498,7 +514,10 @@ const MappingZone = ({ zone, zoneIndex, onSelect }) => {
 // -----------------------------------------------------------------------------
 
 const MainWarehouseMapping = ({ warehouse, onSelect }) => {
-  const zoneEntries = getItemsForMapping(warehouse?.zones || []);
+  if (!warehouse) return null;
+
+  const zones = Array.isArray(warehouse?.zones) ? warehouse.zones : [];
+  const zoneEntries = getItemsForMapping(zones);
 
   const warehouseCode = getCode(warehouse, "WH01");
 
@@ -581,7 +600,7 @@ const MainWarehouseMapping = ({ warehouse, onSelect }) => {
             md:block
           "
         >
-          {warehouse?.zones?.length || 0} zones
+          {zones.length} zones
         </span>
       </div>
 
@@ -633,13 +652,17 @@ const formatLabel = (key) =>
   String(key)
     .replace(/([A-Z])/g, " $1")
     .replace(/[_-]/g, " ")
-    .replace(/\\b\\w/g, (char) => char.toUpperCase())
+    .replace(/\b\w/g, (char) => char.toUpperCase())
     .trim();
 
 const formatValue = (value) => {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") return value.toLocaleString();
+  if (typeof value === "object") {
+    if (Array.isArray(value)) return `${value.length} items`;
+    return JSON.stringify(value);
+  }
   return String(value);
 };
 
@@ -666,6 +689,10 @@ const getCurrentObjectDetails = (node) => {
     case "level":
       delete data.bins;
       break;
+    case "bin":
+      // ✅ KEEP items for bin - don't delete them
+      // Only delete nested children, but keep items
+      break;
     default:
       break;
   }
@@ -677,6 +704,10 @@ const getCurrentObjectDetails = (node) => {
 
   return data;
 };
+
+// -----------------------------------------------------------------------------
+// SELECTED NODE POPUP - Shows full item details below Level Name
+// -----------------------------------------------------------------------------
 
 const SelectedNode = ({ node, onClose }) => {
   if (!node) return null;
@@ -717,6 +748,141 @@ const SelectedNode = ({ node, onClose }) => {
   };
 
   const style = typeStyles[node.type] || typeStyles.bin;
+
+  // Helper to render items with full details
+  const renderItems = (items) => {
+    if (!items) return <p className="text-xs text-slate-500">No items</p>;
+
+    // If items is a string, try to parse it
+    let itemsArray = items;
+    if (typeof items === "string") {
+      try {
+        itemsArray = JSON.parse(items);
+      } catch (e) {
+        return <p className="text-xs text-slate-500">Invalid items data</p>;
+      }
+    }
+
+    // Ensure it's an array
+    if (!Array.isArray(itemsArray) || itemsArray.length === 0) {
+      return <p className="text-xs text-slate-500">No items</p>;
+    }
+
+    return (
+      <div className="space-y-3">
+        <div className="text-[10px] text-slate-500">
+          {itemsArray.length} item{itemsArray.length > 1 ? "s" : ""} in this bin
+        </div>
+        <div className="max-h-60 overflow-y-auto space-y-2">
+          {itemsArray.map((item, idx) => {
+            // Ensure item is an object
+            if (typeof item !== "object" || item === null) {
+              return null;
+            }
+
+            return (
+              <div
+                key={idx}
+                className="rounded-md border border-slate-200 bg-white p-3"
+              >
+                <div className="grid grid-cols-2 gap-1.5 text-xs">
+                  <p className="col-span-2 font-semibold text-blue-600 text-sm mb-1">
+                    #{idx + 1} {item.itemName || "Unnamed Item"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-500">Code:</span>{" "}
+                    {item.itemCode || "-"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-500">Name:</span>{" "}
+                    {item.itemName || "-"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-500">
+                      Quantity:
+                    </span>{" "}
+                    {item.quantity || 0}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-500">
+                      Available:
+                    </span>{" "}
+                    {item.availableQuantity || 0}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-500">
+                      Reserved:
+                    </span>{" "}
+                    {item.reservedQuantity || 0}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-500">UOM:</span>{" "}
+                    {item.uom || "-"}
+                  </p>
+                  {item.batchNumber && (
+                    <p className="col-span-2">
+                      <span className="font-medium text-slate-500">Batch:</span>{" "}
+                      {item.batchNumber}
+                    </p>
+                  )}
+                  {item.unitPrice !== null && item.unitPrice !== undefined && (
+                    <p>
+                      <span className="font-medium text-slate-500">
+                        Unit Price:
+                      </span>{" "}
+                      ₹{item.unitPrice}
+                    </p>
+                  )}
+                  {item.totalValue !== null &&
+                    item.totalValue !== undefined && (
+                      <p>
+                        <span className="font-medium text-slate-500">
+                          Total Value:
+                        </span>{" "}
+                        ₹{item.totalValue}
+                      </p>
+                    )}
+                  {item.expiryDate && (
+                    <p className="col-span-2">
+                      <span className="font-medium text-slate-500">
+                        Expiry:
+                      </span>{" "}
+                      {item.expiryDate}
+                    </p>
+                  )}
+                  {item.mfgDate && (
+                    <p className="col-span-2">
+                      <span className="font-medium text-slate-500">MFG:</span>{" "}
+                      {item.mfgDate}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper to format value for display
+  const formatDisplayValue = (value) => {
+    if (value === null || value === undefined || value === "") return "-";
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (typeof value === "number") return value.toLocaleString();
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return `${value.length} items`;
+    if (typeof value === "object") {
+      // Don't stringify items array here - it will be handled separately
+      if (value.items) return `${value.items?.length || 0} items`;
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
+  // Get items from the original node data (not details)
+  const originalItems =
+    node.data?.stockSummary?.items || node.data?.items || [];
 
   return (
     <div
@@ -770,7 +936,7 @@ const SelectedNode = ({ node, onClose }) => {
           </button>
         </div>
 
-        {/* Only clicked object's details */}
+        {/* Details */}
         <div className="max-h-[72vh] overflow-y-auto p-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(details).map(([key, value]) => {
@@ -778,50 +944,190 @@ const SelectedNode = ({ node, onClose }) => {
                 return null;
               }
 
+              // Skip empty arrays
+              if (Array.isArray(value) && value.length === 0) {
+                return null;
+              }
+
+              // Skip the items field from the grid (we'll render it separately)
+              if (key === "items") {
+                return null;
+              }
+
+              // Determine if this field should span full width
+              const isFullWidth =
+                key === "stockSummary" ||
+                key === "fullLocation" ||
+                key === "address" ||
+                key === "remarks" ||
+                key === "description";
+
               return (
                 <div
                   key={key}
                   className={cn(
                     "rounded-lg border border-slate-100 bg-slate-50 px-3 py-2",
-                    key === "stockSummary" ||
-                      key === "fullLocation" ||
-                      key === "address" ||
-                      key === "remarks"
-                      ? "sm:col-span-2 lg:col-span-3"
-                      : "",
+                    isFullWidth ? "sm:col-span-2 lg:col-span-3" : "",
                   )}
                 >
                   <div className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
                     {formatLabel(key)}
                   </div>
 
-                  {key === "stockSummary" && typeof value === "object" ? (
+                  {key === "stockSummary" &&
+                  typeof value === "object" &&
+                  !Array.isArray(value) ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {Object.entries(value).map(([stockKey, stockValue]) => (
-                        <div
-                          key={stockKey}
-                          className="rounded-md border border-slate-100 bg-white px-2 py-1.5"
-                        >
-                          <div className="text-[8px] text-slate-400">
-                            {formatLabel(stockKey)}
+                      {Object.entries(value)
+                        .filter(
+                          ([, stockValue]) =>
+                            stockValue !== null &&
+                            stockValue !== undefined &&
+                            stockValue !== "",
+                        )
+                        .map(([stockKey, stockValue]) => (
+                          <div
+                            key={stockKey}
+                            className="rounded-md border border-slate-100 bg-white px-2 py-1.5"
+                          >
+                            <div className="text-[8px] text-slate-400">
+                              {formatLabel(stockKey)}
+                            </div>
+                            <div className="mt-0.5 text-[10px] font-semibold text-slate-700">
+                              {formatDisplayValue(stockValue)}
+                            </div>
                           </div>
-                          <div className="mt-0.5 text-[10px] font-semibold text-slate-700">
-                            {formatValue(stockValue)}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   ) : (
                     <div className="break-words text-[11px] font-medium text-slate-700">
-                      {Array.isArray(value)
-                        ? `${value.length} items`
-                        : formatValue(value)}
+                      {formatDisplayValue(value)}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* ✅ ITEMS SECTION - Displayed below all other fields */}
+          {(() => {
+            // Get items from original node data
+            let items = originalItems;
+
+            // If items is a string, try to parse it
+            if (typeof items === "string") {
+              try {
+                items = JSON.parse(items);
+              } catch (e) {
+                return null;
+              }
+            }
+
+            // Check if it's a valid array with items
+            if (!Array.isArray(items) || items.length === 0) {
+              return null;
+            }
+
+            return (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Items in Bin ({items.length})
+                </div>
+                <div className="space-y-2">
+                  {items.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-slate-100 bg-slate-50 p-3"
+                    >
+                      <div className="grid grid-cols-2 gap-1.5 text-xs sm:grid-cols-3 lg:grid-cols-4">
+                        <p className="col-span-2 font-semibold text-blue-600 text-sm mb-1 sm:col-span-3 lg:col-span-4">
+                          #{idx + 1} {item.itemName || "Unnamed Item"}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-500">
+                            Code:
+                          </span>{" "}
+                          {item.itemCode || "-"}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-500">
+                            Name:
+                          </span>{" "}
+                          {item.itemName || "-"}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-500">
+                            Quantity:
+                          </span>{" "}
+                          {item.quantity || 0}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-500">
+                            Available:
+                          </span>{" "}
+                          {item.availableQuantity || 0}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-500">
+                            Reserved:
+                          </span>{" "}
+                          {item.reservedQuantity || 0}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-500">
+                            UOM:
+                          </span>{" "}
+                          {item.uom || "-"}
+                        </p>
+                        {item.batchNumber && (
+                          <p className="col-span-2">
+                            <span className="font-medium text-slate-500">
+                              Batch:
+                            </span>{" "}
+                            {item.batchNumber}
+                          </p>
+                        )}
+                        {item.unitPrice !== null &&
+                          item.unitPrice !== undefined && (
+                            <p>
+                              <span className="font-medium text-slate-500">
+                                Unit Price:
+                              </span>{" "}
+                              ₹{item.unitPrice}
+                            </p>
+                          )}
+                        {item.totalValue !== null &&
+                          item.totalValue !== undefined && (
+                            <p>
+                              <span className="font-medium text-slate-500">
+                                Total Value:
+                              </span>{" "}
+                              ₹{item.totalValue}
+                            </p>
+                          )}
+                        {item.expiryDate && (
+                          <p className="col-span-2">
+                            <span className="font-medium text-slate-500">
+                              Expiry:
+                            </span>{" "}
+                            {item.expiryDate}
+                          </p>
+                        )}
+                        {item.mfgDate && (
+                          <p className="col-span-2">
+                            <span className="font-medium text-slate-500">
+                              MFG:
+                            </span>{" "}
+                            {item.mfgDate}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
@@ -838,7 +1144,6 @@ const SelectedNode = ({ node, onClose }) => {
     </div>
   );
 };
-
 // -----------------------------------------------------------------------------
 // MAIN COMPONENT
 // -----------------------------------------------------------------------------
@@ -848,13 +1153,9 @@ export const WarehouseHierarchy = ({
   onNodeSelect,
 }) => {
   const [warehouse, setWarehouse] = useState(null);
-
   const [isLoading, setIsLoading] = useState(true);
-
   const [error, setError] = useState(null);
-
   const [selectedNode, setSelectedNode] = useState(null);
-
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(
     initialWarehouseId || null,
   );
@@ -866,6 +1167,7 @@ export const WarehouseHierarchy = ({
       setSelectedNode(null);
     }
   }, [initialWarehouseId]);
+
   // ---------------------------------------------------------------------------
   // Select Node
   // ---------------------------------------------------------------------------
@@ -889,18 +1191,18 @@ export const WarehouseHierarchy = ({
 
       try {
         const data = await fetchWarehouse(selectedWarehouseId);
-
         setWarehouse(data);
       } catch (err) {
         setError("Failed to load warehouse hierarchy");
-
         console.error(err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadWarehouse();
+    if (selectedWarehouseId) {
+      loadWarehouse();
+    }
   }, [selectedWarehouseId]);
 
   // ---------------------------------------------------------------------------
@@ -920,41 +1222,13 @@ export const WarehouseHierarchy = ({
       >
         <CardHeader>
           <Skeleton className="h-6 w-48" />
-
-          <Skeleton
-            className="
-              mt-2
-              h-4
-              w-32
-            "
-          />
+          <Skeleton className="mt-2 h-4 w-32" />
         </CardHeader>
 
-        <CardContent
-          className="
-            space-y-3
-          "
-        >
-          <Skeleton
-            className="
-              h-12
-              w-full
-            "
-          />
-
-          <Skeleton
-            className="
-              h-48
-              w-full
-            "
-          />
-
-          <Skeleton
-            className="
-              h-48
-              w-full
-            "
-          />
+        <CardContent className="space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
         </CardContent>
       </Card>
     );
@@ -984,30 +1258,9 @@ export const WarehouseHierarchy = ({
             py-12
           "
         >
-          <div
-            className="
-              text-center
-              text-red-500
-            "
-          >
-            <p
-              className="
-                text-lg
-                font-semibold
-              "
-            >
-              Failed to Load
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-sm
-                text-slate-500
-              "
-            >
-              {error}
-            </p>
+          <div className="text-center text-red-500">
+            <p className="text-lg font-semibold">Failed to Load</p>
+            <p className="mt-1 text-sm text-slate-500">{error}</p>
           </div>
 
           <Button

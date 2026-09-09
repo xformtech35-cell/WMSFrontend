@@ -64,20 +64,28 @@ const apiRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
+// ✅ FIXED: Only send status when filterStatus is not null
 const getInboundsAPI = async (
   page = 0,
   size = 10,
   searchTerm = "",
   filterStatus,
 ) => {
+  const filters = {
+    searchTerm: searchTerm || "",
+  };
+
+  // Only add status filter if it's not null/undefined
+  if (filterStatus) {
+    filters.status = filterStatus;
+  }
+
   const requestBody = {
-    filters: {
-      searchTerm: searchTerm || "",
-      status: filterStatus,
-    },
+    filters: filters,
     page: page,
     size: size,
   };
+
   return apiRequest("/inbound/filter", "POST", requestBody);
 };
 
@@ -105,7 +113,7 @@ export default function MaterialUnload() {
   const [viewLoading, setViewLoading] = useState(false);
   const [showUnloadingModal, setShowUnloadingModal] = useState(false);
   const [unloadingInbound, setUnloadingInbound] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("GATE_ENTRY"); // null = all, 'PENDING' = pending only
+  const [filterStatus, setFilterStatus] = useState(null); // null = all records
 
   // Debounce search term
   useEffect(() => {
@@ -251,9 +259,10 @@ export default function MaterialUnload() {
       setCurrentPage(newPage);
     }
   };
+
   const handleFilterToggle = (status) => {
     if (filterStatus === status) {
-      setFilterStatus(null); // Toggle off
+      setFilterStatus(null); // Toggle off - show all records
     } else {
       setFilterStatus(status); // Set filter
     }
@@ -328,6 +337,7 @@ export default function MaterialUnload() {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[250px]">
               <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by Inbound Number, PO Number, or Supplier..."
@@ -410,7 +420,7 @@ export default function MaterialUnload() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-12">
+                    <td colSpan="9" className="text-center py-12">
                       <div className="flex justify-center items-center gap-3">
                         <div className="animate-spin rounded-full h-8 w-8 border-3 border-emerald-500 border-t-transparent"></div>
                         <span className="text-gray-500 font-medium">
@@ -421,7 +431,7 @@ export default function MaterialUnload() {
                   </tr>
                 ) : inbounds.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-12">
+                    <td colSpan="9" className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <Warehouse className="w-12 h-12 text-gray-300" />
                         <p className="text-gray-500 font-medium">
@@ -518,10 +528,12 @@ export default function MaterialUnload() {
                               <Box className="w-3.5 h-3.5" />
                               Unload
                             </button>
-                          ) :<span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
-                                                        <CheckCircle className="w-3 h-3" />
-                                                        Loaded
-                                                      </span>}
+                          ) : (
+                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Loaded
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -560,6 +572,7 @@ export default function MaterialUnload() {
             </div>
           )}
         </div>
+
         {/* Unloading Modal */}
         {showUnloadingModal && unloadingInbound && (
           <UnloadingModal
@@ -572,6 +585,7 @@ export default function MaterialUnload() {
             onSuccess={handleUnloadingSuccess}
           />
         )}
+
         {/* View Modal */}
         {showViewModal && viewingInbound && (
           <InboundViewModal

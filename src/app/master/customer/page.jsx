@@ -29,7 +29,12 @@ import CustomerForm from "./component/CustomerForm";
 import CustomerDetails from "./component/CustomerDetails";
 
 // API Functions
-const getCustomersAPI = async (page = 0, size = 10, search = "", status = null) => {
+const getCustomersAPI = async (
+  page = 0,
+  size = 10,
+  search = "",
+  status = null,
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -52,7 +57,9 @@ const getCustomersAPI = async (page = 0, size = 10, search = "", status = null) 
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
           numberOfElements: data.numberOfElements,
@@ -186,32 +193,32 @@ export default function CustomerPage() {
         currentPage,
         pageSize,
         searchTerm,
-        statusFilter
+        statusFilter,
       );
       console.log("Loaded customers:", result);
 
       setCustomers(result.data || []);
       setTotalItems(result.total || 0);
       setTotalPages(
-        result.totalPages || Math.ceil((result.total || 0) / pageSize)
+        result.totalPages || Math.ceil((result.total || 0) / pageSize),
       );
       setIsFirstPage(
-        result.first !== undefined ? result.first : currentPage === 0
+        result.first !== undefined ? result.first : currentPage === 0,
       );
       setIsLastPage(
         result.last !== undefined
           ? result.last
-          : currentPage === (result.totalPages || 0) - 1
+          : currentPage === (result.totalPages || 0) - 1,
       );
 
       // Clean up selected customers - remove any that no longer exist
       setSelectedCustomers((prev) =>
-        prev.filter((id) => (result.data || []).some((c) => c.id === id))
+        prev.filter((id) => (result.data || []).some((c) => c.id === id)),
       );
     } catch (error) {
       console.error("Load customers error:", error);
       setError(
-        "Failed to load customers: " + (error.message || "Unknown error")
+        "Failed to load customers: " + (error.message || "Unknown error"),
       );
     } finally {
       setLoading(false);
@@ -305,7 +312,7 @@ export default function CustomerPage() {
 
     if (
       !window.confirm(
-        `Are you sure you want to delete ${selectedCustomers.length} customers?`
+        `Are you sure you want to delete ${selectedCustomers.length} customers?`,
       )
     ) {
       return;
@@ -349,7 +356,7 @@ export default function CustomerPage() {
       setError(
         error.response?.data?.message ||
           error.message ||
-          "Failed to save customer"
+          "Failed to save customer",
       );
       await loadCustomers();
     } finally {
@@ -377,7 +384,7 @@ export default function CustomerPage() {
 
   const handleSelectCustomer = (id) => {
     setSelectedCustomers((prev) =>
-      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id],
     );
   };
 
@@ -423,10 +430,22 @@ export default function CustomerPage() {
 
   const getCustomerTypeBadge = (type) => {
     const typeMap = {
-      CORPORATE: { bg: "bg-blue-100", text: "text-blue-800", label: "Corporate" },
-      INDIVIDUAL: { bg: "bg-purple-100", text: "text-purple-800", label: "Individual" },
+      CORPORATE: {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        label: "Corporate",
+      },
+      INDIVIDUAL: {
+        bg: "bg-purple-100",
+        text: "text-purple-800",
+        label: "Individual",
+      },
       RETAIL: { bg: "bg-orange-100", text: "text-orange-800", label: "Retail" },
-      WHOLESALE: { bg: "bg-indigo-100", text: "text-indigo-800", label: "Wholesale" },
+      WHOLESALE: {
+        bg: "bg-indigo-100",
+        text: "text-indigo-800",
+        label: "Wholesale",
+      },
     };
 
     const style = typeMap[type] || typeMap.CORPORATE;
@@ -511,12 +530,12 @@ export default function CustomerPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-4">
-            <Link
+            {/* <Link
               href="/"
               className="p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
             >
               <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </Link>
+            </Link> */}
             <div>
               <h1 className="text-2xl font-bold text-gray-800">
                 Customer Management
@@ -757,7 +776,8 @@ export default function CustomerPage() {
                             <div className="text-xs text-gray-500 mt-0.5">
                               <User className="w-3 h-3 inline mr-1" />
                               {customer.contactPerson}
-                              {customer.contactDesignation && ` - ${customer.contactDesignation}`}
+                              {customer.contactDesignation &&
+                                ` - ${customer.contactDesignation}`}
                             </div>
                           )}
                         </div>
