@@ -372,11 +372,8 @@ export default function PurchaseRequestPage() {
               >
                 <option value="ALL">All Status</option>
                 <option value="DRAFT">Draft</option>
-                <option value="SUBMITTED">Submitted</option>
                 <option value="APPROVED">Approved</option>
                 <option value="REJECTED">Rejected</option>
-                <option value="PARTIALLY_RECEIVED">Partially Received</option>
-                <option value="COMPLETED">Completed</option>
                 <option value="PENDING">Pending</option>
               </select>
             </div>

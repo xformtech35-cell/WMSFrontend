@@ -161,13 +161,29 @@ export default function GRN() {
       );
 
       if (response && response.content) {
+         const total = response.totalElements || 0;
+
+        // If Pending filter is selected but there are no pending records,
+        // automatically switch to All Records.
+        if (filterStatus === "GRN_PENDING" && total === 0) {
+          setFilterStatus(null);
+          setSuccessMessage(
+            `No pending records found. Showing all records instead.`,
+          );
+          setCurrentPage(0);
+          return;
+        }
         setInbounds(response.content || []);
         setTotalPages(response.totalPages || 0);
-        setTotalElements(response.totalElements || 0);
+        setTotalElements(total);
       } else {
         setInbounds([]);
         setTotalPages(0);
         setTotalElements(0);
+        if (filterStatus === "GRN_PENDING") {
+          setFilterStatus(null);
+          setCurrentPage(0);
+        }
       }
     } catch (error) {
       console.error("Error loading inbounds:", error);

@@ -156,9 +156,30 @@ const ALL_MENU_ITEMS = [
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,
   },
-  {
+  { 
     href: "/return-quality-check",
     label: "Return Quality Check",
+    icon: FileText,
+    group: "Purchase Rejected/Return",
+    permission: P.PURCHASE_REQUEST,
+  },
+   { 
+    href: "/pack-return-order",
+    label: "Packing Return Order",
+    icon: FileText,
+    group: "Purchase Rejected/Return",
+    permission: P.PURCHASE_REQUEST,
+  },
+   { 
+    href: "/packed-return-order",
+    label: "Packed Return Order",
+    icon: FileText,
+    group: "Purchase Rejected/Return",
+    permission: P.PURCHASE_REQUEST,
+  },
+   { 
+    href: "/return-dispatches",
+    label: "Return Dispatches",
     icon: FileText,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REQUEST,

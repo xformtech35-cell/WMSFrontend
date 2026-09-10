@@ -146,6 +146,7 @@ export default function MaterialUnload() {
   const loadInbounds = async () => {
     try {
       setLoading(true);
+
       const response = await getInboundsAPI(
         currentPage,
         pageSize,
@@ -154,13 +155,29 @@ export default function MaterialUnload() {
       );
 
       if (response && response.content) {
+        const total = response?.totalElements || 0;
+
+        // If GATE_ENTRY filter has no records,
+        // automatically switch to All Records.
+        if (filterStatus === "GATE_ENTRY" && total === 0) {
+          setFilterStatus(null);
+          setSuccessMessage(
+            `No pending records found. Showing all records instead.`,
+          );
+          setCurrentPage(0);
+          return;
+        }
         setInbounds(response.content || []);
         setTotalPages(response.totalPages || 0);
-        setTotalElements(response.totalElements || 0);
+        setTotalElements(total);
       } else {
         setInbounds([]);
         setTotalPages(0);
         setTotalElements(0);
+        if (filterStatus === "GATE_ENTRY") {
+          setFilterStatus(null);
+          setCurrentPage(0);
+        }
       }
     } catch (error) {
       console.error("Error loading inbounds:", error);
@@ -517,7 +534,7 @@ export default function MaterialUnload() {
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {!inbound?.unloadingEndTime ? (
+                          {inbound.status === "GATE_ENTRY" && (
                             <button
                               type="button"
                               onClick={() => handleUnloadingClick(inbound)}
@@ -528,11 +545,6 @@ export default function MaterialUnload() {
                               <Box className="w-3.5 h-3.5" />
                               Unload
                             </button>
-                          ) : (
-                            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3" />
-                              Loaded
-                            </span>
                           )}
                         </div>
                       </td>

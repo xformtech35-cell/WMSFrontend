@@ -145,13 +145,29 @@ export default function InboundPage() {
       );
 
       if (response && response.content) {
+        const total = response.totalElements || 0;
+
+        // If Pending filter is selected but there are no pending records,
+        // automatically switch to All Records.
+        if (filterStatus === "UNLOADING" && total === 0) {
+          setFilterStatus(null);
+          setSuccessMessage(
+            `No pending records found. Showing all records instead.`,
+          );
+          setCurrentPage(0);
+          return;
+        }
         setInbounds(response.content || []);
         setTotalPages(response.totalPages || 0);
-        setTotalElements(response.totalElements || 0);
+        setTotalElements(total);
       } else {
         setInbounds([]);
         setTotalPages(0);
         setTotalElements(0);
+        if (filterStatus === "UNLOADING") {
+          setFilterStatus(null);
+          setCurrentPage(0);
+        }
       }
     } catch (error) {
       console.error("Error loading inbounds:", error);
@@ -320,7 +336,6 @@ export default function InboundPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-               
                 <button
                   type="button"
                   onClick={loadInbounds}

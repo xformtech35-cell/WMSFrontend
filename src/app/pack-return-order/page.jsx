@@ -101,6 +101,15 @@ const qcItemsAPI = async (orderId, qcData) => {
   return apiRequest(`/vendor-returns/orders/${orderId}/qc`, "PATCH", qcData);
 };
 
+// Pack items API
+const packItemsAPI = async (orderId, packingData) => {
+  return apiRequest(
+    `/vendor-returns/orders/${orderId}/pack`,
+    "PATCH",
+    packingData,
+  );
+};
+
 // Fetch users API
 const fetchUsersAPI = async () => {
   try {
@@ -119,7 +128,7 @@ const fetchUsersAPI = async () => {
 };
 
 // Main Component
-export default function VendorReturnPicklistsPage() {
+export default function PackReturnOrder() {
   const [picklists, setPicklists] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
@@ -131,7 +140,7 @@ export default function VendorReturnPicklistsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("PENDING_QC");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingPicklist, setViewingPicklist] = useState(null);
 
@@ -149,6 +158,12 @@ export default function VendorReturnPicklistsPage() {
   const [qcSubmitting, setQcSubmitting] = useState(false);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // State for Pack modal
+  const [showPackModal, setShowPackModal] = useState(false);
+  const [packPicklist, setPackPicklist] = useState(null);
+  const [packData, setPackData] = useState([]);
+  const [packSubmitting, setPackSubmitting] = useState(false);
 
   // Load data on component mount and when dependencies change
   useEffect(() => {
@@ -178,12 +193,12 @@ export default function VendorReturnPicklistsPage() {
     }
   }, [errorMessage]);
 
-  // Fetch users when QC modal opens
+  // Fetch users when QC or Pack modal opens
   useEffect(() => {
-    if (showQcModal) {
+    if (showQcModal || showPackModal) {
       loadUsers();
     }
-  }, [showQcModal]);
+  }, [showQcModal, showPackModal]);
 
   const loadUsers = async () => {
     try {
@@ -299,20 +314,7 @@ export default function VendorReturnPicklistsPage() {
   };
 
   // QC Handlers
-  const handleQcClick = (picklist) => {
-    setQcPicklist(picklist);
-    // Initialize QC data for each item
-    const initialQcData =
-      picklist.items?.map((item) => ({
-        lineId: item.id,
-        qcQuantity: item.pickedQuantity || 0,
-        passed: true,
-        verifiedBy: null,
-        remarks: "",
-      })) || [];
-    setQcData(initialQcData);
-    setShowQcModal(true);
-  };
+ 
 
   const handleQcLineChange = (index, field, value) => {
     const updatedQcData = [...qcData];
@@ -368,10 +370,96 @@ export default function VendorReturnPicklistsPage() {
     }
   };
 
+  // Pack Handlers
+  const handlePackClick = (picklist) => {
+    setPackPicklist(picklist);
+    // Initialize pack data for each item that has been picked
+    const initialPackData =
+      picklist.items
+        ?.filter(
+          (item) =>
+            item.pickedQuantity > 0 || item.status === "PICKED",
+        )
+        .map((item) => ({
+          lineId: item.id,
+          packedQuantity: item.pickedQuantity || 0,
+          packedBy: null,
+          packagingType: "Box",
+          remarks: "",
+        })) || [];
+    setPackData(initialPackData);
+    setShowPackModal(true);
+  };
+
+  const handlePackLineChange = (index, field, value) => {
+    const updatedPackData = [...packData];
+    updatedPackData[index] = {
+      ...updatedPackData[index],
+      [field]: value,
+    };
+    setPackData(updatedPackData);
+  };
+
+  const handleSubmitPack = async () => {
+    if (!packPicklist) return;
+
+    if (packData.length === 0) {
+      setErrorMessage("No items available to pack.");
+      return;
+    }
+
+    // Validate
+    for (const item of packData) {
+      if (!item.packedBy) {
+        setErrorMessage("Please select a packer for all items.");
+        return;
+      }
+      if (!item.packagingType) {
+        setErrorMessage("Please select a packaging type for all items.");
+        return;
+      }
+      if (item.packedQuantity < 0) {
+        setErrorMessage("Packed Quantity cannot be negative.");
+        return;
+      }
+    }
+
+    try {
+      setPackSubmitting(true);
+      // Transform data to match API format
+      const payload = packData.map((item) => ({
+        lineId: item.lineId,
+        packedQuantity: item.packedQuantity,
+        packedBy: item.packedBy,
+        packagingType: item.packagingType,
+        remarks: item.remarks || null,
+      }));
+
+      await packItemsAPI(packPicklist.id, payload);
+
+      setSuccessMessage(`Successfully packed ${packData.length} item(s)!`);
+      setShowSuccess(true);
+      setShowPackModal(false);
+      setPackPicklist(null);
+      setPackData([]);
+
+      // Reload picklists
+      await loadPicklists();
+    } catch (error) {
+      console.error("Error submitting packing:", error);
+      setErrorMessage(`Failed to submit packing: ${error.message}`);
+    } finally {
+      setPackSubmitting(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       PENDING: "bg-yellow-100 text-yellow-700",
       IN_PROGRESS: "bg-blue-100 text-blue-700",
+      PENDING_QC: "bg-orange-100 text-orange-700",
+      QC_PASSED: "bg-teal-100 text-teal-700",
+      PENDING_PACKING: "bg-amber-100 text-amber-700",
       PACKED: "bg-purple-100 text-purple-700",
       COMPLETED: "bg-green-100 text-green-700",
       CANCELLED: "bg-red-100 text-red-700",
@@ -383,6 +471,9 @@ export default function VendorReturnPicklistsPage() {
     const names = {
       PENDING: "Pending",
       IN_PROGRESS: "In Progress",
+      PENDING_QC: "Pending QC",
+      QC_PASSED: "QC Passed",
+      PENDING_PACKING: "Pending Packing",
       PACKED: "Packed",
       COMPLETED: "Completed",
       CANCELLED: "Cancelled",
@@ -537,7 +628,7 @@ export default function VendorReturnPicklistsPage() {
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-white">
-                  Vendor Return Picklists
+                  Packing Return Order
                 </h1>
                 <p className="text-blue-100 text-sm mt-1">
                   Manage picking lists for vendor returns
@@ -581,6 +672,9 @@ export default function VendorReturnPicklistsPage() {
                 <option value="ALL">All Status</option>
                 <option value="PENDING">Pending</option>
                 <option value="IN_PROGRESS">In Progress</option>
+                <option value="PENDING_QC">Pending QC</option>
+                <option value="QC_PASSED">QC Passed</option>
+                <option value="PENDING_PACKING">Pending Packing</option>
                 <option value="PACKED">Packed</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="CANCELLED">Cancelled</option>
@@ -648,7 +742,7 @@ export default function VendorReturnPicklistsPage() {
                     </td>
                   </tr>
                 ) : (
-                  picklists.map((picklist) => (
+                  picklists.filter((picklist) => picklist.status !== "PENDING_QC").map((picklist) => (
                     <tr
                       key={picklist.id}
                       className="hover:bg-gray-50 transition-colors"
@@ -713,15 +807,16 @@ export default function VendorReturnPicklistsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+ 
 
-                          {picklist.status === "PENDING_QC" && (
+                          {picklist.status === "PENDING_PACKING" && (
                             <button
                               type="button"
-                              onClick={() => handleQcClick(picklist)}
-                              className="text-purple-600 cursor-pointer hover:text-purple-800 transition-colors"
-                              title="QC Items"
+                              onClick={() => handlePackClick(picklist)}
+                              className="text-orange-600 cursor-pointer hover:text-orange-800 transition-colors"
+                              title="Pack Items"
                             >
-                              <ThumbsUp className="w-4 h-4" />
+                              <Package className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -962,37 +1057,37 @@ export default function VendorReturnPicklistsPage() {
           </div>
         )}
 
-        {/* QC Modal */}
-        {showQcModal && qcPicklist && (
+        {/* Pack Modal */}
+        {showPackModal && packPicklist && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
             <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl my-4">
               {/* Modal Header */}
-              <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-t-xl">
+              <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-xl">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <ThumbsUp className="w-5 h-5 text-purple-600" />
-                    Quality Check (QC)
+                    <Package className="w-5 h-5 text-orange-600" />
+                    Pack Items
                   </h2>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-sm text-blue-600 font-medium">
-                      {qcPicklist.pickListNumber}
+                      {packPicklist.pickListNumber}
                     </span>
                     <span className="text-xs text-gray-400">|</span>
                     <span className="text-sm text-gray-500">
-                      {qcPicklist.vroNumber}
+                      {packPicklist.vroNumber}
                     </span>
                     <span className="text-xs text-gray-400">|</span>
                     <span className="text-sm text-gray-500">
-                      Supplier: {qcPicklist.supplierName}
+                      Supplier: {packPicklist.supplierName}
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    setShowQcModal(false);
-                    setQcPicklist(null);
-                    setQcData([]);
+                    setShowPackModal(false);
+                    setPackPicklist(null);
+                    setPackData([]);
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1002,28 +1097,8 @@ export default function VendorReturnPicklistsPage() {
 
               {/* Modal Body */}
               <div className="p-6 max-h-[70vh] overflow-y-auto">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Review QC for all items
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQcSelectAll(true)}
-                      className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                      Pass All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQcSelectAll(false)}
-                      className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors flex items-center gap-1"
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                      Fail All
-                    </button>
-                  </div>
+                <div className="mb-4 text-sm text-gray-600">
+                  Enter packing details for all picked items
                 </div>
 
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -1043,13 +1118,13 @@ export default function VendorReturnPicklistsPage() {
                           Picked Qty
                         </th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                          QC Qty
-                        </th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
-                          Pass/Fail
+                          Packed Qty
                         </th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Verified By
+                          Packaging Type
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Packed By
                         </th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                           Remarks
@@ -1057,101 +1132,105 @@ export default function VendorReturnPicklistsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {qcPicklist.items?.map((item, index) => {
-                        const qcItem = qcData[index] || {};
-                        return (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-xs text-gray-500">
-                              {index + 1}
-                            </td>
-                            <td className="px-3 py-2 font-medium text-gray-800">
-                              {item.itemCode}
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              {item.itemName}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {item.pickedQuantity || 0}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <input
-                                type="number"
-                                value={qcItem.qcQuantity || 0}
-                                onChange={(e) =>
-                                  handleQcLineChange(
-                                    index,
-                                    "qcQuantity",
-                                    Number(e.target.value),
-                                  )
-                                }
-                                className="w-20 px-2 py-1 text-right border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                min="0"
-                                max={item.pickedQuantity || 0}
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleQcLineChange(index, "passed", true)
+                      {packPicklist.items
+                        ?.filter(
+                          (item) =>
+                            item.pickedQuantity > 0 ||
+                            item.status === "PICKED",
+                        )
+                        .map((item, index) => {
+                          const packItem = packData[index] || {};
+                          return (
+                            <tr key={item.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 text-xs text-gray-500">
+                                {index + 1}
+                              </td>
+                              <td className="px-3 py-2 font-medium text-gray-800">
+                                {item.itemCode}
+                              </td>
+                              <td className="px-3 py-2 text-gray-600">
+                                {item.itemName}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                {item.pickedQuantity || 0}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <input
+                                  type="number"
+                                  value={packItem.packedQuantity || 0}
+                                  onChange={(e) =>
+                                    handlePackLineChange(
+                                      index,
+                                      "packedQuantity",
+                                      Number(e.target.value),
+                                    )
                                   }
-                                  className={`p-1 rounded ${qcItem.passed !== false ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}
-                                >
-                                  <ThumbsUp className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleQcLineChange(index, "passed", false)
+                                  className="w-20 px-2 py-1 text-right border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  min="0"
+                                  max={item.pickedQuantity || 0}
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <select
+                                  value={packItem.packagingType || "Box"}
+                                  onChange={(e) =>
+                                    handlePackLineChange(
+                                      index,
+                                      "packagingType",
+                                      e.target.value,
+                                    )
                                   }
-                                  className={`p-1 rounded ${qcItem.passed === false ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-400"}`}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 >
-                                  <ThumbsDown className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <select
-                                value={qcItem.verifiedBy || ""}
-                                onChange={(e) =>
-                                  handleQcLineChange(
-                                    index,
-                                    "verifiedBy",
-                                    e.target.value
-                                      ? Number(e.target.value)
-                                      : null,
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                disabled={loadingUsers}
-                              >
-                                <option value="">Select Verifier</option>
-                                {users.map((user) => (
-                                  <option key={user.id} value={user.id}>
-                                    {getUserDisplayName(user)}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={qcItem.remarks || ""}
-                                onChange={(e) =>
-                                  handleQcLineChange(
-                                    index,
-                                    "remarks",
-                                    e.target.value,
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="QC remarks..."
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
+                                  <option value="Box">Box</option>
+                                  <option value="Carton">Carton</option>
+                                  <option value="Pallet">Pallet</option>
+                                  <option value="Bag">Bag</option>
+                                  <option value="Envelope">Envelope</option>
+                                  <option value="Crate">Crate</option>
+                                </select>
+                              </td>
+                              <td className="px-3 py-2">
+                                <select
+                                  value={packItem.packedBy || ""}
+                                  onChange={(e) =>
+                                    handlePackLineChange(
+                                      index,
+                                      "packedBy",
+                                      e.target.value
+                                        ? Number(e.target.value)
+                                        : null,
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  disabled={loadingUsers}
+                                >
+                                  <option value="">Select Packer</option>
+                                  {users.map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                      {getUserDisplayName(user)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={packItem.remarks || ""}
+                                  onChange={(e) =>
+                                    handlePackLineChange(
+                                      index,
+                                      "remarks",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  placeholder="Packaging remarks..."
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
@@ -1162,9 +1241,9 @@ export default function VendorReturnPicklistsPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowQcModal(false);
-                    setQcPicklist(null);
-                    setQcData([]);
+                    setShowPackModal(false);
+                    setPackPicklist(null);
+                    setPackData([]);
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 >
@@ -1172,19 +1251,19 @@ export default function VendorReturnPicklistsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleSubmitQc}
-                  disabled={qcSubmitting}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  onClick={handleSubmitPack}
+                  disabled={packSubmitting || packData.length === 0}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {qcSubmitting ? (
+                  {packSubmitting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Submitting QC...
+                      Packing...
                     </>
                   ) : (
                     <>
-                      <ThumbsUp className="w-4 h-4" />
-                      Submit QC
+                      <Package className="w-4 h-4" />
+                      Pack Items ({packData.length})
                     </>
                   )}
                 </button>

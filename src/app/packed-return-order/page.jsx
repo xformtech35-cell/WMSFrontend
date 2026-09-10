@@ -30,8 +30,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   Users,
+  ScanBarcode,
+  AlertTriangle,
 } from "lucide-react";
 import api from "@/lib/api";
+import { downloadImage } from "@/components/downloadImage64";
 
 // API Functions
 const apiRequest = async (
@@ -85,10 +88,7 @@ const getPicklistsAPI = async (
     params.append("status", status);
   }
 
-  return apiRequest(
-    `/vendor-returns/picklists/search?${params.toString()}`,
-    "POST",
-  );
+  return apiRequest(`/vendor-returns/packs?${params.toString()}`, "GET");
 };
 
 // Pick items API
@@ -99,6 +99,11 @@ const pickItemsAPI = async (orderId, lines) => {
 // QC items API
 const qcItemsAPI = async (orderId, qcData) => {
   return apiRequest(`/vendor-returns/orders/${orderId}/qc`, "PATCH", qcData);
+};
+
+// Create Dispatch API
+const createDispatchAPI = async (payload) => {
+  return apiRequest(`/vendor-returns/dispatches`, "POST", payload);
 };
 
 // Fetch users API
@@ -118,8 +123,21 @@ const fetchUsersAPI = async () => {
   }
 };
 
+// Helpers for date/time defaults
+const pad = (n) => String(n).padStart(2, "0");
+
+const getTodayDate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const getCurrentTime = () => {
+  const d = new Date();
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
 // Main Component
-export default function VendorReturnPicklistsPage() {
+export default function PackedReturnOrderPage() {
   const [picklists, setPicklists] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
@@ -131,7 +149,7 @@ export default function VendorReturnPicklistsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("PENDING_QC");
+  const [statusFilter, setStatusFilter] = useState("PACKED");
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingPicklist, setViewingPicklist] = useState(null);
 
@@ -149,6 +167,28 @@ export default function VendorReturnPicklistsPage() {
   const [qcSubmitting, setQcSubmitting] = useState(false);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // State for Dispatch modal
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchPicklist, setDispatchPicklist] = useState(null);
+  const [dispatchForm, setDispatchForm] = useState({
+    dispatchDate: "",
+    dispatchTime: "",
+    transportMode: "ROAD",
+    transporterName: "",
+    transportCompany: "",
+    vehicleNumber: "",
+    driverName: "",
+    driverPhone: "",
+    lrNumber: "",
+    trackingUrl: "",
+    returnChallanNumber: "",
+    returnChallanDate: "",
+    totalWeight: "",
+    totalVolume: "",
+  });
+  const [dispatchItems, setDispatchItems] = useState([]);
+  const [submittingDispatch, setSubmittingDispatch] = useState(false);
 
   // Load data on component mount and when dependencies change
   useEffect(() => {
@@ -241,7 +281,6 @@ export default function VendorReturnPicklistsPage() {
   const handlePickClick = (picklist) => {
     setSelectedPicklist(picklist);
     setSelectedOrderId(picklist.id);
-    // Initialize with all lines selected by default
     setSelectedLines(
       picklist.items?.map((item) => ({ lineId: item.id })) || [],
     );
@@ -288,7 +327,6 @@ export default function VendorReturnPicklistsPage() {
       setSelectedOrderId(null);
       setSelectedLines([]);
 
-      // Reload picklists
       await loadPicklists();
     } catch (error) {
       console.error("Error picking items:", error);
@@ -301,7 +339,6 @@ export default function VendorReturnPicklistsPage() {
   // QC Handlers
   const handleQcClick = (picklist) => {
     setQcPicklist(picklist);
-    // Initialize QC data for each item
     const initialQcData =
       picklist.items?.map((item) => ({
         lineId: item.id,
@@ -334,7 +371,6 @@ export default function VendorReturnPicklistsPage() {
   const handleSubmitQc = async () => {
     if (!qcPicklist) return;
 
-    // Validate
     for (const item of qcData) {
       if (!item.verifiedBy) {
         setErrorMessage("Please select a verifier for all items.");
@@ -358,7 +394,6 @@ export default function VendorReturnPicklistsPage() {
       setQcPicklist(null);
       setQcData([]);
 
-      // Reload picklists
       await loadPicklists();
     } catch (error) {
       console.error("Error submitting QC:", error);
@@ -368,6 +403,158 @@ export default function VendorReturnPicklistsPage() {
     }
   };
 
+  // ==================== Dispatch Handlers ====================
+
+  const handleDispatchClick = (picklist) => {
+    setDispatchPicklist(picklist);
+
+    // Pre-fill form
+    setDispatchForm({
+      dispatchDate: getTodayDate(),
+      dispatchTime: getCurrentTime(),
+      transportMode: "ROAD",
+      transporterName: "",
+      transportCompany: "",
+      vehicleNumber: "",
+      driverName: "",
+      driverPhone: "",
+      lrNumber: "",
+      trackingUrl: "",
+      returnChallanNumber: picklist.vroNumber
+        ? `RC-${picklist.vroNumber}`
+        : "",
+      returnChallanDate: getTodayDate(),
+      totalWeight: "",
+      totalVolume: "",
+    });
+
+    // Pre-fill items from picklist items
+    const items =
+      picklist.items?.map((item) => ({
+        vroLineId: item.id,
+        itemCode: item.itemCode || "",
+        itemName: item.itemName || "",
+        dispatchedQuantity:
+          item.packedQuantity || item.pickedQuantity || item.orderQuantity || 0,
+        packedQuantity:
+          item.packedQuantity || item.pickedQuantity || item.orderQuantity || 0,
+        packagingType: "Box",
+        packageCount: 1,
+        packageWeight: "",
+      })) || [];
+
+    setDispatchItems(items);
+    setShowDispatchModal(true);
+  };
+
+  const handleDispatchClose = () => {
+    if (submittingDispatch) return;
+    setShowDispatchModal(false);
+    setDispatchPicklist(null);
+    setDispatchItems([]);
+  };
+
+  const handleDispatchFormChange = (field, value) => {
+    setDispatchForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDispatchItemChange = (index, field, value) => {
+    setDispatchItems((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleSubmitDispatch = async () => {
+    if (!dispatchPicklist) return;
+
+    // Validate required fields
+    if (!dispatchForm.dispatchDate || !dispatchForm.dispatchTime) {
+      setErrorMessage("Dispatch Date and Time are required.");
+      return;
+    }
+    if (!dispatchForm.transportMode) {
+      setErrorMessage("Transport Mode is required.");
+      return;
+    }
+    if (!dispatchForm.returnChallanNumber) {
+      setErrorMessage("Return Challan Number is required.");
+      return;
+    }
+    if (dispatchItems.length === 0) {
+      setErrorMessage("At least one item is required.");
+      return;
+    }
+    for (const item of dispatchItems) {
+      if (!item.dispatchedQuantity || item.dispatchedQuantity <= 0) {
+        setErrorMessage(
+          `Dispatched quantity for ${item.itemCode} must be greater than 0.`,
+        );
+        return;
+      }
+    }
+
+    // Build payload
+    const payload = {
+      dispatchDate: dispatchForm.dispatchDate,
+      dispatchTime: dispatchForm.dispatchTime,
+      returnOrderId: dispatchPicklist.id,
+      transportMode: dispatchForm.transportMode,
+      transporterName: dispatchForm.transporterName || null,
+      transportCompany: dispatchForm.transportCompany || null,
+      vehicleNumber: dispatchForm.vehicleNumber || null,
+      driverName: dispatchForm.driverName || null,
+      driverPhone: dispatchForm.driverPhone || null,
+      lrNumber: dispatchForm.lrNumber || null,
+      trackingUrl: dispatchForm.trackingUrl || null,
+      returnChallanNumber: dispatchForm.returnChallanNumber,
+      returnChallanDate: dispatchForm.returnChallanDate || null,
+      totalWeight: dispatchForm.totalWeight
+        ? parseFloat(dispatchForm.totalWeight)
+        : null,
+      totalVolume: dispatchForm.totalVolume
+        ? parseFloat(dispatchForm.totalVolume)
+        : null,
+      items: dispatchItems.map((item) => ({
+        vroLineId: item.vroLineId,
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        dispatchedQuantity: Number(item.dispatchedQuantity),
+        packedQuantity: Number(item.packedQuantity),
+        packagingType: item.packagingType || null,
+        packageCount: item.packageCount
+          ? Number(item.packageCount)
+          : null,
+        packageWeight: item.packageWeight
+          ? parseFloat(item.packageWeight)
+          : null,
+      })),
+    };
+
+    try {
+      setSubmittingDispatch(true);
+      await createDispatchAPI(payload);
+
+      setSuccessMessage(
+        `Dispatch for ${dispatchPicklist.pickListNumber || dispatchPicklist.id} created successfully!`,
+      );
+      setShowSuccess(true);
+      setShowDispatchModal(false);
+      setDispatchPicklist(null);
+      setDispatchItems([]);
+
+      await loadPicklists();
+    } catch (error) {
+      console.error("Error creating dispatch:", error);
+      setErrorMessage(`Failed to create dispatch: ${error.message}`);
+    } finally {
+      setSubmittingDispatch(false);
+    }
+  };
+
+  // ==================== Display Helpers ====================
+
   const getStatusColor = (status) => {
     const colors = {
       PENDING: "bg-yellow-100 text-yellow-700",
@@ -375,6 +562,7 @@ export default function VendorReturnPicklistsPage() {
       PACKED: "bg-purple-100 text-purple-700",
       COMPLETED: "bg-green-100 text-green-700",
       CANCELLED: "bg-red-100 text-red-700",
+      DISPATCHED: "bg-teal-100 text-teal-700",
     };
     return colors[status] || colors.PENDING;
   };
@@ -386,6 +574,7 @@ export default function VendorReturnPicklistsPage() {
       PACKED: "Packed",
       COMPLETED: "Completed",
       CANCELLED: "Cancelled",
+      DISPATCHED: "Dispatched",
     };
     return names[status] || status || "Pending";
   };
@@ -485,6 +674,10 @@ export default function VendorReturnPicklistsPage() {
     );
   };
 
+  // Common input class
+  const inputCls =
+    "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:bg-gray-100";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -572,21 +765,6 @@ export default function VendorReturnPicklistsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="ALL">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="PACKED">Packed</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </div>
-
             <div className="text-sm text-gray-500">
               Showing {picklists.length} of {totalElements} picklists
             </div>
@@ -600,7 +778,7 @@ export default function VendorReturnPicklistsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pick List No.
+                    Id
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     VRO No.
@@ -624,7 +802,7 @@ export default function VendorReturnPicklistsPage() {
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned At
+                    Packed At
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -634,7 +812,7 @@ export default function VendorReturnPicklistsPage() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="11" className="text-center py-8">
+                    <td colSpan="10" className="text-center py-8">
                       <div className="flex justify-center items-center gap-2">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                         <span className="text-gray-500">Loading...</span>
@@ -643,7 +821,7 @@ export default function VendorReturnPicklistsPage() {
                   </tr>
                 ) : picklists.length === 0 ? (
                   <tr>
-                    <td colSpan="11" className="text-center py-8 text-gray-500">
+                    <td colSpan="10" className="text-center py-8 text-gray-500">
                       No picklists found
                     </td>
                   </tr>
@@ -655,7 +833,7 @@ export default function VendorReturnPicklistsPage() {
                     >
                       <td className="px-4 py-3">
                         <span className="font-medium text-blue-600">
-                          {picklist.pickListNumber}
+                          {picklist.id}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
@@ -701,10 +879,10 @@ export default function VendorReturnPicklistsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {formatDateShort(picklist.assignedAt)}
+                        {formatDateShort(picklist.packedAt)}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <button
                             type="button"
                             onClick={() => handleViewClick(picklist)}
@@ -714,16 +892,14 @@ export default function VendorReturnPicklistsPage() {
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {picklist.status === "PENDING_QC" && (
-                            <button
-                              type="button"
-                              onClick={() => handleQcClick(picklist)}
-                              className="text-purple-600 cursor-pointer hover:text-purple-800 transition-colors"
-                              title="QC Items"
-                            >
-                              <ThumbsUp className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDispatchClick(picklist)}
+                            className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
+                            title="Create Dispatch"
+                          >
+                            <Truck className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -761,11 +937,10 @@ export default function VendorReturnPicklistsPage() {
           )}
         </div>
 
-        {/* Pick Modal */}
+        {/* Pick Modal (unchanged) */}
         {showPickModal && selectedPicklist && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
             <div className="w-full max-w-4xl rounded-xl bg-white shadow-2xl my-4">
-              {/* Modal Header */}
               <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-green-50 to-green-100 rounded-t-xl">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -800,7 +975,6 @@ export default function VendorReturnPicklistsPage() {
                 </button>
               </div>
 
-              {/* Modal Body */}
               <div className="p-6 max-h-[70vh] overflow-y-auto">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
@@ -851,13 +1025,9 @@ export default function VendorReturnPicklistsPage() {
                           #
                         </th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Item Code
-                        </th>
+                          Item Code                        </th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                           Item Name
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Location
                         </th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
                           Order Qty
@@ -899,9 +1069,6 @@ export default function VendorReturnPicklistsPage() {
                           <td className="px-3 py-2 text-gray-600">
                             {item.itemName}
                           </td>
-                          <td className="px-3 py-2 text-gray-500">
-                            {item.pickLocation}
-                          </td>
                           <td className="px-3 py-2 text-right">
                             {item.orderQuantity}
                           </td>
@@ -925,7 +1092,6 @@ export default function VendorReturnPicklistsPage() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
               <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4 rounded-b-xl">
                 <button
                   type="button"
@@ -962,246 +1128,14 @@ export default function VendorReturnPicklistsPage() {
           </div>
         )}
 
-        {/* QC Modal */}
-        {showQcModal && qcPicklist && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
-            <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl my-4">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-t-xl">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <ThumbsUp className="w-5 h-5 text-purple-600" />
-                    Quality Check (QC)
-                  </h2>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-sm text-blue-600 font-medium">
-                      {qcPicklist.pickListNumber}
-                    </span>
-                    <span className="text-xs text-gray-400">|</span>
-                    <span className="text-sm text-gray-500">
-                      {qcPicklist.vroNumber}
-                    </span>
-                    <span className="text-xs text-gray-400">|</span>
-                    <span className="text-sm text-gray-500">
-                      Supplier: {qcPicklist.supplierName}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowQcModal(false);
-                    setQcPicklist(null);
-                    setQcData([]);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 max-h-[70vh] overflow-y-auto">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Review QC for all items
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQcSelectAll(true)}
-                      className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                      Pass All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQcSelectAll(false)}
-                      className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors flex items-center gap-1"
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                      Fail All
-                    </button>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          #
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Item Code
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Item Name
-                        </th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                          Picked Qty
-                        </th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                          QC Qty
-                        </th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
-                          Pass/Fail
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Verified By
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          Remarks
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {qcPicklist.items?.map((item, index) => {
-                        const qcItem = qcData[index] || {};
-                        return (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-xs text-gray-500">
-                              {index + 1}
-                            </td>
-                            <td className="px-3 py-2 font-medium text-gray-800">
-                              {item.itemCode}
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              {item.itemName}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {item.pickedQuantity || 0}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <input
-                                type="number"
-                                value={qcItem.qcQuantity || 0}
-                                onChange={(e) =>
-                                  handleQcLineChange(
-                                    index,
-                                    "qcQuantity",
-                                    Number(e.target.value),
-                                  )
-                                }
-                                className="w-20 px-2 py-1 text-right border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                min="0"
-                                max={item.pickedQuantity || 0}
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleQcLineChange(index, "passed", true)
-                                  }
-                                  className={`p-1 rounded ${qcItem.passed !== false ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}
-                                >
-                                  <ThumbsUp className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleQcLineChange(index, "passed", false)
-                                  }
-                                  className={`p-1 rounded ${qcItem.passed === false ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-400"}`}
-                                >
-                                  <ThumbsDown className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <select
-                                value={qcItem.verifiedBy || ""}
-                                onChange={(e) =>
-                                  handleQcLineChange(
-                                    index,
-                                    "verifiedBy",
-                                    e.target.value
-                                      ? Number(e.target.value)
-                                      : null,
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                disabled={loadingUsers}
-                              >
-                                <option value="">Select Verifier</option>
-                                {users.map((user) => (
-                                  <option key={user.id} value={user.id}>
-                                    {getUserDisplayName(user)}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={qcItem.remarks || ""}
-                                onChange={(e) =>
-                                  handleQcLineChange(
-                                    index,
-                                    "remarks",
-                                    e.target.value,
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="QC remarks..."
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4 rounded-b-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowQcModal(false);
-                    setQcPicklist(null);
-                    setQcData([]);
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitQc}
-                  disabled={qcSubmitting}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {qcSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Submitting QC...
-                    </>
-                  ) : (
-                    <>
-                      <ThumbsUp className="w-4 h-4" />
-                      Submit QC
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* View Modal */}
+        {/* View Modal (unchanged) */}
         {showViewModal && viewingPicklist && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
             <div className="w-full max-w-4xl rounded-xl bg-white shadow-2xl my-4">
-              {/* Modal Header */}
               <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-xl">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">
-                    Picklist Details
+                    Packed Details
                   </h2>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-sm text-blue-600 font-medium">
@@ -1222,9 +1156,7 @@ export default function VendorReturnPicklistsPage() {
                 </button>
               </div>
 
-              {/* Modal Body */}
               <div className="p-6 max-h-[70vh] overflow-y-auto">
-                {/* Summary Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-xs text-gray-500">Supplier</div>
@@ -1251,7 +1183,6 @@ export default function VendorReturnPicklistsPage() {
                   </div>
                 </div>
 
-                {/* Items Table */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                     <Package className="w-4 h-4" />
@@ -1270,9 +1201,6 @@ export default function VendorReturnPicklistsPage() {
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                             Item Name
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                            Location
-                          </th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
                             Order Qty
                           </th>
@@ -1280,10 +1208,10 @@ export default function VendorReturnPicklistsPage() {
                             Picked
                           </th>
                           <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                            Remaining
+                            Packed
                           </th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                            Status
+                            Barcode
                           </th>
                         </tr>
                       </thead>
@@ -1299,9 +1227,6 @@ export default function VendorReturnPicklistsPage() {
                             <td className="px-3 py-2 text-gray-600">
                               {item.itemName}
                             </td>
-                            <td className="px-3 py-2 text-gray-500">
-                              {item.pickLocation}
-                            </td>
                             <td className="px-3 py-2 text-right">
                               {item.orderQuantity}
                             </td>
@@ -1309,14 +1234,22 @@ export default function VendorReturnPicklistsPage() {
                               {item.pickedQuantity}
                             </td>
                             <td className="px-3 py-2 text-right text-orange-600">
-                              {item.remainingQuantity}
+                              {item.packedQuantity}
                             </td>
                             <td className="px-3 py-2">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}
+                              <button
+                                onClick={() =>
+                                  downloadImage(
+                                    item.packBarcodeImageBase64,
+                                    `barcode_${item.packBarcode || item.id}.png`,
+                                  )
+                                }
+                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Download Barcode"
+                                disabled={!item.packBarcodeImageBase64}
                               >
-                                {getItemStatusDisplayName(item.status)}
-                              </span>
+                                <ScanBarcode className="w-4 h-4" />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1326,7 +1259,6 @@ export default function VendorReturnPicklistsPage() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
               <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4 rounded-b-xl">
                 <button
                   type="button"
@@ -1334,6 +1266,499 @@ export default function VendorReturnPicklistsPage() {
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Dispatch Modal */}
+        {showDispatchModal && dispatchPicklist && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-y-auto py-8">
+            <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl my-4 animate-scale-up">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-100 rounded-t-xl">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-100">
+                    <Truck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Create Dispatch
+                    </h2>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-blue-600 font-medium">
+                        {dispatchPicklist.pickListNumber ||
+                          dispatchPicklist.id}
+                      </span>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs text-gray-500">
+                        {dispatchPicklist.vroNumber}
+                      </span>
+                      <span className="text-xs text-gray-400">|</span>
+                      <span className="text-xs text-gray-500">
+                        {dispatchPicklist.supplierName}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDispatchClose}
+                  disabled={submittingDispatch}
+                  className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                {/* Section: Dispatch Info */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Dispatch Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Dispatch Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={dispatchForm.dispatchDate}
+                        onChange={(e) =>
+                          handleDispatchFormChange("dispatchDate", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Dispatch Time <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="time"
+                        step="1"
+                        value={dispatchForm.dispatchTime}
+                        onChange={(e) =>
+                          handleDispatchFormChange("dispatchTime", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Transport Mode <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={dispatchForm.transportMode}
+                        onChange={(e) =>
+                          handleDispatchFormChange(
+                            "transportMode",
+                            e.target.value,
+                          )
+                        }
+                        disabled={submittingDispatch}
+                        className={inputCls}
+                      >
+                        <option value="ROAD">Road</option>
+                        <option value="RAIL">Rail</option>
+                        <option value="AIR">Air</option>
+                        <option value="SEA">Sea</option>
+                        <option value="COURIER">Courier</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Transport Details */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Truck className="w-4 h-4" />
+                    Transport Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Transporter Name
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.transporterName}
+                        onChange={(e) =>
+                          handleDispatchFormChange(
+                            "transporterName",
+                            e.target.value,
+                          )
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. Rajesh Kumar"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Transport Company
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.transportCompany}
+                        onChange={(e) =>
+                          handleDispatchFormChange(
+                            "transportCompany",
+                            e.target.value,
+                          )
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. ABC Logistics Pvt. Ltd."
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Vehicle Number
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.vehicleNumber}
+                        onChange={(e) =>
+                          handleDispatchFormChange(
+                            "vehicleNumber",
+                            e.target.value,
+                          )
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. MH12AB1234"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Driver Name
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.driverName}
+                        onChange={(e) =>
+                          handleDispatchFormChange("driverName", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. Suresh Patil"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Driver Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.driverPhone}
+                        onChange={(e) =>
+                          handleDispatchFormChange("driverPhone", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. +91-9876543210"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        LR Number
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.lrNumber}
+                        onChange={(e) =>
+                          handleDispatchFormChange("lrNumber", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. LR-2026-000123"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Challan & Tracking */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Challan & Tracking
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Return Challan Number{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.returnChallanNumber}
+                        onChange={(e) =>
+                          handleDispatchFormChange(
+                            "returnChallanNumber",
+                            e.target.value,
+                          )
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. RC-2026-0006"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Return Challan Date
+                      </label>
+                      <input
+                        type="date"
+                        value={dispatchForm.returnChallanDate}
+                        onChange={(e) =>
+                          handleDispatchFormChange(
+                            "returnChallanDate",
+                            e.target.value,
+                          )
+                        }
+                        disabled={submittingDispatch}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Tracking URL
+                      </label>
+                      <input
+                        type="text"
+                        value={dispatchForm.trackingUrl}
+                        onChange={(e) =>
+                          handleDispatchFormChange("trackingUrl", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="https://track.example.com/..."
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Totals */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Boxes className="w-4 h-4" />
+                    Total Weight & Volume
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Total Weight (kg)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={dispatchForm.totalWeight}
+                        onChange={(e) =>
+                          handleDispatchFormChange("totalWeight", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. 22.50"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Total Volume (m³)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={dispatchForm.totalVolume}
+                        onChange={(e) =>
+                          handleDispatchFormChange("totalVolume", e.target.value)
+                        }
+                        disabled={submittingDispatch}
+                        placeholder="e.g. 1.20"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Items */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Items ({dispatchItems.length})
+                  </h3>
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            #
+                          </th>
+                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Item Code
+                          </th>
+                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Item Name
+                          </th>
+                          <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Dispatched Qty
+                          </th>
+                          <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Packed Qty
+                          </th>
+                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                            Packaging
+                          </th>
+                          <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Pkg Count
+                          </th>
+                          <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                            Pkg Weight
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {dispatchItems.map((item, index) => (
+                          <tr key={item.vroLineId} className="hover:bg-gray-50">
+                            <td className="px-2 py-2 text-xs text-gray-500">
+                              {index + 1}
+                            </td>
+                            <td className="px-2 py-2 font-medium text-gray-800">
+                              {item.itemCode}
+                            </td>
+                            <td className="px-2 py-2 text-gray-600">
+                              {item.itemName}
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.dispatchedQuantity}
+                                onChange={(e) =>
+                                  handleDispatchItemChange(
+                                    index,
+                                    "dispatchedQuantity",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={submittingDispatch}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.packedQuantity}
+                                onChange={(e) =>
+                                  handleDispatchItemChange(
+                                    index,
+                                    "packedQuantity",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={submittingDispatch}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <select
+                                value={item.packagingType}
+                                onChange={(e) =>
+                                  handleDispatchItemChange(
+                                    index,
+                                    "packagingType",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={submittingDispatch}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              >
+                                <option value="Box">Box</option>
+                                <option value="Carton">Carton</option>
+                                <option value="Pallet">Pallet</option>
+                                <option value="Bag">Bag</option>
+                                <option value="Crate">Crate</option>
+                                <option value="Bundle">Bundle</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.packageCount}
+                                onChange={(e) =>
+                                  handleDispatchItemChange(
+                                    index,
+                                    "packageCount",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={submittingDispatch}
+                                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.packageWeight}
+                                onChange={(e) =>
+                                  handleDispatchItemChange(
+                                    index,
+                                    "packageWeight",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={submittingDispatch}
+                                placeholder="0.00"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4 rounded-b-xl">
+                <button
+                  type="button"
+                  onClick={handleDispatchClose}
+                  disabled={submittingDispatch}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitDispatch}
+                  disabled={submittingDispatch}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {submittingDispatch ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-4 h-4" />
+                      Create Dispatch
+                    </>
+                  )}
                 </button>
               </div>
             </div>
