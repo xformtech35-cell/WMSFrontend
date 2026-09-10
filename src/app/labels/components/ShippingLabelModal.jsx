@@ -39,7 +39,6 @@ const ShippingLabelModal = ({
     shipTo: {
       name: shippingLabel.customerName || "-",
       address: shippingLabel.customerAddress || "-",
-     
     },
     soNumber: shippingLabel.soNumber || "SO-1001",
     packageNumber: shippingLabel.packageNumber || "PKG-000123",
@@ -51,241 +50,239 @@ const ShippingLabelModal = ({
     shippingAddress: "Same as Ship To",
     shippingMethod: shippingLabel.shippingMethod || "ROAD",
     trackingNumber: shippingLabel.trackingNumber || "TRK1001",
-    shippingDate: shippingLabel.shippingDate ? formatDate(shippingLabel.shippingDate) : "21-May-2026",
+    shippingDate: shippingLabel.shippingDate
+      ? formatDate(shippingLabel.shippingDate)
+      : "21-May-2026",
     warehouse: "WH01",
     warehouseName: "PUNE WAREHOUSE",
     barcode: shippingLabel.barcode,
   };
 
   // Function to convert label to image using html2canvas
-  const labelToImage = async () => {
-    const labelElement = labelRef.current;
-    if (!labelElement) {
-      throw new Error('Label element not found');
-    }
+const labelToImage = async () => {
+  const labelElement = labelRef.current;
 
-    try {
-      const canvas = await html2canvas(labelElement, {
-        scale: 3,
-        backgroundColor: '#ffffff',
-        allowTaint: true,
-        useCORS: true,
-        logging: false,
-        width: 400,
-        height: 600,
-        onclone: (document) => {
-          const clonedElement = document.querySelector('.label-container');
-          if (clonedElement) {
-            clonedElement.style.transform = 'scale(1)';
-            clonedElement.style.width = '400px';
-            clonedElement.style.minHeight = '600px';
-          }
-        }
+  if (!labelElement) {
+    throw new Error("Label element not found");
+  }
+
+  // Make sure all images (especially barcode) are loaded
+  const images = Array.from(labelElement.querySelectorAll("img"));
+
+  await Promise.all(
+    images.map((img) => {
+      if (img.complete && img.naturalWidth > 0) {
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () =>
+          reject(new Error(`Failed to load image: ${img.src}`));
       });
-      
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error('html2canvas error:', error);
-      // Fallback: Use canvas drawing
-      return createFallbackImage();
-    }
-  };
+    }),
+  );
 
-  // Fallback method using canvas drawing
-  const createFallbackImage = () => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const width = 600;
-      const height = 900;
-      canvas.width = width;
-      canvas.height = height;
+  // Allow browser to finish rendering
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
-      // White background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
+  try {
+    const canvas = await html2canvas(labelElement, {
+      scale: 4,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
 
-      // Draw border
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(10, 10, width - 20, height - 20);
+      // Don't force dimensions
+      width: labelElement.scrollWidth,
+      height: labelElement.scrollHeight,
 
-      // Header
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 24px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('SHIPPING LABEL', width/2, 50);
+      onclone: (clonedDocument) => {
+        /*
+         * IMPORTANT:
+         *
+         * Tailwind/global CSS may contain lab()/oklch()
+         * colors which html2canvas cannot parse.
+         *
+         * Remove external stylesheets from the cloned
+         * document. Your label uses inline styles, so
+         * those remain intact.
+         */
+        clonedDocument
+          .querySelectorAll("style, link[rel='stylesheet']")
+          .forEach((element) => {
+            element.remove();
+          });
 
-      // Separator line
-      ctx.beginPath();
-      ctx.moveTo(20, 65);
-      ctx.lineTo(width - 20, 65);
-      ctx.stroke();
+        const clonedElement =
+          clonedDocument.querySelector(".label-container");
 
-      // Ship To
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText('SHIP TO:', 30, 95);
-      ctx.font = '14px Arial';
-      let y = 120;
-      ctx.fillText(labelData.shipTo.name, 30, y);
-      y += 22;
-      ctx.fillText(labelData.shipTo.address, 30, y);
-      y += 22;
-      
+        if (!clonedElement) return;
 
-      // Info Grid - Left column
-      ctx.font = 'bold 13px Arial';
-      ctx.fillText('SO NO. : ' + labelData.soNumber, 30, y);
-      y += 22;
-      ctx.fillText('CUSTOMER : ' + labelData.customer, 30, y);
-      y += 22;
-      ctx.fillText('ITEM : ' + labelData.item, 30, y);
-      y += 22;
-      ctx.fillText('QUANTITY : ' + labelData.quantity, 30, y);
-      y += 22;
-      ctx.fillText('SHIPPING ADDRESS : ' + labelData.shippingAddress, 30, y);
-      y += 22;
-      ctx.fillText('SHIPPING METHOD : ' + labelData.shippingMethod, 30, y);
+        // Explicitly reset label dimensions
+        clonedElement.style.width = "400px";
+        clonedElement.style.minHeight = "600px";
+        clonedElement.style.height = "auto";
+        clonedElement.style.transform = "none";
 
-      // Info Grid - Right column
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 13px Arial';
-      let yRight = 150;
-      ctx.fillText('PACKAGE NO. : ' + labelData.packageNumber, width - 30, yRight);
-      yRight += 22;
-      ctx.fillText('', width - 30, yRight);
-      yRight += 22;
-      ctx.fillText('WEIGHT : ' + labelData.weight, width - 30, yRight);
-      yRight += 22;
-      ctx.fillText('', width - 30, yRight);
-      yRight += 22;
-      ctx.fillText('SHIPPING DATE : ' + labelData.shippingDate, width - 30, yRight);
-      yRight += 35;
+        clonedElement.style.backgroundColor = "#ffffff";
+        clonedElement.style.color = "#000000";
 
-      // Barcode section
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 12px Arial';
-      ctx.fillText('PACKAGE BARCODE', width/2, y + 50);
-      
-      // Draw barcode lines
-      const barcodeText = labelData.packageBarcode;
-      const barcodeWidth = 300;
-      const barcodeHeight = 60;
-      const xStart = (width - barcodeWidth) / 2;
-      const yStart = y + 65;
-      
-      ctx.fillStyle = '#000000';
-      for (let i = 0; i < barcodeText.length; i++) {
-        const charCode = barcodeText.charCodeAt(i);
-        const barWidth = 2 + (charCode % 4);
-        const x = xStart + (i * (barcodeWidth / barcodeText.length));
-        ctx.fillRect(x, yStart, barWidth, barcodeHeight);
-      }
-      
-      // Barcode text
-      ctx.font = '16px monospace';
-      ctx.fillStyle = '#000000';
-      ctx.fillText(barcodeText, width/2, yStart + barcodeHeight + 30);
+        // Make sure barcode image is rendered exactly
+        const clonedImages =
+          clonedElement.querySelectorAll("img");
 
-      
-      resolve(canvas.toDataURL('image/png'));
+        clonedImages.forEach((img) => {
+          img.style.display = "block";
+          img.style.visibility = "visible";
+          img.style.opacity = "1";
+        });
+      },
     });
-  };
 
-  const handlePrint = async () => {
-    setPrinting(true);
-    try {
-      const imageData = await labelToImage();
-      const win = window.open('', '_blank');
-      if (!win) {
-        alert('Please allow pop-ups to print the label');
-        return;
-      }
+    return canvas.toDataURL("image/png");
+  } catch (error) {
+    console.error("❌ html2canvas FAILED:", error);
 
-      win.document.write(`
-        <html>
-          <head>
-            <title>Shipping Label - ${labelData.packageNumber}</title>
-            <style>
-              * {
+    // IMPORTANT: don't create a fake barcode
+    throw error;
+  }
+};
+
+
+ 
+
+const handlePrint = async () => {
+  setPrinting(true);
+
+  try {
+    const labelElement = labelRef.current;
+
+    if (!labelElement) {
+      throw new Error("Label element not found");
+    }
+
+    // Make sure barcode is loaded
+    const images = Array.from(labelElement.querySelectorAll("img"));
+
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+      }),
+    );
+
+    const win = window.open("", "_blank");
+
+    if (!win) {
+      alert("Please allow pop-ups to print the label");
+      return;
+    }
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Shipping Label - ${labelData.packageNumber}</title>
+
+          <style>
+            @page {
+              size: 4in 6in;
+              margin: 0;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+              width: 4in;
+              height: 6in;
+              background: white;
+            }
+
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+            }
+
+            .label-container {
+              width: 4in !important;
+              min-height: 6in !important;
+              height: 6in !important;
+              margin: 0 !important;
+              background: white !important;
+            }
+
+            .label-container img {
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+            }
+
+            @media print {
+              html,
+              body {
+                width: 4in;
+                height: 6in;
                 margin: 0;
                 padding: 0;
-                box-sizing: border-box;
               }
-              body {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #f0f0f0;
-                font-family: Arial, sans-serif;
+
+              .label-container {
+                page-break-inside: avoid;
               }
-              .print-container {
-                background: white;
-                padding: 20px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-              }
-              img {
-                max-width: 100%;
-                height: auto;
-                display: block;
-              }
-              @media print {
-                body {
-                  background: white;
-                  padding: 0;
-                  margin: 0;
-                }
-                .print-container {
-                  padding: 0;
-                  box-shadow: none;
-                }
-                img {
-                  max-width: 100%;
-                  max-height: 100vh;
-                  page-break-inside: avoid;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="print-container">
-              <img src="${imageData}" alt="Shipping Label" />
-            </div>
-            <script>
-              setTimeout(() => {
+            }
+          </style>
+        </head>
+
+        <body>
+          ${labelElement.outerHTML}
+
+          <script>
+            window.onload = function () {
+              setTimeout(function () {
                 window.print();
               }, 500);
-            <\/script>
-          </body>
-        </html>
-      `);
+            };
+          <\/script>
+        </body>
+      </html>
+    `);
 
-      win.document.close();
-    } catch (error) {
-      console.error('Print error:', error);
-      alert('Failed to print label. Please try again.');
-    } finally {
-      setPrinting(false);
-    }
-  };
+    win.document.close();
+  } catch (error) {
+    console.error("Print error:", error);
+    alert("Failed to print label. Please try again.");
+  } finally {
+    setPrinting(false);
+  }
+};
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
       const imageData = await labelToImage();
-      
+
       // Create download link
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = imageData;
       link.download = `shipping_label_${labelData.packageNumber}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download label. Please try again.');
+      console.error("Download error:", error);
+      alert("Failed to download label. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -359,193 +356,230 @@ const ShippingLabelModal = ({
               ref={labelRef}
               className="label-container"
               style={{
-                width: '400px',
-                minHeight: '600px',
-                padding: '16px',
-                background: 'white',
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-                border: '3px solid #000000',
-                fontFamily: 'Arial, Helvetica, sans-serif',
-                position: 'relative',
+                width: "400px",
+                minHeight: "600px",
+                padding: "16px",
+                background: "white",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                border: "3px solid #000000",
+                fontFamily: "Arial, Helvetica, sans-serif",
+                position: "relative",
               }}
             >
               {/* Header */}
-              <div style={{
-                textAlign: 'center',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                borderBottom: '3px solid #000',
-                paddingBottom: '8px',
-                marginBottom: '10px',
-                letterSpacing: '2px',
-              }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  borderBottom: "3px solid #000",
+                  paddingBottom: "8px",
+                  marginBottom: "10px",
+                  letterSpacing: "2px",
+                }}
+              >
                 SHIPPING LABEL
               </div>
 
               {/* Ship To */}
-              <div style={{
-                border: '2px solid #000',
-                padding: '8px 10px',
-                marginBottom: '8px',
-                backgroundColor: '#fafafa',
-              }}>
-                <div style={{ 
-                  fontWeight: 'bold', 
-                  fontSize: '13px', 
-                  marginBottom: '4px',
-                  letterSpacing: '1px',
-                }}>
+              <div
+                style={{
+                  border: "2px solid #000",
+                  padding: "8px 10px",
+                  marginBottom: "8px",
+                  backgroundColor: "#fafafa",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                    letterSpacing: "1px",
+                  }}
+                >
                   SHIP TO:
                 </div>
-                <div style={{ lineHeight: '1.6', fontSize: '11px' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '12px' }}>
+                <div style={{ lineHeight: "1.6", fontSize: "11px" }}>
+                  <div style={{ fontWeight: "bold", fontSize: "12px" }}>
                     {labelData.shipTo.name}
                   </div>
                   <div>{labelData.shipTo.address}</div>
-                 
                 </div>
               </div>
 
               {/* Info Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '2px 12px',
-                border: '2px solid #000',
-                padding: '8px 10px',
-                marginBottom: '8px',
-                fontSize: '11px',
-                backgroundColor: '#fafafa',
-              }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "2px 12px",
+                  border: "2px solid #000",
+                  padding: "8px 10px",
+                  marginBottom: "8px",
+                  fontSize: "11px",
+                  backgroundColor: "#fafafa",
+                }}
+              >
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     SO NO.
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.soNumber}</div>
+                  <div style={{ fontWeight: "bold" }}>{labelData.soNumber}</div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     PACKAGE NO.
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.packageNumber}</div>
+                  <div style={{ fontWeight: "bold" }}>
+                    {labelData.packageNumber}
+                  </div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     CUSTOMER
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.customer}</div>
+                  <div style={{ fontWeight: "bold" }}>{labelData.customer}</div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     ITEM
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.item}</div>
+                  <div style={{ fontWeight: "bold" }}>{labelData.item}</div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     QUANTITY
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.quantity}</div>
+                  <div style={{ fontWeight: "bold" }}>{labelData.quantity}</div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     WEIGHT
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.weight}</div>
+                  <div style={{ fontWeight: "bold" }}>{labelData.weight}</div>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                <div style={{ gridColumn: "span 2" }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     SHIPPING ADDRESS
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.shippingAddress}</div>
+                  <div style={{ fontWeight: "bold" }}>
+                    {labelData.shippingAddress}
+                  </div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     SHIPPING METHOD
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.shippingMethod}</div>
+                  <div style={{ fontWeight: "bold" }}>
+                    {labelData.shippingMethod}
+                  </div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '8px', 
-                    textTransform: 'uppercase', 
-                    color: '#555',
-                    letterSpacing: '1px',
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textTransform: "uppercase",
+                      color: "#555",
+                      letterSpacing: "1px",
+                    }}
+                  >
                     SHIPPING DATE
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{labelData.shippingDate}</div>
+                  <div style={{ fontWeight: "bold" }}>
+                    {labelData.shippingDate}
+                  </div>
                 </div>
               </div>
 
               {/* Package Barcode */}
-              <div style={{
-                border: '2px solid #000',
-                padding: '8px',
-                marginBottom: '8px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                backgroundColor: '#fafafa',
-              }}>
-                <div style={{ 
-                  fontSize: '9px', 
-                  fontWeight: 'bold', 
-                  textTransform: 'uppercase', 
-                  marginBottom: '4px',
-                  letterSpacing: '2px',
-                }}>
+              <div
+                style={{
+                  border: "2px solid #000",
+                  padding: "8px",
+                  marginBottom: "8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  backgroundColor: "#fafafa",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    textTransform: "uppercase",
+                    marginBottom: "4px",
+                    letterSpacing: "2px",
+                  }}
+                >
                   PACKAGE BARCODE
                 </div>
                 {labelData.barcode ? (
@@ -553,29 +587,25 @@ const ShippingLabelModal = ({
                     src={decodeBase64Image(labelData.barcode)}
                     alt="Barcode"
                     style={{
-                      maxHeight: '80px',
-                      maxWidth: '100%',
-                      objectFit: 'contain',
+                      maxHeight: "80px",
+                      maxWidth: "100%",
+                      objectFit: "contain",
                     }}
                   />
                 ) : (
-                  <div style={{
-                    fontFamily: 'monospace',
-                    fontSize: '28px',
-                    fontWeight: 'bold',
-                    letterSpacing: '6px',
-                    padding: '8px 0',
-                  }}>
+                  <div
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "28px",
+                      fontWeight: "bold",
+                      letterSpacing: "6px",
+                      padding: "8px 0",
+                    }}
+                  >
                     {labelData.packageBarcode}
                   </div>
                 )}
               </div>
-
-             
-              
-             
-
-              
             </div>
           </div>
 
