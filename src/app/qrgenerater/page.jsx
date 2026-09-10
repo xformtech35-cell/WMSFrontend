@@ -284,16 +284,24 @@ export default function QRCodeGeneratorPage() {
 
       const response = await fetchQRCodes(params);
 
-      // Handle the paginated response structure
-      const content = response.data?.content || response.content || [];
-      const totalElements =
-        response.data?.totalElements || response.totalElements || 0;
-      const totalPages = response.data?.totalPages || response.totalPages || 0;
-      const currentPage = response.data?.number || response.number || page;
-      const pageSize =
-        response.data?.size || response.size || pagination.pageSize;
-      const first = response.data?.first || response.first || true;
-      const last = response.data?.last || response.last || true;
+      // Handle the response structure flexibly across wrapper types
+      const rawData = response?.data?.data ?? response?.data ?? response;
+      const content = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.content)
+        ? rawData.content
+        : Array.isArray(rawData?.items)
+        ? rawData.items
+        : Array.isArray(rawData?.data)
+        ? rawData.data
+        : [];
+
+      const totalElements = rawData?.totalElements ?? content.length;
+      const totalPages = rawData?.totalPages ?? Math.ceil((totalElements || content.length) / (rawData?.size || pagination.pageSize || 20)) ?? 1;
+      const currentPage = rawData?.number ?? page;
+      const pageSize = rawData?.size ?? pagination.pageSize;
+      const first = rawData?.first ?? true;
+      const last = rawData?.last ?? true;
 
       // Transform API data to match component format
       const transformedData = content.map((item) => ({
@@ -634,7 +642,7 @@ export default function QRCodeGeneratorPage() {
       const response = await generateQRCode(payload);
 
       // Extract QR data from response
-      const qrData = response.data || response;
+      const qrData = response?.data?.data ?? response?.data ?? response;
 
       toast.success("QR Code generated successfully!");
       setGenerate(false);
@@ -845,8 +853,8 @@ export default function QRCodeGeneratorPage() {
       </div>
 
       {generate === true && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto thin-scrollbar">
+          <div className="flex items-center justify-center min-h-screen p-2 sm:p-4">
             <div
               className="fixed inset-0 bg-black/50"
               onClick={() => {
@@ -883,15 +891,15 @@ export default function QRCodeGeneratorPage() {
                 fetchMasterData();
               }}
             />
-            <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] max-sm:max-h-[95vh] max-sm:w-[95vw] overflow-y-auto thin-scrollbar">
               <Card className="border-0 shadow-none">
-                <CardHeader className="sticky top-0 bg-white z-10 border-b px-6 py-4 flex flex-row items-center justify-between">
+                <CardHeader className="sticky top-0 bg-white z-10 border-b px-4 py-3 sm:px-6 sm:py-4 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2 text-xl">
+                    <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                       <QrCode className="size-5 text-blue-600" />
                       Generate QR Code
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       Fill in the details below to generate a QR code for
                       warehouse labeling.
                     </CardDescription>
@@ -1187,7 +1195,7 @@ export default function QRCodeGeneratorPage() {
                         <FolderTree className="size-4" />
                         Warehouse Location
                       </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                         <div className="space-y-1.5">
                           <Label htmlFor="warehouseId">Warehouse *</Label>
                           <select

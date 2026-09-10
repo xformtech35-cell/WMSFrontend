@@ -143,39 +143,49 @@ export default function GRNSelector({
 
       const response = await fetchApprovedGRNs(params);
 
-      const data = response.data?.data || response.data || response;
-      const content = data.content || [];
-      console.log("Fetched GRNs:", content); // Debugging log
-      const totalElements = data.totalElements || 0;
-      const totalPages = data.totalPages || 0;
-      const currentPage = data.number || page;
-      const pageSize = data.size || pagination.pageSize;
-      const first = data.first !== undefined ? data.first : true;
-      const last = data.last !== undefined ? data.last : true;
+      const rawData = response?.data?.data ?? response?.data ?? response;
+      const content = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.content)
+        ? rawData.content
+        : Array.isArray(rawData?.items)
+        ? rawData.items
+        : Array.isArray(rawData?.data)
+        ? rawData.data
+        : [];
+      
+      console.log("Fetched GRNs response:", response, "content:", content);
 
-      // Only GRNs having at least one pending barcode line
+      const totalElements = rawData?.totalElements ?? content.length;
+      const totalPages = rawData?.totalPages ?? Math.ceil((totalElements || content.length) / (rawData?.size || pagination.pageSize || 10)) ?? 1;
+      const currentPage = rawData?.number ?? page;
+      const pageSize = rawData?.size ?? pagination.pageSize;
+      const first = rawData?.first !== undefined ? rawData.first : true;
+      const last = rawData?.last !== undefined ? rawData.last : true;
+
+      // Filter GRNs having pending barcode line or items needing barcodes
       const filteredContent = content.filter((grn) =>
-        grn.lines?.some((line) => line.barcodeGenerate === null),
+        !grn.lines || grn.lines.length === 0 || grn.lines?.some((line) => line.barcodeGenerate === null || line.barcodeGenerate === undefined || (line.remainingQuantity !== null && line.remainingQuantity > 0))
       );
+      const displayGrns = filteredContent.length > 0 ? filteredContent : content;
 
-      setGrns(filteredContent);
+      setGrns(displayGrns);
 
       setPagination({
         currentPage,
         pageSize,
-        totalElements: totalElements,
-        totalPages,
+        totalElements: totalElements || content.length,
+        totalPages: totalPages || 1,
         first,
         last,
       });
 
-      // Select first GRN + first pending line by default
-      if (filteredContent.length > 0) {
-        const firstGRN = filteredContent[0];
-
+      // Select first GRN + first line by default if available
+      if (displayGrns.length > 0) {
+        const firstGRN = displayGrns[0];
         const firstPendingLine = firstGRN.lines?.find(
-          (line) => line.barcodeGenerate === null,
-        );
+          (line) => line.barcodeGenerate === null || line.barcodeGenerate === undefined || line.remainingQuantity > 0
+        ) || firstGRN.lines?.[0];
 
         setExpandedGRN(firstGRN.id);
         setSelectedGrnId(firstGRN.id);
@@ -191,7 +201,7 @@ export default function GRNSelector({
         setSelectedLineId(null);
       }
 
-      return filteredContent;
+      return displayGrns;
     } catch (error) {
       console.error("Error fetching approved GRNs:", error);
       toast.error("Failed to load GRNs. Please try again.");
@@ -283,19 +293,19 @@ const handleSelectLine = (grn, line) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
-        <DialogHeader className="border-b border-border px-6 py-4">
-          <DialogTitle className="flex items-center gap-2 text-lg">
+      <DialogContent className="flex max-h-[90vh] max-sm:max-h-[95vh] flex-col gap-0 overflow-hidden p-0 w-full sm:max-w-4xl max-sm:w-[95vw]">
+        <DialogHeader className="border-b border-border px-4 py-3 sm:px-6 sm:py-4">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Package className="size-5 text-primary" />
             Select GRN and Item
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Choose an approved GRN with items pending barcode generation.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 overflow-y-auto px-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:gap-4 overflow-y-auto thin-scrollbar px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
             <form
               onSubmit={handleSearch}
               className="relative w-full sm:max-w-xs"
@@ -328,7 +338,7 @@ const handleSelectLine = (grn, line) => {
             </Button>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="max-h-[55vh] sm:max-h-[60vh] overflow-y-auto thin-scrollbar rounded-lg border border-border">
             {isLoading ? (
               <div className="space-y-3 p-6">
                 {[...Array(3)].map((_, i) => (
@@ -584,11 +594,11 @@ const handleSelectLine = (grn, line) => {
           )}
         </div>
 
-        <DialogFooter className="-mx-0 -mb-0 border-t border-border bg-muted/30 px-6 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="-mx-0 -mb-0 border-t border-border bg-muted/30 px-4 py-3 sm:px-6 sm:py-4 flex-col-reverse sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!selectedLineId}>
+          <Button onClick={handleConfirm} disabled={!selectedLineId} className="w-full sm:w-auto">
             <CheckCircle2 className="mr-1.5 size-3.5" />
             Confirm Selection
           </Button>

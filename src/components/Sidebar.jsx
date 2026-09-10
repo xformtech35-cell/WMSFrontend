@@ -49,9 +49,15 @@ import {
   // Purchase
   FileText,
   FileCheck,
+  FileCheck2,
   FileSearch,
+  FileX,
+  FileMinus,
   ClipboardCheck,
   ClipboardPen,
+  Undo2,
+  PackageX,
+  UserCheck,
 
   // Inbound
   DoorOpen,
@@ -123,21 +129,21 @@ const ALL_MENU_ITEMS = [
   {
     href: "/purchase-rejected",
     label: "Purchase Rejected",
-    icon: FileText,
+    icon: FileX,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_REJECTED,
   },
   {
     href: "/return-request-approval",
     label: "Return Request Approval",
-    icon: FileText,
+    icon: FileCheck2,
     group: "Purchase Rejected/Return",
     permission: P.RETURN_REQUEST_APPROVAL,
   },
   {
     href: "/purchase-return-request",
     label: "Purchase Return Request",
-    icon: FileText,
+    icon: Undo2,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_RETURN_REQUEST,
   },
@@ -145,42 +151,42 @@ const ALL_MENU_ITEMS = [
   {
     href: "/purchase-return-orders",
     label: "Purchase Return Orders",
-    icon: FileText,
+    icon: FileMinus,
     group: "Purchase Rejected/Return",
     permission: P.PURCHASE_RETURN_ORDERS,
   },
   {
     href: "/picking-return-orders",
     label: "Picking Return Orders",
-    icon: FileText,
+    icon: PackageX,
     group: "Purchase Rejected/Return",
     permission: P.PICKING_RETURN_ORDERS,
   },
   { 
     href: "/return-quality-check",
     label: "Return Quality Check",
-    icon: FileText,
+    icon: ClipboardCheck,
     group: "Purchase Rejected/Return",
     permission: P.RETURN_QUALITY_CHECK,
   },
    { 
     href: "/pack-return-order",
     label: "Packing Return Order",
-    icon: FileText,
+    icon: PackagePlus,
     group: "Purchase Rejected/Return",
     permission: P.PACKING_RETURN_ORDER,
   },
    { 
     href: "/packed-return-order",
     label: "Packed Return Order",
-    icon: FileText,
+    icon: PackageCheckIcon,
     group: "Purchase Rejected/Return",
     permission: P.PACKED_RETURN_ORDER,
   },
    { 
     href: "/return-dispatches",
     label: "Return Dispatches",
-    icon: FileText,
+    icon: Send,
     group: "Purchase Rejected/Return",
     permission: P.RETURN_DISPATCHES,
   },
@@ -490,14 +496,14 @@ const ALL_MENU_ITEMS = [
   {
     href: "/master/suppliers",
     label: "Suppliers",
-    icon: Users,
+    icon: TruckIcon,
     group: "Admin/Masters",
     permission: P.MASTER_VIEW,
   },
   {
     href: "/master/customer",
     label: "Customers",
-    icon: Users,
+    icon: UserCheck,
     group: "Admin/Masters",
     permission: P.MASTER_VIEW,
   },
@@ -543,13 +549,13 @@ const ALL_MENU_ITEMS = [
     group: "Admin/Masters",
     permission: P.USERS_MANAGE,
   },
-  {
-    href: "/settings",
-    label: "Settings",
-    icon: Settings,
-    group: "Admin/Masters",
-    permission: null,
-  },
+  // {
+  //   href: "/settings",
+  //   label: "Settings",
+  //   icon: Settings,
+  //   group: "Admin/Masters",
+  //   permission: null,
+  // },
 ];
 /* ── Enhanced NavItem with favorites and better styling ── */
 const NavItem = memo(function NavItem({
@@ -558,6 +564,7 @@ const NavItem = memo(function NavItem({
   liveValue,
   isFavorite,
   onToggleFavorite,
+  onItemClick,
 }) {
   const pathname = usePathname();
   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -566,6 +573,7 @@ const NavItem = memo(function NavItem({
   const content = (
     <Link
       href={item.href}
+      onClick={onItemClick}
       onMouseEnter={() => !isCollapsed && setShowFavStar(true)}
       onMouseLeave={() => !isCollapsed && setShowFavStar(false)}
       className={cn(
@@ -675,7 +683,7 @@ const SectionHeader = memo(function SectionHeader({
 });
 
 /* ── Main Sidebar Component ── */
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen, onCloseMobile }) => {
   const [width, setWidth] = useState(SIDEBAR_DEFAULT);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -880,37 +888,59 @@ const Sidebar = () => {
   const displayRole = role ? role.replace("_", " ") : "";
 
   return (
-    <aside
-      suppressHydrationWarning
-      style={{ width }}
-      className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar select-none overflow-hidden",
-        !isDragging && "transition-[width] duration-200 ease-out",
-      )}
-    >
-      {/* ── Header: Brand ── */}
-      <div className="relative border-b border-sidebar-border bg-linear-to-r from-sidebar to-sidebar/95 px-3 py-2.5 transition-all duration-200">
+    <>
+      {mobileOpen && (
         <div
-          className={cn(
-            "flex items-center justify-between gap-3",
-            isCollapsed && "justify-center",
-          )}
-        >
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-600 text-[12px] font-extrabold text-white shadow-md shadow-blue-500/20 transition-transform duration-200 hover:scale-105">
-              W
-            </div>
-
-            {!isCollapsed && (
-              <div className="min-w-0 max-w-[11rem]">
-                <p className="truncate text-[0.92rem] font-semibold leading-none text-sidebar-foreground">
-                  WMS Pro Control Tower
-                </p>
-              </div>
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-xs md:hidden"
+          onClick={onCloseMobile}
+        />
+      )}
+      <aside
+        suppressHydrationWarning
+        style={{ width }}
+        className={cn(
+          "sticky top-0 flex h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar select-none overflow-hidden",
+          !isDragging && "transition-all duration-200 ease-out",
+          "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:!w-72 max-md:shadow-2xl max-md:bg-sidebar",
+          mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
+        )}
+      >
+        {/* ── Header: Brand ── */}
+        <div className="relative border-b border-sidebar-border bg-linear-to-r from-sidebar to-sidebar/95 px-3 py-2.5 transition-all duration-200">
+          <div
+            className={cn(
+              "flex items-center justify-between gap-3",
+              isCollapsed && "justify-center",
             )}
+          >
+            <div className="flex min-w-0 items-center justify-between w-full gap-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-600 text-[12px] font-extrabold text-white shadow-md shadow-blue-500/20 transition-transform duration-200 hover:scale-105">
+                  W
+                </div>
+
+                {!isCollapsed && (
+                  <div className="min-w-0 max-w-[11rem]">
+                    <p className="truncate text-[0.92rem] font-semibold leading-none text-sidebar-foreground">
+                      WMS Pro Control Tower
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {onCloseMobile && (
+                <button
+                  type="button"
+                  onClick={onCloseMobile}
+                  className="md:hidden p-1.5 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  aria-label="Close menu"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
       {/* ── Search Bar — Expanded only ── */}
       {!isCollapsed && (
@@ -978,6 +1008,7 @@ const Sidebar = () => {
                           liveValue={item.liveKey && kpis ? pendingPicks : 0}
                           isFavorite={favorites.includes(item.href)}
                           onToggleFavorite={toggleFavorite}
+                          onItemClick={onCloseMobile}
                         />
                       </div>
                     ))}
@@ -1009,6 +1040,7 @@ const Sidebar = () => {
                                 }
                                 isFavorite={favorites.includes(item.href)}
                                 onToggleFavorite={toggleFavorite}
+                                onItemClick={onCloseMobile}
                               />
                             </div>
                           ))}
@@ -1090,6 +1122,7 @@ const Sidebar = () => {
         )}
       />
     </aside>
+  </>
   );
 };
 

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "powershell -Command \"if (Test-Path out) { Remove-Item -Path dist -Recurse -Force -ErrorAction SilentlyContinue; Rename-Item -Path out -NewName dist }\"",
+    "postbuild": "powershell -Command \"if (Test-Path out) { if (Test-Path dist) { Remove-Item -Path dist -Recurse -Force -ErrorAction SilentlyContinue }; Move-Item -Path out -Destination dist -Force }\"",
     "start": "npx serve dist -l 3000",
     "lint": "eslint"
   },

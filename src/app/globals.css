@@ -213,6 +213,11 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
     /* 14px enterprise body text — rem scale stays at 16px so Tailwind spacing works */
@@ -228,6 +233,32 @@
   h2 { @apply text-[1.429rem] font-semibold leading-snug    tracking-tight; }
   h3 { @apply text-[1.143rem] font-semibold leading-normal; }
   h4 { @apply text-base       font-semibold leading-normal; }
+
+  /* Mobile responsiveness rules */
+  @media (max-width: 640px) {
+    [role="dialog"] {
+      max-width: 95vw !important;
+      width: 95vw !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="search"],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  div:has(> table) {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -301,13 +332,16 @@
 
   .thin-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: oklch(0.75 0.03 264 / 60%) transparent;
   }
-  .thin-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+  .thin-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
   .thin-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .thin-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 2px;
+    background: oklch(0.75 0.03 264 / 50%);
+    border-radius: 9999px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.5 0.18 264 / 80%);
   }
 
   /* ── Tables row hover ──────────────────────────────── */

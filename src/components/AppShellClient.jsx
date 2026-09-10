@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { cn } from "@/lib/utils";
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2, Menu, X } from "lucide-react";
 import api from "@/lib/api";
 import { useWebSocketSubscription } from "@/lib/hooks/useWebSocketSubscription";
 import { toast } from "sonner";
@@ -46,11 +46,13 @@ export default function AppShellClient({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(isPublicRoute);
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const notificationsRef = useRef(null);
 
   const [isNavigating, setIsNavigating] = useState(false);
   const previousPathname = useRef(pathname);
   useEffect(() => {
+    setMobileOpen(false);
     if (previousPathname.current !== pathname) {
       setIsNavigating(false);
       previousPathname.current = pathname;
@@ -232,21 +234,31 @@ export default function AppShellClient({ children }) {
         </div>
       )}
       <CommandPalette onNavigate={(href) => router.push(href)} />
-      <Sidebar />
-      <main className="flex-1 overflow-x-hidden">
+      <Sidebar mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} />
+      <main className="flex-1 overflow-x-hidden min-w-0">
         <header
           className={cn(
             "!sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75",
           )}
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 md:px-8">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Warehouse software
-              </p>
-              <h1 className="truncate text-sm font-semibold text-foreground">
-                {shellTitle}
-              </h1>
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-6 md:px-8">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setMobileOpen((prev) => !prev)}
+                className="md:hidden flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-background text-foreground shadow-xs hover:bg-muted focus:outline-none"
+                aria-label="Toggle navigation menu"
+              >
+                {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+              </button>
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground truncate">
+                  Warehouse software
+                </p>
+                <h1 className="truncate text-xs sm:text-sm font-semibold text-foreground">
+                  {shellTitle}
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-[10px] font-bold text-muted-foreground shadow-sm uppercase tracking-wider">
