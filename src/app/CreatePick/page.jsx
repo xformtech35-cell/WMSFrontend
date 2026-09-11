@@ -365,14 +365,7 @@ export default function SalesOrderPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleCreateClick}
-                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Sales Order
-                </button>
+             
                 <button
                   type="button"
                   onClick={loadSalesOrders}
