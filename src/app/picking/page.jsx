@@ -2,6 +2,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import UserSelect from "@/components/UserSelect";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -350,6 +351,22 @@ export default function PickListPage() {
   const handlePickTaskInputChange = (e) => {
     const { name, value } = e.target;
     setPickTaskData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePickerChange = (user) => {
+    if (user) {
+      setPickTaskData((prev) => ({
+        ...prev,
+        pickerId: user.username || String(user.id) || "",
+        pickerName: user.name || user.fullName || user.username || "",
+      }));
+    } else {
+      setPickTaskData((prev) => ({
+        ...prev,
+        pickerId: "",
+        pickerName: "",
+      }));
+    }
   };
 
   // Handle Pick Task Submit
@@ -1002,7 +1019,6 @@ export default function PickListPage() {
                             Item Code *
                           </label>
                           <div className="relative">
-                            <Box className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <input
                               type="text"
                               name="itemCode"
@@ -1038,7 +1054,6 @@ export default function PickListPage() {
                             Location Barcode *
                           </label>
                           <div className="relative">
-                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <input
                               type="text"
                               name="locationBarcode"
@@ -1056,7 +1071,6 @@ export default function PickListPage() {
                             Item Barcode
                           </label>
                           <div className="relative">
-                            <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <input
                               type="text"
                               name="itemBarcode"
@@ -1075,7 +1089,6 @@ export default function PickListPage() {
                             Bin ID
                           </label>
                           <div className="relative">
-                            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <input
                               type="text"
                               name="binId"
@@ -1102,42 +1115,23 @@ export default function PickListPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Picker ID *
-                          </label>
-                          <div className="relative">
-                            <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              name="pickerId"
-                              value={pickTaskData.pickerId}
-                              onChange={handlePickTaskInputChange}
-                              placeholder="Enter picker ID"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                              required
-                            />
+                      <div>
+                        <UserSelect
+                          label="Select Picker"
+                          name="pickerId"
+                          value={pickTaskData.pickerId || pickTaskData.pickerName}
+                          onChange={handlePickerChange}
+                          placeholder="Select Picker..."
+                          required={true}
+                          valueKey="username"
+                          displayKey="username"
+                          subDisplayKey="email"
+                        />
+                        {pickTaskData.pickerName && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            Selected Picker: {pickTaskData.pickerName}
                           </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Picker Name *
-                          </label>
-                          <div className="relative">
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              name="pickerName"
-                              value={pickTaskData.pickerName}
-                              onChange={handlePickTaskInputChange}
-                              placeholder="Enter picker name"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                        </div>
+                        )}
                       </div>
 
                       <div className="hidden">

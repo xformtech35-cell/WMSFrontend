@@ -1,5 +1,6 @@
 "use client";
 
+import apiRequest from "@/components/apiRequest";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Search,

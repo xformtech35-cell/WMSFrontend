@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import UserSelect from "@/components/UserSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -342,22 +343,13 @@ export default function PutawayFormModal({
                   <User className="size-3.5" />
                   Assigned To *
                 </Label>
-                <select
-                  id="assignedTo"
+                <UserSelect
                   name="assignedTo"
-                  className={`h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                    formErrors.assignedTo ? "border-red-500" : ""
-                  }`}
                   value={formData.assignedTo}
-                  onChange={onInputChange}
-                >
-                  <option value="">Select user</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.name || u.username || u.id}>
-                      {u.name || u.username || `User ${u.id}`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(user, e) => onInputChange(e)}
+                  valueKey="username"
+                  placeholder="Select user"
+                />
                 {formErrors.assignedTo && (
                   <p className="text-xs text-red-500">
                     {formErrors.assignedTo}
@@ -536,8 +528,8 @@ export default function PutawayFormModal({
                   <Package className="size-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">No items added yet</p>
                   <p className="text-xs">
-                    Select items from the GRN above and click "Add Selected
-                    Items"
+                    Select items from the GRN above and click &quot;Add Selected
+                    Items&quot;
                   </p>
                 </div>
               ) : (

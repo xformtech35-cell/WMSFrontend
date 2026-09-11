@@ -10,6 +10,7 @@ import {
   Hash,
 } from "lucide-react";
 import { toast } from "sonner";
+import UserSelect from "@/components/UserSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -306,22 +307,13 @@ export default function PutawayExecuteModal({
                 <User className="size-3.5" />
                 Scanned By *
               </Label>
-              <select
-                id="scannedBy"
+              <UserSelect
                 name="scannedBy"
-                className={`h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                  errors.scannedBy ? "border-red-500" : ""
-                }`}
                 value={formData.scannedBy}
-                onChange={handleInputChange}
-              >
-                <option value="">Select user</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.name || u.username || u.id}>
-                    {u.name || u.username || `User ${u.id}`}
-                  </option>
-                ))}
-              </select>
+                onChange={(user, e) => handleInputChange(e)}
+                valueKey="username"
+                placeholder="Select user"
+              />
               {errors.scannedBy && (
                 <p className="text-xs text-red-500">{errors.scannedBy}</p>
               )}

@@ -16,6 +16,8 @@ import {
   Save,
   FileText,
 } from "lucide-react";
+import api from "@/lib/api";
+import apiRequest from "@/components/apiRequest";
 
 // Get shipping labels (packages) for selection with pagination
 const getShippingLabelsAPI = async (page = 0, size = 10, searchTerm = "") => {

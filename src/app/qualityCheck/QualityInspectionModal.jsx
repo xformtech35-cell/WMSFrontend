@@ -30,6 +30,7 @@ import {
   Trash2,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserSelect from "@/components/UserSelect";
 
 const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -706,29 +707,14 @@ const QualityInspectionModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     <span className="text-red-500 ml-1">*</span>
                   </label>
 
-                  <div className="relative">
-                    <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
-
-                    <select
-                      name="inspectedBy"
-                      value={formData.inspectedBy}
-                      onChange={handleChange}
-                      required
-                      className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-white focus:ring-4 focus:ring-green-100 focus:border-green-400 transition-all appearance-none"
-                    >
-                      <option value="">Select </option>
-
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name ||
-                            user.fullName ||
-                            user.username ||
-                            user.userName ||
-                            `User ${user.id}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <UserSelect
+                    name="inspectedBy"
+                    value={formData.inspectedBy}
+                    onChange={(user, e) => handleChange(e)}
+                    valueKey="id"
+                    placeholder="Select Inspected By"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">

@@ -19,6 +19,7 @@ import {
   Search,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserSelect from "@/components/UserSelect";
 import ItemSelectorModal from "./ItemSelectorModal";
 
 
@@ -608,83 +609,23 @@ export default function PurchaseRequestForm({
                   </div>
                 </div>
 
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Requested By *
-                  </label>
-
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={userSearch}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setUserSearch(value);
-                        setShowUserDropdown(true);
-
+                <div>
+                  <UserSelect
+                    label="Requested By"
+                    name="requestedBy"
+                    value={prData.requestedBy}
+                    onChange={(user) => {
+                      if (user) {
+                        const name = user.name || user.fullName || user.username || user.id;
                         setPrData((prev) => ({
                           ...prev,
-                          requestedBy: value,
+                          requestedBy: name,
                         }));
-                      }}
-                      onFocus={() => setShowUserDropdown(true)}
-                      onBlur={() => {
-                        // Small delay so click on dropdown option works
-                        setTimeout(() => setShowUserDropdown(false), 150);
-                      }}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Search user..."
-                      required
-                      autoComplete="off"
-                    />
-
-                    {showUserDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {filteredUsers.length > 0 ? (
-                          filteredUsers.map((user) => {
-                            const name =
-                              user.name ||
-                              user.fullName ||
-                              user.username ||
-                              `${user.firstName || ""} ${user.lastName || ""}`.trim();
-
-                            return (
-                              <button
-                                key={user.id}
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => {
-                                  setUserSearch(name);
-
-                                  setPrData((prev) => ({
-                                    ...prev,
-                                    requestedBy: name,
-                                  }));
-
-                                  setShowUserDropdown(false);
-                                }}
-                                className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
-                              >
-                                <div className="font-medium text-gray-800">
-                                  {name}
-                                </div>
-
-                                {user.email && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {user.email}
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="px-4 py-3 text-sm text-gray-500">
-                            No users found
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                      }
+                    }}
+                    placeholder="Search / Select User..."
+                    required
+                  />
                 </div>
 
                 <div>

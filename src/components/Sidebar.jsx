@@ -743,17 +743,6 @@ const Sidebar = ({ mobileOpen, onCloseMobile }) => {
     return filtered;
   }, [groupedItems, searchQuery]);
 
-  /* Live KPIs */
-  const { data: kpis } = useQuery({
-    queryKey: ["dashboardKpis-sidebar"],
-    queryFn: () => api.get("/dashboard/kpis").then((r) => r.data),
-    retry: false,
-    // refetchInterval: 20000,
-    // staleTime: 30000,
-    // gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
   // Hydrate from localStorage - using a ref to track if we've initialized
   const isInitialized = useRef(false);
 
@@ -877,13 +866,9 @@ const Sidebar = ({ mobileOpen, onCloseMobile }) => {
 
   // Get group stats
   const getGroupStats = (group) => {
-    if (group === "Fulfillment" && pendingPicks) {
-      return `${pendingPicks} pending`;
-    }
     return null;
   };
 
-  const pendingPicks = kpis?.pendingPicks ?? 0;
   const displayName = username ?? "User";
   const displayRole = role ? role.replace("_", " ") : "";
 
@@ -1005,7 +990,7 @@ const Sidebar = ({ mobileOpen, onCloseMobile }) => {
                         <NavItem
                           item={item}
                           isCollapsed={isCollapsed}
-                          liveValue={item.liveKey && kpis ? pendingPicks : 0}
+                          liveValue={0}
                           isFavorite={favorites.includes(item.href)}
                           onToggleFavorite={toggleFavorite}
                           onItemClick={onCloseMobile}
@@ -1035,9 +1020,7 @@ const Sidebar = ({ mobileOpen, onCloseMobile }) => {
                               <NavItem
                                 item={item}
                                 isCollapsed={isCollapsed}
-                                liveValue={
-                                  item.liveKey && kpis ? pendingPicks : 0
-                                }
+                                liveValue={0}
                                 isFavorite={favorites.includes(item.href)}
                                 onToggleFavorite={toggleFavorite}
                                 onItemClick={onCloseMobile}

@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { createPortal } from "react-dom";
-import { PUT } from "@/components/apiRequest";
+import apiRequest, { PUT } from "@/components/apiRequest";
+import UserSelect from "@/components/UserSelect";
 
 
 
@@ -1382,18 +1383,13 @@ export default function SalesOrderForm({
                 {mode === "edit" && (
                   <>
                     <div>
-                      <SearchableSelect
+                      <UserSelect
                         label="Assigned To"
                         required={true}
-                        options={assignees}
                         value={pickListData.assignedTo}
                         onChange={handleAssigneeChange}
                         placeholder="Select Assignee"
-                        loading={isLoadingAssignees}
-                        onSearch={handleAssigneeSearch}
-                        onLoadMore={handleAssigneeLoadMore}
-                        hasMore={hasMoreAssignees}
-                        totalOptions={assigneeTotal}
+                        valueKey="username"
                         displayKey="username"
                         subDisplayKey="email"
                       />

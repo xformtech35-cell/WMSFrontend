@@ -1,5 +1,6 @@
 "use client";
 
+import apiRequest from "@/components/apiRequest";
 import { useState, useEffect, useRef } from "react";
 import {
   Barcode,

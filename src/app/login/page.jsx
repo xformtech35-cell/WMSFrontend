@@ -113,7 +113,6 @@ export default function LoginPage() {
                   Username
                 </Label>
                 <div className="relative">
-                  <UserRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input
                     id="username"
                     className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
@@ -135,7 +134,6 @@ export default function LoginPage() {
                   Password
                 </Label>
                 <div className="relative">
-                  <LockKeyhole className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}

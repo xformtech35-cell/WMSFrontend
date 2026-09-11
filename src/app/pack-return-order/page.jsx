@@ -1,7 +1,9 @@
 "use client";
 
-import apiRequest from "@/components/apiRequest";
 import React, { useState, useEffect } from "react";
+import api from "@/lib/api";
+import apiRequest from "@/components/apiRequest";
+import UserSelect from "@/components/UserSelect";
 import {
   Eye,
   Search,
@@ -32,9 +34,6 @@ import {
   ThumbsDown,
   Users,
 } from "lucide-react";
-import api from "@/lib/api";
-
-
 
 // API function for picklists
 const getPicklistsAPI = async (
@@ -1166,21 +1165,12 @@ export default function PackReturnOrder() {
                                     handlePackLineChange(
                                       index,
                                       "packedBy",
-                                      e.target.value
-                                        ? Number(e.target.value)
-                                        : null,
+                                      user ? Number(user.id) : null,
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                  disabled={loadingUsers}
-                                >
-                                  <option value="">Select Packer</option>
-                                  {users.map((user) => (
-                                    <option key={user.id} value={user.id}>
-                                      {getUserDisplayName(user)}
-                                    </option>
-                                  ))}
-                                </select>
+                                  valueKey="id"
+                                  placeholder="Select Packer"
+                                />
                               </td>
                               <td className="px-3 py-2">
                                 <input

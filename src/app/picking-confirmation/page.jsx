@@ -41,9 +41,12 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 
-
-
-const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getSalesOrdersAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -64,7 +67,9 @@ const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = 
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -104,7 +109,10 @@ const deleteSalesOrderAPI = async (id) => {
 
 // Update pick list status
 const updatePickListStatusAPI = async (pickListNumber, status) => {
-  return apiRequest(`/outbound/pick-task/${pickListNumber}/status?status=${status}`, "PATCH");
+  return apiRequest(
+    `/outbound/pick-task/${pickListNumber}/status?status=${status}`,
+    "PATCH",
+  );
 };
 
 // Create pick task
@@ -235,9 +243,6 @@ export default function PickListPageConfi() {
     }
   };
 
- 
-
- 
   const handleFormClose = () => {
     setShowFormModal(false);
     setEditingSO(null);
@@ -254,8 +259,6 @@ export default function PickListPageConfi() {
     resetPickTaskForm();
     resetConfirmationForm();
   };
-
- 
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this sales order?")) {
@@ -278,29 +281,35 @@ export default function PickListPageConfi() {
 
   // Handle status update
   const handleStatusUpdate = async (pickTaskNumber, status, actionLabel) => {
-    if (!window.confirm(`Are you sure you want to mark this pick task as ${actionLabel}?`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to mark this pick task as ${actionLabel}?`,
+      )
+    ) {
       return;
     }
 
     try {
       setUpdatingStatus(true);
       await updatePickListStatusAPI(pickTaskNumber, status);
-      setSuccessMessage(`Pick task ${pickTaskNumber} marked as ${actionLabel} successfully`);
+      setSuccessMessage(
+        `Pick task ${pickTaskNumber} marked as ${actionLabel} successfully`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
-      
+
       if (showViewModal) {
         handleViewClose();
       }
     } catch (error) {
       console.error("Status update error:", error);
-      setErrorMessage(error.message || `Failed to update pick task status to ${actionLabel}.`);
+      setErrorMessage(
+        error.message || `Failed to update pick task status to ${actionLabel}.`,
+      );
     } finally {
       setUpdatingStatus(false);
     }
   };
-
- 
 
   // Reset Pick Task Form
   const resetPickTaskForm = () => {
@@ -330,20 +339,16 @@ export default function PickListPageConfi() {
     });
   };
 
- 
-
   // Handle Confirmation Form Input
   const handleConfirmationInputChange = (e) => {
     const { name, value } = e.target;
     setConfirmationData((prev) => ({ ...prev, [name]: value }));
   };
 
-  
-
   // Handle Confirm Pick Submit
   const handleConfirmPickSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!confirmationData.pickTaskNumber) {
       setErrorMessage("Pick Task Number is required");
@@ -353,7 +358,10 @@ export default function PickListPageConfi() {
       setErrorMessage("Item Code is required");
       return;
     }
-    if (!confirmationData.pickedQuantity || confirmationData.pickedQuantity <= 0) {
+    if (
+      !confirmationData.pickedQuantity ||
+      confirmationData.pickedQuantity <= 0
+    ) {
       setErrorMessage("Picked Quantity must be greater than 0");
       return;
     }
@@ -366,14 +374,18 @@ export default function PickListPageConfi() {
       setLoading(true);
       const response = await confirmPickAPI(confirmationData);
       console.log("Pick Confirmation submitted:", response);
-      
-      setSuccessMessage(`Pick confirmation submitted successfully for ${confirmationData.pickTaskNumber}`);
+
+      setSuccessMessage(
+        `Pick confirmation submitted successfully for ${confirmationData.pickTaskNumber}`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
       handlePickTaskClose();
     } catch (error) {
       console.error("Pick Confirmation error:", error);
-      setErrorMessage(error.message || "Failed to confirm pick. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to confirm pick. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -442,16 +454,36 @@ export default function PickListPageConfi() {
   const getStatusActions = (currentStatus) => {
     const actions = {
       PENDING: [
-        { status: "CONFIRMED", label: "Confirm Pick", icon: Check, color: "bg-blue-600 hover:bg-blue-700" },
+        {
+          status: "CONFIRMED",
+          label: "Confirm Pick",
+          icon: Check,
+          color: "bg-blue-600 hover:bg-blue-700",
+        },
       ],
       CONFIRMED: [
-        { status: "PICKED", label: "Mark as Picked", icon: CheckSquare, color: "bg-green-600 hover:bg-green-700" },
+        {
+          status: "PICKED",
+          label: "Mark as Picked",
+          icon: CheckSquare,
+          color: "bg-green-600 hover:bg-green-700",
+        },
       ],
       PICKED: [
-        { status: "SHIPPED", label: "Mark as Shipped", icon: Truck, color: "bg-purple-600 hover:bg-purple-700" },
+        {
+          status: "SHIPPED",
+          label: "Mark as Shipped",
+          icon: Truck,
+          color: "bg-purple-600 hover:bg-purple-700",
+        },
       ],
       SHIPPED: [
-        { status: "DELIVERED", label: "Mark as Delivered", icon: CheckCircle, color: "bg-indigo-600 hover:bg-indigo-700" },
+        {
+          status: "DELIVERED",
+          label: "Mark as Delivered",
+          icon: CheckCircle,
+          color: "bg-indigo-600 hover:bg-indigo-700",
+        },
       ],
     };
     return actions[currentStatus] || [];
@@ -626,12 +658,8 @@ export default function PickListPageConfi() {
                           {so.pickTaskNumber || "N/A"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {so.pickListNumber}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {so.soNumber}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{so.pickListNumber}</td>
+                      <td className="px-4 py-3 text-sm">{so.soNumber}</td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
                           {so.itemCode}
@@ -671,28 +699,29 @@ export default function PickListPageConfi() {
                             <Eye className="w-4 h-4" />
                           </button>
                           {/* {(so.status === "PENDING") && ( */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                // Open confirmation modal
-                                setSelectedPickList(so);
-                                setConfirmationData({
-                                  pickTaskNumber: so.pickTaskNumber || "",
-                                  itemCode: so.itemCode || "",
-                                  pickedQuantity: so.requiredQuantity || 0,
-                                  shortQuantity: 0,
-                                  barcode: so.itemBarcode || "",
-                                  confirmedBy: so.pickerName || "",
-                                });
-                                setShowPickTaskModal(true);
-                              }}
-                              className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                              title="Confirm Pick"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Open confirmation modal
+                              setSelectedPickList(so);
+                              setConfirmationData({
+                                pickTaskNumber: so.pickTaskNumber || "",
+                                itemCode: so.itemCode || "",
+                                pickedQuantity: so.requiredQuantity || 0,
+                                shortQuantity: 0,
+                                barcode: so.itemBarcode || "",
+                                confirmedBy: so.pickerName || "",
+                              });
+                              setShowPickTaskModal(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                            title="Confirm Pick"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
                           {/* )} */}
-                          {(so.status === "PENDING" || so.status === "DRAFT") && (
+                          {(so.status === "PENDING" ||
+                            so.status === "DRAFT") && (
                             <button
                               type="button"
                               onClick={() => handleDelete(so.pickTaskNumber)}
@@ -765,7 +794,7 @@ export default function PickListPageConfi() {
                     <XCircle className="w-6 h-6" />
                   </button>
                 </div>
-                
+
                 <div className="p-6">
                   {/* Status Update Actions */}
                   <div className="mb-6">
@@ -774,11 +803,11 @@ export default function PickListPageConfi() {
                         <button
                           key={action.status}
                           type="button"
-                          onClick={() => 
+                          onClick={() =>
                             handleStatusUpdate(
-                              viewingSO.pickTaskNumber, 
-                              action.status, 
-                              action.label
+                              viewingSO.pickTaskNumber,
+                              action.status,
+                              action.label,
                             )
                           }
                           disabled={updatingStatus}
@@ -798,110 +827,182 @@ export default function PickListPageConfi() {
                         <Tag className="w-3 h-3" />
                         Pick Task Number
                       </label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickTaskNumber}</p>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickTaskNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickListNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Pick List Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickListNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.soNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        SO Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.soNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Status</label>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Status
+                      </label>
                       <p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
+                        >
                           {viewingSO.status}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Item Code</label>
-                      <p className="font-medium text-gray-900">{viewingSO.itemCode}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Item Code
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.itemCode}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Item Name</label>
-                      <p className="font-medium text-gray-900">{viewingSO.itemName}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Item Name
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.itemName}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">UOM</label>
-                      <p className="font-medium text-gray-900">{viewingSO.uom}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        UOM
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.uom}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.requiredQuantity}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Required Quantity
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.requiredQuantity}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Picked Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickedQuantity || 0}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Picked Quantity
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickedQuantity || 0}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Picker ID</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickerId || "N/A"}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Picker ID
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickerId || "N/A"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Picker Name</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickerName || "N/A"}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Picker Name
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickerName || "N/A"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Created At</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingSO.createdAt)}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Created At
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {formatDate(viewingSO.createdAt)}
+                      </p>
                     </div>
                   </div>
 
                   {/* Location Details */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        Location Barcode
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm">{viewingSO.locationBarcode || "N/A"}</p>
+                    <div className="col-span-2 md:col-span-1 gap-1">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          Location Barcode
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.locationBarcode || "N/A"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                          <Barcode className="w-3 h-3" />
+                          Item Barcode
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.itemBarcode || "N/A"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Barcode className="w-3 h-3" />
-                        Item Barcode
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm">{viewingSO.itemBarcode || "N/A"}</p>
-                    </div>
+                    <br />
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
                         <Hash className="w-3 h-3" />
                         Bin ID
                       </label>
-                      <p className="font-medium text-gray-900 text-sm">{viewingSO.binId || "N/A"}</p>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.binId || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
                         <Layers className="w-3 h-3" />
                         Batch Number
                       </label>
-                      <p className="font-medium text-gray-900 text-sm">{viewingSO.batchNumber || "N/A"}</p>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.batchNumber || "N/A"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Sales Order Line ID</label>
-                      <p className="font-medium text-gray-900 text-sm">{viewingSO.salesOrderLineId || "N/A"}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Sales Order Line ID
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.salesOrderLineId || "N/A"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Inventory ID</label>
-                      <p className="font-medium text-gray-900 text-sm">{viewingSO.inventoryId || "N/A"}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Inventory ID
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.inventoryId || "N/A"}
+                      </p>
                     </div>
                   </div>
 
                   {/* Scan Status */}
                   <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Scan Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${viewingSO.isScanned ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {viewingSO.isScanned ? 'Scanned' : 'Not Scanned'}
+                      <span className="text-sm text-gray-600">
+                        Scan Status:
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${viewingSO.isScanned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                      >
+                        {viewingSO.isScanned ? "Scanned" : "Not Scanned"}
                       </span>
                     </div>
                     {viewingSO.scanTime && (
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">Scan Time: {formatDate(viewingSO.scanTime)}</span>
+                        <span className="text-sm text-gray-600">
+                          Scan Time: {formatDate(viewingSO.scanTime)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -909,8 +1010,12 @@ export default function PickListPageConfi() {
                   {/* Remarks if any */}
                   {viewingSO.remarks && (
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <label className="text-xs text-gray-500 uppercase font-medium">Remarks</label>
-                      <p className="text-sm text-gray-700">{viewingSO.remarks}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Remarks
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingSO.remarks}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -952,29 +1057,55 @@ export default function PickListPageConfi() {
                     <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick Task Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickTaskNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Pick Task Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.pickTaskNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickListNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Pick List Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.pickListNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.soNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            SO Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.soNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Item</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.itemCode} - {selectedPickList?.itemName}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Item
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.itemCode} -{" "}
+                            {selectedPickList?.itemName}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.requiredQuantity} {selectedPickList?.uom}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Required Quantity
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.requiredQuantity}{" "}
+                            {selectedPickList?.uom}
+                          </p>
                         </div>
                         <br />
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Location</label>
-                          <p className="font-medium text-gray-900 text-sm">{selectedPickList?.locationBarcode}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Location
+                          </label>
+                          <p className="font-medium text-gray-900 text-sm">
+                            {selectedPickList?.locationBarcode}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1053,7 +1184,12 @@ export default function PickListPageConfi() {
                             min="0"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Auto-calculated: {Math.max(0, (selectedPickList?.requiredQuantity || 0) - confirmationData.pickedQuantity)}
+                            Auto-calculated:{" "}
+                            {Math.max(
+                              0,
+                              (selectedPickList?.requiredQuantity || 0) -
+                                confirmationData.pickedQuantity,
+                            )}
                           </p>
                         </div>
                       </div>

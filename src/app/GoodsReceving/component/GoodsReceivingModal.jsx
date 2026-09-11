@@ -21,6 +21,7 @@ import {
   Save,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserSelect from "@/components/UserSelect";
 
 const GoodsReceivingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -443,29 +444,14 @@ const GoodsReceivingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
     <span className="text-red-500 ml-1">*</span>
   </label>
 
-  <div className="relative">
-    <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
-
-    <select
-      name="receivedBy"
-      value={formData.receivedBy}
-      onChange={handleChange}
-      required
-      className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl bg-white focus:ring-4 focus:ring-green-100 focus:border-green-400 transition-all appearance-none"
-    >
-      <option value="">Select Received By</option>
-
-      {users.map((user) => (
-        <option key={user.id} value={user.id}>
-          {user.name ||
-            user.fullName ||
-            user.username ||
-            user.userName ||
-            `User ${user.id}`}
-        </option>
-      ))}
-    </select>
-  </div>
+                  <UserSelect
+                    name="receivedBy"
+                    value={formData.receivedBy}
+                    onChange={(user, e) => handleChange(e)}
+                    valueKey="id"
+                    placeholder="Select Received By"
+                    required
+                  />
 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
