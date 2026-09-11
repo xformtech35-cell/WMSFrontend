@@ -543,14 +543,14 @@ export default function SalesOrderPage() {
                             </button>
                           {/* )} */}
                           {/* {(so.status === "DRAFT" || so.status === "PROCESSING") && ( */}
-                            <button
+                            {/* <button
                               type="button"
                               onClick={() => handleDelete(so.soNumber)}
                               className="text-red-600 hover:text-red-800 transition-colors"
                               title="Delete"
                             >
                               <XCircle className="w-4 h-4" />
-                            </button>
+                            </button> */}
                           {/* )} */}
                         </div>
                       </td>
