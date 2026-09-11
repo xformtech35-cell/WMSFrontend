@@ -582,14 +582,14 @@ export default function DeliveryChallan() {
                             <Edit className="w-4 h-4" />
                           </button>
 
-                          <button
+                          {/* <button
                             type="button"
                             onClick={() => handleDelete(challan.id)}
                             className="text-red-600 hover:text-red-800 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>

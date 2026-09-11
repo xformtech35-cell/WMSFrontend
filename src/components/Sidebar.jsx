@@ -507,13 +507,13 @@ const ALL_MENU_ITEMS = [
     group: "Admin/Masters",
     permission: P.MASTER_VIEW,
   },
-  {
-    href: "/master/allotments",
-    label: "Rack Allotments",
-    icon: MapPin,
-    group: "Admin/Masters",
-    permission: P.MASTER_VIEW,
-  },
+  // {
+  //   href: "/master/allotments",
+  //   label: "Rack Allotments",
+  //   icon: MapPin,
+  //   group: "Admin/Masters",
+  //   permission: P.MASTER_VIEW,
+  // },
   {
     href: "/master/items",
     label: "Items",
