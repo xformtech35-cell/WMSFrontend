@@ -53,7 +53,7 @@ const ForgotPasswordForm = ({ onSubmit, onBack }) => {
           <Input
             id="email"
             type="email"
-            className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
+            className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
             placeholder="Enter your email address"
             {...register('email')}
           />

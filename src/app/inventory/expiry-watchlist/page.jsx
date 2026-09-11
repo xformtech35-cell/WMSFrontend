@@ -119,7 +119,6 @@ export default function ExpiryWatchlistPage() {
       <div className="glass-card rounded-2xl p-5 flex flex-col gap-4 bg-white border border-slate-100 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
             <Input
               placeholder="Search SKU or batch number..."
               value={search}

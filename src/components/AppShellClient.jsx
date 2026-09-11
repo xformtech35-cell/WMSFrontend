@@ -280,11 +280,6 @@ export default function AppShellClient({ children }) {
                 >
                   <div className="relative">
                     <Bell className="size-3.5 text-primary" />
-                    {/* {notifCount > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-bold leading-none text-white shadow-xs">
-                        {notifCount}
-                      </span>
-                    )} */}
                   </div>
                   <span>Live notifications</span>
                 </button>

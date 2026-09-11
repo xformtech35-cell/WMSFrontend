@@ -690,7 +690,6 @@ export default function PutawayPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
               {" "}
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{" "}
               <Input
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}

@@ -283,7 +283,7 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     onChange={handleChange}
                     placeholder="Number of boxes"
                     min="1"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                   />
                 </div>

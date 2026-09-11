@@ -698,7 +698,6 @@ export default function PickListPageConfiAll() {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by Confirmation #, SO Number or Pick Task..."
@@ -1158,7 +1157,7 @@ export default function PickListPageConfiAll() {
                               value={confirmationData.barcode}
                               onChange={handleConfirmationInputChange}
                               placeholder="Scan or enter barcode"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                             />
                           </div>
                         </div>
@@ -1175,7 +1174,7 @@ export default function PickListPageConfiAll() {
                               value={confirmationData.confirmedBy}
                               onChange={handleConfirmationInputChange}
                               placeholder="Enter confirmer name"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                               required
                             />
                           </div>

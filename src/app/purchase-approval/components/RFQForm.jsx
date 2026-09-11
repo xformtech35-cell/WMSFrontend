@@ -496,7 +496,7 @@ export default function RFQForm({
                         name="rfqDate"
                         value={formData.rfqDate}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                       />
                     </div>
@@ -514,7 +514,7 @@ export default function RFQForm({
                         value={formData.closingDate}
                         onChange={handleInputChange}
                         min={formData.rfqDate}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                       />
                     </div>
@@ -531,7 +531,7 @@ export default function RFQForm({
                         name="referenceNumber"
                         value={formData.referenceNumber}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Reference number"
                       />
                     </div>

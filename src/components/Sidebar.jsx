@@ -952,7 +952,7 @@ const Sidebar = ({ mobileOpen, onCloseMobile }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={cn(
-                "w-full rounded-lg border border-sidebar-border/60 bg-sidebar-accent/40 pl-7 pr-2.5 py-1.5",
+                "w-full rounded-lg border border-sidebar-border/60 bg-sidebar-accent/40 px-2.5 py-1.5",
                 "text-[0.78rem] text-sidebar-foreground placeholder:text-sidebar-foreground/40",
                 "transition-all duration-200 focus:outline-none focus:border-sidebar-primary/60 focus:bg-sidebar-accent/80",
                 "hover:border-sidebar-border/80",

@@ -134,8 +134,7 @@ export function DataTable({ data, columns: columnsProp, keyField, onRowClick, se
       <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-2.5">
         {/* Global search */}
         {globalFilter && (<div className="relative flex-1 min-w-36 max-w-64">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"/>
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" className="h-8 pl-8 text-sm"/>
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" className="h-8 text-sm"/>
             {query && (<button type="button" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X className="size-3.5"/>
               </button>)}

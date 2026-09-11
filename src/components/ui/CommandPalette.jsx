@@ -170,7 +170,6 @@ export function CommandPalette({ onNavigate }) {
       <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-popover shadow-xl animate-fade-in-up" onPointerDown={(e) => e.stopPropagation()}>
         {/* Search bar */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <Search className="size-4 shrink-0 text-muted-foreground"/>
           <input ref={inputRef} value={query} onChange={(e) => { setQuery(e.target.value); setCursor(0); }} onKeyDown={handleKeyDown} placeholder="Search commands…" className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" aria-label="Command search"/>
           <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground sm:block">
             ESC

@@ -222,7 +222,7 @@ const InboundCreationModal = ({
                     name="inboundDate"
                     value={formData.inboundDate}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                   />
                 </div>
@@ -240,7 +240,7 @@ const InboundCreationModal = ({
                     name="expectedArrivalDate"
                     value={formData.expectedArrivalDate}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />
                 </div>
               </div>
@@ -258,7 +258,7 @@ const InboundCreationModal = ({
                     value={formData.invoiceNumber}
                     onChange={handleChange}
                     placeholder="INV-2026-001"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />
                 </div>
               </div>
@@ -276,7 +276,7 @@ const InboundCreationModal = ({
                     value={formData.deliveryChallan}
                     onChange={handleChange}
                     placeholder="DC-2026-001"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />
                 </div>
               </div>
@@ -294,7 +294,7 @@ const InboundCreationModal = ({
                     value={formData.trackingNumber}
                     onChange={handleChange}
                     placeholder="TRK-123456"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />
                 </div>
               </div>
@@ -312,7 +312,7 @@ const InboundCreationModal = ({
                     value={formData.trackingName}
                     onChange={handleChange}
                     placeholder="Logistics Company"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />
                 </div>
               </div>

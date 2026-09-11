@@ -722,7 +722,6 @@ export default function WarehousesPage() {
       </Dialog>
 
       <div className="relative w-full max-w-sm">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}

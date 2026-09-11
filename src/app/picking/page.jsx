@@ -575,7 +575,6 @@ export default function PickListPage() {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by SO Number or Pick List..."
@@ -1034,7 +1033,7 @@ export default function PickListPage() {
                               value={pickTaskData.itemCode}
                               onChange={handlePickTaskInputChange}
                               placeholder="Enter item code"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                               required
                             />
                           </div>
@@ -1070,7 +1069,7 @@ export default function PickListPage() {
                               value={pickTaskData.locationBarcode}
                               onChange={handlePickTaskInputChange}
                               placeholder="Scan or enter location"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                               required
                             />
                           </div>
@@ -1088,7 +1087,7 @@ export default function PickListPage() {
                               value={pickTaskData.itemBarcode}
                               onChange={handlePickTaskInputChange}
                               placeholder="Scan or enter item barcode"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                             />
                           </div>
                         </div>
@@ -1107,7 +1106,7 @@ export default function PickListPage() {
                               value={pickTaskData.binId}
                               onChange={handlePickTaskInputChange}
                               placeholder="Enter bin ID"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                             />
                           </div>
                         </div>
@@ -1140,7 +1139,7 @@ export default function PickListPage() {
                               value={pickTaskData.pickerId}
                               onChange={handlePickTaskInputChange}
                               placeholder="Enter picker ID"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                               required
                             />
                           </div>
@@ -1158,7 +1157,7 @@ export default function PickListPage() {
                               value={pickTaskData.pickerName}
                               onChange={handlePickTaskInputChange}
                               placeholder="Enter picker name"
-                              className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                               required
                             />
                           </div>

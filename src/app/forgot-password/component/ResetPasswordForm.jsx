@@ -85,7 +85,7 @@ const ResetPasswordForm = ({ email, otp, onSuccess, onBack }) => {
           <Input
             id="newPassword"
             type={showNewPassword ? 'text' : 'password'}
-            className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 !pl-10 pr-11 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
+            className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 ! pr-11 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
             placeholder="Enter new password"
             {...register('newPassword')}
           />
@@ -134,7 +134,7 @@ const ResetPasswordForm = ({ email, otp, onSuccess, onBack }) => {
           <Input
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
-            className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 !pl-10 pr-11 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
+            className="h-11 rounded-xl border-slate-200/80 bg-slate-50/50 ! pr-11 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/80 focus-visible:bg-white transition-all"
             placeholder="Confirm new password"
             {...register('confirmPassword')}
           />

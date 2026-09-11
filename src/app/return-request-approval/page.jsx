@@ -449,8 +449,7 @@ export default function VendorReturnRequestPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              </div>
+                </div>
             </div>
 
             <div className="flex items-center gap-2">

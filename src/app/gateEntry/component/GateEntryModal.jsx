@@ -239,7 +239,7 @@ const GateEntryModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     value={formData.driverName}
                     onChange={handleChange}
                     placeholder="Enter driver name"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                   />
                 </div>
@@ -258,7 +258,7 @@ const GateEntryModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     value={formData.driverContact}
                     onChange={handleChange}
                     placeholder="9876543210"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                     maxLength={10}
                   />
@@ -278,7 +278,7 @@ const GateEntryModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     value={formData.driverId}
                     onChange={handleChange}
                     placeholder="DL-123456"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   />
                 </div>
               </div>
@@ -319,7 +319,7 @@ const GateEntryModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                     value={formData.gateNumber}
                     onChange={handleChange}
                     placeholder="Gate-1, Gate-2, etc."
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                    className="w-full pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
                     required
                   />
                 </div>

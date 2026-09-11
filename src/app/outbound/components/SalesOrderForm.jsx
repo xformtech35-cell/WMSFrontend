@@ -393,8 +393,6 @@ const SearchableSelect = ({
         {/* Search */}
         <div className="p-2 border-b border-gray-200 bg-white">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-
             <input
               ref={inputRef}
               type="text"
@@ -402,7 +400,7 @@ const SearchableSelect = ({
               onChange={handleSearch}
               placeholder="Search..."
               autoFocus
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
