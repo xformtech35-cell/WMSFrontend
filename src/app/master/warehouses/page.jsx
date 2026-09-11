@@ -1,5 +1,6 @@
 "use client";
 
+import apiRequest from "@/components/apiRequest";
 import { useState, useMemo, useEffect } from "react";
 import {
   Building2,
@@ -85,31 +86,7 @@ async function exportWarehousesExcel(items) {
   toast.success("Warehouses exported to Excel");
 }
 
-const apiRequest = async (endpoint, method = "GET", data = null) => {
-  try {
-    const response = await api.request({
-      url: endpoint,
-      method,
-      data,
-    });
 
-    const result = response.data;
-    if (result && result.success === false) {
-      throw new Error(
-        result?.message || `API request failed: ${response.status}`,
-      );
-    }
-    return result?.data || result;
-  } catch (error) {
-    console.error("API Error:", error);
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "API request failed",
-    );
-  }
-};
 
 const createAPI = async (data) => {
   return apiRequest("/warehouses", "POST", data);

@@ -1,5 +1,6 @@
 // app/inbound/page.js
 "use client";
+import apiRequest from "@/components/apiRequest";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -31,37 +32,11 @@ import {
   CheckSquare,
   Loader,
 } from "lucide-react";
-import api from "@/lib/api";
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import GoodsReceivingModal from "./component/GoodsReceivingModal";
 // import InboundViewModal from "./component/InboundViewModal";
 
-// API Functions
-const apiRequest = async (endpoint, method = "GET", data = null) => {
-  try {
-    const response = await api.request({
-      url: endpoint,
-      method,
-      data,
-    });
 
-    const result = response.data;
-    if (result && result.success === false) {
-      throw new Error(
-        result?.message || `API request failed: ${response.status}`,
-      );
-    }
-    return result?.data || result;
-  } catch (error) {
-    console.error("API Error:", error);
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "API request failed",
-    );
-  }
-};
 
 const getInboundsAPI = async (
   page = 0,

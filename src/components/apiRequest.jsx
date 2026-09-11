@@ -1,53 +1,72 @@
 import api from "@/lib/api";
 import { toast } from "sonner";
 
-const apiRequest = async (endpoint, method = "GET", data = null) => {
+/**
+ * Common API Request utility function used across components.
+ * Automatically delegates to central axios instance (`api`) which handles
+ * authentication tokens, global error handling, and top-right error toasts.
+ */
+export const apiRequest = async (endpoint, method = "GET", data = null, customConfig = {}) => {
+  const { showSuccessToast = false, successMessage, ...config } = customConfig || {};
+
   try {
     const response = await api.request({
       url: endpoint,
       method,
       data,
+      ...config,
     });
 
     const result = response.data;
     if (result && result.success === false) {
       throw new Error(
-        result?.message || `API request failed: ${response.status}`,
+        result?.message || `API request failed with status ${response.status}`
       );
     }
-      // CRUD success toast
-    if (method === "POST") {
-      toast.success("Created successfully.");
-    } else if (method === "PUT" || method === "PATCH") {
-      toast.success("Updated successfully.");
-    } else if (method === "DELETE") {
-      toast.success("Deleted successfully.");
+
+    if (showSuccessToast) {
+      const upperMethod = String(method).toUpperCase();
+      let defaultMsg = "Operation completed successfully.";
+      if (upperMethod === "POST") defaultMsg = "Created successfully.";
+      else if (upperMethod === "PUT" || upperMethod === "PATCH") defaultMsg = "Updated successfully.";
+      else if (upperMethod === "DELETE") defaultMsg = "Deleted successfully.";
+
+      toast.success(successMessage || defaultMsg);
     }
-    return result?.data || result;
+
+    return result?.data !== undefined ? result.data : result;
   } catch (error) {
-    console.error("API Error:", error);
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "API request failed",
-    );
+    console.error("API Request Error:", error);
+    throw error;
   }
 };
 
-export const CREATE = async (api, data) => {
-  return apiRequest(api, "POST", data);
+export const CREATE = async (endpoint, data, config) => {
+  return apiRequest(endpoint, "POST", data, config);
 };
 
-export const update = async (api, data) => {
-  return apiRequest(api, "PUT", data);
+export const update = async (endpoint, data, config) => {
+  return apiRequest(endpoint, "PUT", data, config);
 };
-export const GET = async (api, data) => {
-  return apiRequest(api, "GET", data);
+
+export const GET = async (endpoint, config) => {
+  return apiRequest(endpoint, "GET", null, config);
 };
-export const DELETE = async (api, data) => {
-  return apiRequest(api, "DELETE", data);
+
+export const POST = async (endpoint, data, config) => {
+  return apiRequest(endpoint, "POST", data, config);
 };
-export const PUT = async (api, data) => {
-  return apiRequest(api, "PUT", data);
+
+export const PUT = async (endpoint, data, config) => {
+  return apiRequest(endpoint, "PUT", data, config);
 };
+
+export const PATCH = async (endpoint, data, config) => {
+  return apiRequest(endpoint, "PATCH", data, config);
+};
+
+export const DELETE = async (endpoint, config) => {
+  return apiRequest(endpoint, "DELETE", null, config);
+};
+
+export default apiRequest;

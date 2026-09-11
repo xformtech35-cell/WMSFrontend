@@ -1,5 +1,6 @@
 // app/purchase-orders/page.js
 "use client";
+import apiRequest from "@/components/apiRequest";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -29,7 +30,6 @@ import {
   ThumbsUp,
   CheckCircle2,
 } from "lucide-react";
-import api from "@/lib/api";
 // import PurchaseOrderViewModal from "./PurchaseOrderViewPage";
 import InboundCreationModal from "../purchase-orders/component/InboundCreationModal";
 import StatusUpdateModal from "../purchase-orders/component/StatusUpdateModal";
@@ -38,32 +38,7 @@ import PurchaseOrderViewModal from "../purchase-orders/PurchaseOrderViewPage";
 // import InboundCreationModal from "./component/InboundCreationModal";
 // import StatusUpdateModal from "@/components/purchase-orders/StatusUpdateModal";
 
-// API Functions
-const apiRequest = async (endpoint, method = "GET", data = null) => {
-  try {
-    const response = await api.request({
-      url: endpoint,
-      method,
-      data,
-    });
 
-    const result = response.data;
-    if (result && result.success === false) {
-      throw new Error(
-        result?.message || `API request failed: ${response.status}`,
-      );
-    }
-    return result?.data || result;
-  } catch (error) {
-    console.error("API Error:", error);
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "API request failed",
-    );
-  }
-};
 
 const getPurchaseOrdersAPI = async (page = 0, size = 10, searchTerm = "") => {
   const requestBody = {

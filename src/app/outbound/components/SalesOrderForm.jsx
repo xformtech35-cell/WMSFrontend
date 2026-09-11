@@ -25,32 +25,7 @@ import api from "@/lib/api";
 import { createPortal } from "react-dom";
 import { PUT } from "@/components/apiRequest";
 
-// API Functions
-const apiRequest = async (endpoint, method = "GET", data = null) => {
-  try {
-    const response = await api.request({
-      url: endpoint,
-      method,
-      data,
-    });
 
-    const result = response.data;
-    if (result && result.success === false) {
-      throw new Error(
-        result?.message || `API request failed: ${response.status}`,
-      );
-    }
-    return result?.data || result;
-  } catch (error) {
-    console.error("API Error:", error);
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "API request failed",
-    );
-  }
-};
 
 // Get all customers with pagination and search
 const getCustomersAPI = async (page = 0, size = 20, search = "") => {

@@ -1,4 +1,5 @@
 "use client";
+import apiRequest from "@/components/apiRequest";
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -20,32 +21,7 @@ import {
 import api from "@/lib/api";
 import ItemSelectorModal from "./ItemSelectorModal";
 
-// API Functions
-const apiRequest = async (endpoint, method = "GET", data = null) => {
-  try {
-    const response = await api.request({
-      url: endpoint,
-      method,
-      data,
-    });
 
-    const result = response.data;
-    if (result && result.success === false) {
-      throw new Error(
-        result?.message || `API request failed: ${response.status}`,
-      );
-    }
-    return result?.data || result;
-  } catch (error) {
-    console.error("API Error:", error);
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "API request failed",
-    );
-  }
-};
 
 // Get all suppliers
 const getSuppliersAPI = async () => {
