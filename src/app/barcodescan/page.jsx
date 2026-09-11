@@ -808,7 +808,7 @@ useEffect(() => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t">
+              {/* <div className="flex flex-wrap gap-2 pt-2 border-t">
                 <Button
                   size="sm"
                   onClick={() => handleDownloadQR(previewQr)}
@@ -837,7 +837,7 @@ useEffect(() => {
                   <Printer className="mr-1.5 size-3.5" />
                   Print
                 </Button>
-              </div>
+              </div> */}
             </div>
           )}
         </DialogContent>
