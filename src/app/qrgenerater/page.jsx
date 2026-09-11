@@ -158,6 +158,91 @@ export default function QRCodeGeneratorPage() {
   // State for selected bin details
   const [selectedBinDetails, setSelectedBinDetails] = useState(null);
 
+  // Location selection mode: "auto" (Auto Putaway) vs "custom" (Custom Location)
+  const [locationMode, setLocationMode] = useState("auto");
+  const [autoLocationData, setAutoLocationData] = useState(null);
+  const [isLoadingAutoLocation, setIsLoadingAutoLocation] = useState(false);
+
+  // Fetch Auto Putaway suggestion from POST /inventory-stock/filter
+  const fetchAutoLocationSuggestion = async (itemCode, quantity, warehouseIdVal) => {
+    if (!itemCode || !quantity || Number(quantity) <= 0) {
+      setAutoLocationData(null);
+      return;
+    }
+
+    try {
+      setIsLoadingAutoLocation(true);
+
+      let selectedWId;
+      if (warehouseIdVal) {
+        const foundWh = warehouses.find(
+          (w) => String(w.id) === String(warehouseIdVal) || w.warehouseId === warehouseIdVal
+        );
+        selectedWId = foundWh?.warehouseId || foundWh?.id || warehouseIdVal;
+      }
+
+      const payload = {
+        itemCode: itemCode.trim(),
+        quantity: Number(quantity),
+      };
+      if (selectedWId) {
+        payload.warehouseId = selectedWId;
+      }
+
+      const response = await api.post("/inventory-stock/filter", payload);
+      const data = response.data?.data || response.data;
+      setAutoLocationData(data);
+
+      if (data?.locationSuggestion) {
+        const sug = data.locationSuggestion;
+
+        const matchedWarehouse = warehouses.find(
+          (w) => String(w.warehouseId) === String(sug.warehouseId) || String(w.id) === String(sug.warehouseId) || w.name === sug.warehouseId
+        );
+        const matchedZone = zones.find(
+          (z) => String(z.zoneId) === String(sug.zone) || String(z.id) === String(sug.zone) || z.name === sug.zone
+        );
+        const matchedAisle = aisles.find(
+          (a) => String(a.aisleId) === String(sug.aisle) || String(a.aisleNumber) === String(sug.aisle) || String(a.id) === String(sug.aisle)
+        );
+        const matchedRack = racks.find(
+          (r) => String(r.rackId) === String(sug.rack) || String(r.id) === String(sug.rack) || r.name === sug.rack
+        );
+        const matchedLevel = levels.find(
+          (l) => String(l.levelId) === String(sug.level) || String(l.id) === String(sug.level) || l.name === sug.level
+        );
+        const matchedBin = bins.find(
+          (b) => b.barcode === sug.binBarcode || b.binId === sug.binId || b.barcode === sug.binId || String(b.id) === String(sug.binId)
+        );
+
+        setFormData((prev) => ({
+          ...prev,
+          warehouseId: matchedWarehouse ? String(matchedWarehouse.id) : (prev.warehouseId || sug.warehouseId || ""),
+          zoneId: matchedZone ? String(matchedZone.id) : "",
+          aisleId: matchedAisle ? String(matchedAisle.id) : "",
+          rackId: matchedRack ? String(matchedRack.id) : "",
+          levelId: matchedLevel ? String(matchedLevel.id) : "",
+          shelfId: sug.shelf || "",
+          binId: matchedBin ? String(matchedBin.id) : (sug.binBarcode || sug.binId || ""),
+        }));
+      }
+    } catch (error) {
+      console.warn("Failed to fetch auto location suggestion:", error);
+      setAutoLocationData(null);
+    } finally {
+      setIsLoadingAutoLocation(false);
+    }
+  };
+
+  useEffect(() => {
+    if (locationMode === "auto" && formData.itemCode && formData.quantity && Number(formData.quantity) > 0) {
+      const timer = setTimeout(() => {
+        fetchAutoLocationSuggestion(formData.itemCode, formData.quantity, formData.warehouseId);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [locationMode, formData.itemCode, formData.quantity, formData.warehouseId, warehouses, zones, aisles, racks, levels, bins]);
+
   // Fetch master data and QR codes on mount
   useEffect(() => {
     fetchMasterData();
@@ -565,8 +650,16 @@ export default function QRCodeGeneratorPage() {
         errors.quantity = `Quantity (${formData.quantity}) exceeds remaining quantity (${remainingQuantity})`;
       }
     }
-    if (!formData.warehouseId) {
-      errors.warehouseId = "Warehouse is required";
+
+    if (locationMode === "custom") {
+      if (!formData.warehouseId) {
+        errors.warehouseId = "Warehouse is required";
+      }
+    } else {
+      // Auto mode: check if suggestion exists or warehouseId is selected
+      if (!autoLocationData?.locationSuggestion && !formData.warehouseId) {
+        // Option to suggest warehouse if not auto-detected
+      }
     }
 
     // Validate bin capacity if bin is selected
@@ -604,6 +697,8 @@ export default function QRCodeGeneratorPage() {
     );
     const selectedBin = bins.find((b) => b.id === parseInt(formData.binId));
 
+    const sug = autoLocationData?.locationSuggestion;
+
     const payload = {
       qrType: formData.qrType,
       labelLevel: formData.labelLevel,
@@ -620,16 +715,36 @@ export default function QRCodeGeneratorPage() {
       quantity: parseInt(formData.quantity),
       uom: formData.uom,
       warehouseId:
-        selectedWarehouse?.warehouseId ||
-        selectedWarehouse?.id ||
-        formData.warehouseId,
-      zone: selectedZone?.zoneId || selectedZone?.name || "",
-      aisle: selectedAisle?.aisleId || selectedAisle?.aisleNumber || "",
-      rack: selectedRack?.rackId || selectedRack?.name || "",
-      level: selectedLevel?.levelId || selectedLevel?.name || "",
+        locationMode === "auto" && sug?.warehouseId
+          ? sug.warehouseId
+          : selectedWarehouse?.warehouseId ||
+            selectedWarehouse?.id ||
+            formData.warehouseId,
+      zone:
+        locationMode === "auto" && sug?.zone
+          ? sug.zone
+          : selectedZone?.zoneId || selectedZone?.name || "",
+      aisle:
+        locationMode === "auto" && sug?.aisle
+          ? sug.aisle
+          : selectedAisle?.aisleId || selectedAisle?.aisleNumber || "",
+      rack:
+        locationMode === "auto" && sug?.rack
+          ? sug.rack
+          : selectedRack?.rackId || selectedRack?.name || "",
+      level:
+        locationMode === "auto" && sug?.level
+          ? sug.level
+          : selectedLevel?.levelId || selectedLevel?.name || "",
       levelId: formData.levelId ? parseInt(formData.levelId) : null,
-      shelf: formData.shelfId || "",
-      binId: selectedBin?.barcode || selectedBin?.binId || "",
+      shelf:
+        locationMode === "auto" && sug?.shelf
+          ? sug.shelf
+          : formData.shelfId || "",
+      binId:
+        locationMode === "auto" && (sug?.binBarcode || sug?.binId)
+          ? sug.binBarcode || sug.binId
+          : selectedBin?.barcode || selectedBin?.binId || "",
       palletNumber: formData.palletNumber.trim(),
       generatedBy: "admin",
       templateName: formData.templateName,
@@ -1191,159 +1306,260 @@ export default function QRCodeGeneratorPage() {
 
                     {/* Section: Warehouse Location */}
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                        <FolderTree className="size-4" />
-                        Warehouse Location
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="warehouseId">Warehouse *</Label>
-                          <select
-                            id="warehouseId"
-                            name="warehouseId"
-                            className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
-                              formErrors.warehouseId ? "border-red-500" : ""
-                            }`}
-                            value={formData.warehouseId}
-                            onChange={handleInputChange}
-                          >
-                            <option value="">Select warehouse</option>
-                            {warehouses.map((w) => (
-                              <option key={w.id} value={w.id}>
-                                {w.name}{" "}
-                                {w.warehouseId ? `(${w.warehouseId})` : ""}
-                              </option>
-                            ))}
-                          </select>
-                          {formErrors.warehouseId && (
-                            <p className="text-xs text-red-500">
-                              {formErrors.warehouseId}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="zoneId">Zone</Label>
-                          <select
-                            id="zoneId"
-                            name="zoneId"
-                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={formData.zoneId}
-                            onChange={handleInputChange}
-                            disabled={!formData.warehouseId}
-                          >
-                            <option value="">Select zone</option>
-                            {filteredZones.map((z) => (
-                              <option key={z.id} value={z.id}>
-                                {z.name} {z.zoneId ? `(${z.zoneId})` : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="aisleId">Aisle</Label>
-                          <select
-                            id="aisleId"
-                            name="aisleId"
-                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={formData.aisleId}
-                            onChange={handleInputChange}
-                            disabled={!formData.zoneId}
-                          >
-                            <option value="">Select aisle</option>
-                            {filteredAisles.map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
-                                {a.name ? ` - ${a.name}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="rackId">Rack</Label>
-                          <select
-                            id="rackId"
-                            name="rackId"
-                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={formData.rackId}
-                            onChange={handleInputChange}
-                            disabled={!formData.aisleId}
-                          >
-                            <option value="">Select rack</option>
-                            {filteredRacks.map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
-                                {r.name ? ` - ${r.name}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="levelId">Level</Label>
-                          <select
-                            id="levelId"
-                            name="levelId"
-                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={formData.levelId}
-                            onChange={handleInputChange}
-                            disabled={!formData.rackId}
-                          >
-                            <option value="">Select level</option>
-                            {filteredLevels.map((l) => (
-                              <option key={l.id} value={l.id}>
-                                {l.levelId || `Level ${l.id}`}
-                                {l.name ? ` - ${l.name}` : ""}
-                                {l.levelNumber
-                                  ? ` (Level ${l.levelNumber})`
-                                  : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="shelfId">Shelf</Label>
-                          <Input
-                            id="shelfId"
-                            name="shelfId"
-                            placeholder="e.g. S-02"
-                            value={formData.shelfId}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="binId">Bin</Label>
-                          <select
-                            id="binId"
-                            name="binId"
-                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={formData.binId}
-                            onChange={handleInputChange}
-                            disabled={!formData.rackId}
-                          >
-                            <option value="">Select bin</option>
-                            {filteredBins.map((b) => (
-                              <option key={b.id} value={b.id}>
-                                {b.barcode || b.binId || `Bin ${b.id}`} -{" "}
-                                {b.stockSummary?.availableSlots || 0} available
-                              </option>
-                            ))}
-                          </select>
-                          {selectedBinDetails && formData.binId && (
-                            <p className="text-xs text-green-600 flex items-center gap-1">
-                              <CheckCircle className="size-3" />
-                              Selected bin has{" "}
-                              {selectedBinDetails.stockSummary
-                                ?.availableSlots || 0}{" "}
-                              available slots
-                            </p>
-                          )}
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <FolderTree className="size-4" />
+                          Warehouse Location
+                        </h3>
+                        <div className="flex items-center gap-4 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+                          <label className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer transition-colors ${locationMode === "auto" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+                            <input
+                              type="radio"
+                              name="locationMode"
+                              value="auto"
+                              checked={locationMode === "auto"}
+                              onChange={() => setLocationMode("auto")}
+                              className="hidden"
+                            />
+                            Auto Putaway
+                          </label>
+                          <label className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer transition-colors ${locationMode === "custom" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+                            <input
+                              type="radio"
+                              name="locationMode"
+                              value="custom"
+                              checked={locationMode === "custom"}
+                              onChange={() => setLocationMode("custom")}
+                              className="hidden"
+                            />
+                            Custom Location
+                          </label>
                         </div>
                       </div>
+
+                      {locationMode === "auto" ? (
+                        <div className="space-y-4 rounded-xl border bg-blue-50/40 p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="warehouseId" className="text-xs text-gray-600">Filter Warehouse (Optional)</Label>
+                              <select
+                                id="warehouseId"
+                                name="warehouseId"
+                                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                                value={formData.warehouseId}
+                                onChange={handleInputChange}
+                              >
+                                <option value="">All Warehouses (Auto-suggest)</option>
+                                {warehouses.map((w) => (
+                                  <option key={w.id} value={w.id}>
+                                    {w.name} {w.warehouseId ? `(${w.warehouseId})` : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {isLoadingAutoLocation ? (
+                            <div className="flex items-center gap-2 text-sm text-blue-600 py-2">
+                              <RefreshCw className="size-4 animate-spin" />
+                              Calculating optimal putaway location...
+                            </div>
+                          ) : autoLocationData?.locationSuggestion ? (
+                            <div className="bg-white rounded-lg border border-blue-200 p-4 shadow-xs space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                                  Suggested Location
+                                </span>
+                                <div className="text-xs text-gray-500">
+                                  Slots Available: <span className="font-semibold text-green-600">{autoLocationData.availableSlots ?? "-"}</span> / {autoLocationData.totalBinCapacity ?? "-"}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                <div>
+                                  <span className="text-gray-500 block">Warehouse</span>
+                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.warehouseId || "-"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block">Zone</span>
+                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.zone || "-"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block">Aisle</span>
+                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.aisle || "-"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block">Rack</span>
+                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.rack || "-"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block">Level</span>
+                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.level || "-"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 block">Bin / Barcode</span>
+                                  <span className="font-bold text-blue-600">{autoLocationData.locationSuggestion.binBarcode || autoLocationData.locationSuggestion.binId || "-"}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500 italic py-1">
+                              {!formData.itemCode || !formData.quantity
+                                ? "Enter Item Code and Quantity above to view optimal location suggestion."
+                                : "No specific location suggestion returned for this item."}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="warehouseId">Warehouse *</Label>
+                            <select
+                              id="warehouseId"
+                              name="warehouseId"
+                              className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
+                                formErrors.warehouseId ? "border-red-500" : ""
+                              }`}
+                              value={formData.warehouseId}
+                              onChange={handleInputChange}
+                            >
+                              <option value="">Select warehouse</option>
+                              {warehouses.map((w) => (
+                                <option key={w.id} value={w.id}>
+                                  {w.name}{" "}
+                                  {w.warehouseId ? `(${w.warehouseId})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                            {formErrors.warehouseId && (
+                              <p className="text-xs text-red-500">
+                                {formErrors.warehouseId}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="zoneId">Zone</Label>
+                            <select
+                              id="zoneId"
+                              name="zoneId"
+                              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              value={formData.zoneId}
+                              onChange={handleInputChange}
+                              disabled={!formData.warehouseId}
+                            >
+                              <option value="">Select zone</option>
+                              {filteredZones.map((z) => (
+                                <option key={z.id} value={z.id}>
+                                  {z.name} {z.zoneId ? `(${z.zoneId})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="aisleId">Aisle</Label>
+                            <select
+                              id="aisleId"
+                              name="aisleId"
+                              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              value={formData.aisleId}
+                              onChange={handleInputChange}
+                              disabled={!formData.zoneId}
+                            >
+                              <option value="">Select aisle</option>
+                              {filteredAisles.map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
+                                  {a.name ? ` - ${a.name}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="rackId">Rack</Label>
+                            <select
+                              id="rackId"
+                              name="rackId"
+                              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              value={formData.rackId}
+                              onChange={handleInputChange}
+                              disabled={!formData.aisleId}
+                            >
+                              <option value="">Select rack</option>
+                              {filteredRacks.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+                                  {r.name ? ` - ${r.name}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="levelId">Level</Label>
+                            <select
+                              id="levelId"
+                              name="levelId"
+                              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              value={formData.levelId}
+                              onChange={handleInputChange}
+                              disabled={!formData.rackId}
+                            >
+                              <option value="">Select level</option>
+                              {filteredLevels.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                  {l.levelId || `Level ${l.id}`}
+                                  {l.name ? ` - ${l.name}` : ""}
+                                  {l.levelNumber
+                                    ? ` (Level ${l.levelNumber})`
+                                    : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="shelfId">Shelf</Label>
+                            <Input
+                              id="shelfId"
+                              name="shelfId"
+                              placeholder="e.g. S-02"
+                              value={formData.shelfId}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="binId">Bin</Label>
+                            <select
+                              id="binId"
+                              name="binId"
+                              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              value={formData.binId}
+                              onChange={handleInputChange}
+                              disabled={!formData.rackId}
+                            >
+                              <option value="">Select bin</option>
+                              {filteredBins.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.barcode || b.binId || `Bin ${b.id}`} -{" "}
+                                  {b.stockSummary?.availableSlots || 0} available
+                                </option>
+                              ))}
+                            </select>
+                            {selectedBinDetails && formData.binId && (
+                              <p className="text-xs text-green-600 flex items-center gap-1">
+                                <CheckCircle className="size-3" />
+                                Selected bin has{" "}
+                                {selectedBinDetails.stockSummary
+                                  ?.availableSlots || 0}{" "}
+                                available slots
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Section: Additional Settings */}
