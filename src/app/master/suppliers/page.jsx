@@ -512,7 +512,7 @@ export default function SuppliersPage() {
       "Email",
       "Phone",
       "Address",
-      "GST",
+      "Tax",
       "Contact Person",
       "Status",
     ];
@@ -744,7 +744,7 @@ export default function SuppliersPage() {
                       Phone
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      GST
+                      Tax
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -1012,7 +1012,7 @@ export default function SuppliersPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    GST Number
+                    Tax Number
                   </label>
                   <input
                     type="text"
@@ -1020,7 +1020,7 @@ export default function SuppliersPage() {
                     value={formData.gstNumber}
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter GST number"
+                    placeholder="Enter Tax number"
                     maxLength={15}
                   />
                 </div>

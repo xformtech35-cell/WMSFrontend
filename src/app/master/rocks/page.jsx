@@ -28,6 +28,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import UomSelect from "@/components/UomSelect";
+import UomModal from "../items/components/UomModal";
 import { SheetFooter } from "@/components/ui/sheet";
 import {
   Table,
@@ -122,6 +124,7 @@ export default function RocksPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [showUomModal, setShowUomModal] = useState(false);
 
   // State for search
   const [search, setSearch] = useState("");
@@ -402,6 +405,13 @@ export default function RocksPage() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setShowUomModal(true)}
+            >
+              <Package className="mr-1.5 size-3.5" /> UOM
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => exportRocksExcel(filtered)}
               disabled={!filtered.length}
             >
@@ -478,7 +488,7 @@ export default function RocksPage() {
 
           <div className="space-y-1.5">
             <Label>Physical Dimensions</Label>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="lengthCm" className="text-xs text-muted-foreground">
                   Length  
@@ -521,31 +531,25 @@ export default function RocksPage() {
                   onChange={handleInputChange}
                 />
               </div>
-              <div>
+            
+             
+            </div>
+             <div>
                 <Label htmlFor="unit" className="text-xs text-muted-foreground">
                   Unit
                 </Label>
-                <select
+                <UomSelect
                   id="unit"
                   name="unit"
-                  className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm ${
-                    formErrors.unit ? "border-red-500" : ""
-                  }`}
                   value={formData.unit}
                   onChange={handleInputChange}
-                >
-                  <option value="">Select unit</option>
-                  {UNIT_TYPES.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select unit..."
+                  fallbackOptions={UNIT_TYPES.map((u) => ({ value: u, label: u }))}
+                />
                 {formErrors.unit && (
                   <p className="text-xs text-red-500">{formErrors.unit}</p>
                 )}
               </div>
-            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -791,6 +795,11 @@ export default function RocksPage() {
           </>
         )}
       </div>
+
+      <UomModal
+        isOpen={showUomModal}
+        onClose={() => setShowUomModal(false)}
+      />
     </div>
   );
 }

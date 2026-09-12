@@ -1325,7 +1325,7 @@ function QuotationFormModal({
                         Unit Price *
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 border-b">
-                        VAT/GST %
+                        Tax %
                       </th>
                     </tr>
                   </thead>

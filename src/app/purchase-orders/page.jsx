@@ -33,6 +33,7 @@ import {
 import PurchaseOrderViewModal from "./PurchaseOrderViewPage";
 import StatusUpdateModal from "./component/StatusUpdateModal";
 import InboundCreationModal from "./component/InboundCreationModal";
+import PurchaseOrderFormModal from "./component/PurchaseOrderFormModal";
 // import StatusUpdateModal from "@/components/purchase-orders/StatusUpdateModal";
 
 
@@ -78,6 +79,33 @@ export default function PurchaseOrderPage() {
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const [showInboundModal, setShowInboundModal] = useState(false);
   const [inboundPO, setInboundPO] = useState(null);
+  // Form Modal State (Create / Edit)
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingPoData, setEditingPoData] = useState(null);
+
+  const handleCreateClick = () => {
+    setEditingPoData(null);
+    setShowFormModal(true);
+  };
+
+  const handleEditClick = async (po) => {
+    try {
+      setLoading(true);
+      const fullPO = await getPurchaseOrderByIdAPI(po.id);
+      setEditingPoData(fullPO);
+      setShowFormModal(true);
+    } catch (error) {
+      console.error("Error loading PO for edit:", error);
+      setErrorMessage("Failed to load purchase order details for edit.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFormSuccess = (msg) => {
+    setSuccessMessage(msg);
+    loadPurchaseOrders();
+  };
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -329,7 +357,13 @@ export default function PurchaseOrderPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                
+                <button
+                  type="button"
+                  onClick={handleCreateClick}
+                  className="bg-white text-blue-700 hover:bg-blue-50 font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-sm text-sm"
+                >
+                  <Plus className="w-4 h-4" /> Create Purchase Order
+                </button>
                 <button
                   type="button"
                   onClick={loadPurchaseOrders}
@@ -481,10 +515,11 @@ export default function PurchaseOrderPage() {
                               </button> */}
                             </>
                           )}
-                          {po.status === "PENDING" && (
+                          {(po.status === "PENDING" || po.status === "DRAFT") && (
                             <>
                               <button
                                 type="button"
+                                onClick={() => handleEditClick(po)}
                                 className="text-purple-600 hover:text-purple-800 transition-colors"
                                 title="Edit PO"
                               >
@@ -529,6 +564,17 @@ export default function PurchaseOrderPage() {
           )}
         </div>
 
+        {/* Create / Edit Form Modal */}
+        <PurchaseOrderFormModal
+          isOpen={showFormModal}
+          onClose={() => {
+            setShowFormModal(false);
+            setEditingPoData(null);
+          }}
+          onSuccess={handleFormSuccess}
+          editPoData={editingPoData}
+        />
+
         {/* Status Update Modal */}
         <StatusUpdateModal
           isOpen={showStatusModal}
@@ -553,7 +599,7 @@ export default function PurchaseOrderPage() {
             getStatusBadgeColor={getStatusBadgeColor}
             onEdit={(po) => {
               handleViewClose();
-              router.push(`/purchase-orders/edit/${po.id}`);
+              handleEditClick(po);
             }}
             onSubmit={(po) => {
               handleViewClose();

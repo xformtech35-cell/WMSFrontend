@@ -21,10 +21,30 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      ACTIVE: { bg: "bg-green-100", text: "text-green-800", dot: "bg-green-500", label: "Active" },
-      INACTIVE: { bg: "bg-gray-100", text: "text-gray-800", dot: "bg-gray-500", label: "Inactive" },
-      SUSPENDED: { bg: "bg-yellow-100", text: "text-yellow-800", dot: "bg-yellow-500", label: "Suspended" },
-      BLOCKED: { bg: "bg-red-100", text: "text-red-800", dot: "bg-red-500", label: "Blocked" },
+      ACTIVE: {
+        bg: "bg-green-100",
+        text: "text-green-800",
+        dot: "bg-green-500",
+        label: "Active",
+      },
+      INACTIVE: {
+        bg: "bg-gray-100",
+        text: "text-gray-800",
+        dot: "bg-gray-500",
+        label: "Inactive",
+      },
+      SUSPENDED: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        dot: "bg-yellow-500",
+        label: "Suspended",
+      },
+      BLOCKED: {
+        bg: "bg-red-100",
+        text: "text-red-800",
+        dot: "bg-red-500",
+        label: "Blocked",
+      },
     };
 
     const style = statusMap[status] || statusMap.ACTIVE;
@@ -41,10 +61,22 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
 
   const getCustomerTypeBadge = (type) => {
     const typeMap = {
-      CORPORATE: { bg: "bg-blue-100", text: "text-blue-800", label: "Corporate" },
-      INDIVIDUAL: { bg: "bg-purple-100", text: "text-purple-800", label: "Individual" },
+      CORPORATE: {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        label: "Corporate",
+      },
+      INDIVIDUAL: {
+        bg: "bg-purple-100",
+        text: "text-purple-800",
+        label: "Individual",
+      },
       RETAIL: { bg: "bg-orange-100", text: "text-orange-800", label: "Retail" },
-      WHOLESALE: { bg: "bg-indigo-100", text: "text-indigo-800", label: "Wholesale" },
+      WHOLESALE: {
+        bg: "bg-indigo-100",
+        text: "text-indigo-800",
+        label: "Wholesale",
+      },
     };
 
     const style = typeMap[type] || typeMap.CORPORATE;
@@ -176,7 +208,11 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
               <Section title="Contact Information" icon={Mail}>
                 <DetailRow icon={Mail} label="Email" value={customer.email} />
                 <DetailRow icon={Phone} label="Phone" value={customer.phone} />
-                <DetailRow icon={Phone} label="Mobile" value={customer.mobile} />
+                <DetailRow
+                  icon={Phone}
+                  label="Mobile"
+                  value={customer.mobile}
+                />
                 {customer.contactPerson && (
                   <>
                     <DetailRow
@@ -215,11 +251,7 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
                       .filter(Boolean)
                       .join(", ")}
                   />
-                  <DetailRow
-                    icon={MapPin}
-                    label="City"
-                    value={customer.city}
-                  />
+                  <DetailRow icon={MapPin} label="City" value={customer.city} />
                   <DetailRow
                     icon={MapPin}
                     label="State"
@@ -248,7 +280,7 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
                 <Section title="Tax & Financial Information" icon={Briefcase}>
                   <DetailRow
                     icon={Briefcase}
-                    label="GST Number"
+                    label="Tax Number"
                     value={customer.gstNumber}
                   />
                   <DetailRow
@@ -269,12 +301,20 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
                   <DetailRow
                     icon={Calendar}
                     label="Credit Days"
-                    value={customer.creditDays ? `${customer.creditDays} days` : "N/A"}
+                    value={
+                      customer.creditDays
+                        ? `${customer.creditDays} days`
+                        : "N/A"
+                    }
                   />
                   <DetailRow
                     icon={DollarSign}
                     label="Discount Percentage"
-                    value={customer.discountPercentage ? `${customer.discountPercentage}%` : "N/A"}
+                    value={
+                      customer.discountPercentage
+                        ? `${customer.discountPercentage}%`
+                        : "N/A"
+                    }
                   />
                 </Section>
               </div>
@@ -335,19 +375,27 @@ const CustomerDetails = ({ customer, isOpen, onClose }) => {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-xs text-gray-500">Created By</span>
-                    <p className="text-gray-700">{customer.createdBy || "N/A"}</p>
+                    <p className="text-gray-700">
+                      {customer.createdBy || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <span className="text-xs text-gray-500">Created At</span>
-                    <p className="text-gray-700">{formatDate(customer.createdAt)}</p>
+                    <p className="text-gray-700">
+                      {formatDate(customer.createdAt)}
+                    </p>
                   </div>
                   <div>
                     <span className="text-xs text-gray-500">Updated By</span>
-                    <p className="text-gray-700">{customer.updatedBy || "N/A"}</p>
+                    <p className="text-gray-700">
+                      {customer.updatedBy || "N/A"}
+                    </p>
                   </div>
                   <div>
                     <span className="text-xs text-gray-500">Updated At</span>
-                    <p className="text-gray-700">{formatDate(customer.updatedAt)}</p>
+                    <p className="text-gray-700">
+                      {formatDate(customer.updatedAt)}
+                    </p>
                   </div>
                 </div>
               </Section>

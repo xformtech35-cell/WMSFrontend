@@ -15,10 +15,16 @@ import {
   Eye,
   Package,
   CheckCircle,
+  Ruler,
+  Layers,
+  Tag,
+  Percent,
 } from "lucide-react";
 import ItemForm from "./components/ItemForm";
-
-
+import UomModal from "./components/UomModal";
+import CategoryModal from "./components/CategoryModal";
+import BrandModal from "./components/BrandModal";
+import GstModal from "./components/GstModal";
 
 const getItemsAPI = async (page = 0, size = 10, searchTerm = "") => {
   const params = new URLSearchParams({
@@ -42,8 +48,10 @@ const deleteItemAPI = async (id) => {
 
 export default function ItemsPage() {
   const router = useRouter();
-
-  // List State
+  const [showUomModal, setShowUomModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showGstModal, setShowGstModal] = useState(false);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
@@ -264,6 +272,42 @@ export default function ItemsPage() {
 
                 <button
                   type="button"
+                  onClick={() => setShowUomModal(true)}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Ruler className="w-4 h-4" />
+                  UOM
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Layers className="w-4 h-4" />
+                  Category
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBrandModal(true)}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Tag className="w-4 h-4" />
+                  Brand
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGstModal(true)}
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
+                >
+                  <Percent className="w-4 h-4" />
+                  Tax
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleimportClick}
                   className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
                 >
@@ -327,7 +371,7 @@ export default function ItemsPage() {
                     Stock
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    GST Rate
+                    Tax Rate
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -473,6 +517,30 @@ export default function ItemsPage() {
           itemId={editingItemId}
         />
 
+        {/* UOM Popup Modal */}
+        <UomModal
+          isOpen={showUomModal}
+          onClose={() => setShowUomModal(false)}
+        />
+
+        {/* Category Popup Modal */}
+        <CategoryModal
+          isOpen={showCategoryModal}
+          onClose={() => setShowCategoryModal(false)}
+        />
+
+        {/* Brand Popup Modal */}
+        <BrandModal
+          isOpen={showBrandModal}
+          onClose={() => setShowBrandModal(false)}
+        />
+
+        {/* Tax Popup Modal */}
+        <GstModal
+          isOpen={showGstModal}
+          onClose={() => setShowGstModal(false)}
+        />
+
         {/* View Modal */}
         {showViewModal && viewingItem && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -573,7 +641,7 @@ export default function ItemsPage() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500">
-                        GST Rate
+                        Tax Rate
                       </label>
                       <p className="text-sm text-gray-700">
                         {viewingItem.isGstApplicable
@@ -583,7 +651,7 @@ export default function ItemsPage() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500">
-                        GST HSN Code
+                        Tax HSN Code
                       </label>
                       <p className="text-sm text-gray-700">
                         {viewingItem.gstHsnCode || "-"}

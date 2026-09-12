@@ -36,6 +36,10 @@ const ROUTE_TITLES = {
   "/master/aisles": "Aisle Master",
   "/master/racks": "Rack Master",
   "/master/bins": "Bin Master",
+  "/master/uom": "UOM Master",
+  "/master/categories": "Category Master",
+  "/master/brands": "Brand Master",
+  "/master/gst": "Tax Master",
   "/returns": "Returns / RMA",
 };
 

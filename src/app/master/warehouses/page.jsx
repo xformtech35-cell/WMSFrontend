@@ -26,6 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SheetFooter } from "@/components/ui/sheet";
+import UomSelect from "@/components/UomSelect";
+import UomModal from "../items/components/UomModal";
 import {
   Table,
   TableBody,
@@ -108,6 +110,7 @@ export default function WarehousesPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [showUomModal, setShowUomModal] = useState(false);
 
   // State for search
   const [search, setSearch] = useState("");
@@ -390,6 +393,13 @@ export default function WarehousesPage() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setShowUomModal(true)}
+            >
+              <Building2 className="mr-1.5 size-3.5" /> UOM
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => exportWarehousesExcel(filtered)}
               disabled={!filtered.length}
             >
@@ -568,22 +578,24 @@ export default function WarehousesPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="capacityUnit">Capacity Unit</Label>
-            <select
+            <UomSelect
               id="capacityUnit"
               name="capacityUnit"
               value={formData.capacityUnit}
               onChange={handleInputChange}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="pallet">Pallet Positions</option>
-              <option value="bin">Bin Positions</option>
-              <option value="sqft">Square Feet (sq ft)</option>
-              <option value="sqm">Square Meters (m²)</option>
-              <option value="cft">Cubic Feet (ft³)</option>
-              <option value="cbm">Cubic Meters (m³)</option>
-              <option value="ton">Tons</option>
-              <option value="kg">Kilograms (KG)</option>
-            </select>
+              placeholder="Select capacity unit..."
+              fallbackOptions={[
+                { value: "pallet", label: "Pallet Positions" },
+                { value: "bin", label: "Bin Positions" },
+                { value: "sqft", label: "Square Feet (sq ft)" },
+                { value: "sqm", label: "Square Meters (m²)" },
+                { value: "cft", label: "Cubic Feet (ft³)" },
+                { value: "cbm", label: "Cubic Meters (m³)" },
+                { value: "ton", label: "Tons" },
+                { value: "kg", label: "Kilograms (KG)" },
+                { value: "pic", label: "Pieces (pic)" },
+              ]}
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -848,6 +860,11 @@ export default function WarehousesPage() {
           </>
         )}
       </div>
+
+      <UomModal
+        isOpen={showUomModal}
+        onClose={() => setShowUomModal(false)}
+      />
     </div>
   );
 }

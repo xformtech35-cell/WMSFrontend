@@ -40,7 +40,9 @@ const getShippingLabelsAPI = async (page = 0, size = 10, searchTerm = "") => {
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -118,7 +120,7 @@ export default function DeliveryChallanForm({
   const [packageSearchTerm, setPackageSearchTerm] = useState("");
   const [packageLoading, setPackageLoading] = useState(false);
   const [selectedPackageIndices, setSelectedPackageIndices] = useState([]);
-  
+
   // Package pagination state
   const [packageCurrentPage, setPackageCurrentPage] = useState(0);
   const [packageTotalPages, setPackageTotalPages] = useState(0);
@@ -147,7 +149,11 @@ export default function DeliveryChallanForm({
   const loadAvailablePackages = async () => {
     try {
       setPackageLoading(true);
-      const response = await getShippingLabelsAPI(packageCurrentPage, packagePageSize, packageSearchTerm);
+      const response = await getShippingLabelsAPI(
+        packageCurrentPage,
+        packagePageSize,
+        packageSearchTerm,
+      );
       if (response && response.data) {
         setAvailablePackages(response.data || []);
         setPackageTotalPages(response.totalPages || 0);
@@ -178,11 +184,16 @@ export default function DeliveryChallanForm({
     const { name, value } = e.target;
     setPackageForm((prev) => ({
       ...prev,
-      [name]: name === "orderedQuantity" || name === "dispatchedQuantity" || 
-              name === "deliveredQuantity" || name === "shortQuantity" ||
-              name === "unitPrice" || name === "weight" || name === "volume"
-              ? parseFloat(value) || 0
-              : value,
+      [name]:
+        name === "orderedQuantity" ||
+        name === "dispatchedQuantity" ||
+        name === "deliveredQuantity" ||
+        name === "shortQuantity" ||
+        name === "unitPrice" ||
+        name === "weight" ||
+        name === "volume"
+          ? parseFloat(value) || 0
+          : value,
     }));
   };
 
@@ -198,9 +209,7 @@ export default function DeliveryChallanForm({
   // Toggle package selection
   const togglePackageSelection = (index) => {
     setSelectedPackageIndices((prev) =>
-      prev.includes(index)
-        ? prev.filter((i) => i !== index)
-        : [...prev, index]
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
     );
   };
 
@@ -210,7 +219,9 @@ export default function DeliveryChallanForm({
       const pkg = availablePackages[index];
       return {
         soNumber: pkg.soNumber || "",
-        packageNumber: pkg.packageNumber || `PKG-${Date.now()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`,
+        packageNumber:
+          pkg.packageNumber ||
+          `PKG-${Date.now()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, "0")}`,
         packageBarcode: pkg.packageBarcode || "",
         customerCode: pkg.customerCode || "",
         customerName: pkg.customerName || "",
@@ -220,7 +231,9 @@ export default function DeliveryChallanForm({
         invoiceNumber: pkg.invoiceNumber || "",
         orderDate: pkg.orderDate || new Date().toISOString(),
         dispatchDate: pkg.dispatchDate || new Date().toISOString(),
-        expectedDeliveryDate: pkg.expectedDeliveryDate || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        expectedDeliveryDate:
+          pkg.expectedDeliveryDate ||
+          new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
         itemCode: pkg.itemCode || "",
         itemName: pkg.itemName || "",
         uom: pkg.uom || "Pcs",
@@ -231,7 +244,8 @@ export default function DeliveryChallanForm({
         batchNumber: pkg.batchNumber || "",
         serialNumbers: pkg.serialNumbers || "",
         unitPrice: pkg.unitPrice || 0,
-        totalPrice: (pkg.unitPrice || 0) * (pkg.quantity || pkg.dispatchedQuantity || 1),
+        totalPrice:
+          (pkg.unitPrice || 0) * (pkg.quantity || pkg.dispatchedQuantity || 1),
         weight: pkg.weight || 0,
         volume: pkg.volume || 0,
         remarks: pkg.remarks || "",
@@ -251,8 +265,14 @@ export default function DeliveryChallanForm({
   };
 
   const addManualPackage = () => {
-    if (!packageForm.soNumber || !packageForm.itemCode || !packageForm.itemName) {
-      setErrorMessage("Please fill in SO Number, Item Code, and Item Name at minimum.");
+    if (
+      !packageForm.soNumber ||
+      !packageForm.itemCode ||
+      !packageForm.itemName
+    ) {
+      setErrorMessage(
+        "Please fill in SO Number, Item Code, and Item Name at minimum.",
+      );
       return;
     }
 
@@ -261,7 +281,9 @@ export default function DeliveryChallanForm({
       totalPrice: packageForm.unitPrice * packageForm.dispatchedQuantity,
       orderDate: packageForm.orderDate || new Date().toISOString(),
       dispatchDate: packageForm.dispatchDate || new Date().toISOString(),
-      expectedDeliveryDate: packageForm.expectedDeliveryDate || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      expectedDeliveryDate:
+        packageForm.expectedDeliveryDate ||
+        new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     if (editingPackageIndex !== null) {
@@ -291,7 +313,9 @@ export default function DeliveryChallanForm({
       invoiceNumber: "",
       orderDate: new Date().toISOString(),
       dispatchDate: new Date().toISOString(),
-      expectedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      expectedDeliveryDate: new Date(
+        Date.now() + 2 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
       itemCode: "",
       itemName: "",
       uom: "Pcs",
@@ -336,7 +360,9 @@ export default function DeliveryChallanForm({
         invoiceNumber: "",
         orderDate: new Date().toISOString(),
         dispatchDate: new Date().toISOString(),
-        expectedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        expectedDeliveryDate: new Date(
+          Date.now() + 2 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
         itemCode: "",
         itemName: "",
         uom: "Pcs",
@@ -492,7 +518,9 @@ export default function DeliveryChallanForm({
                       invoiceNumber: "",
                       orderDate: new Date().toISOString(),
                       dispatchDate: new Date().toISOString(),
-                      expectedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                      expectedDeliveryDate: new Date(
+                        Date.now() + 2 * 24 * 60 * 60 * 1000,
+                      ).toISOString(),
                       itemCode: "",
                       itemName: "",
                       uom: "Pcs",
@@ -513,7 +541,11 @@ export default function DeliveryChallanForm({
                 }}
                 className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-1"
               >
-                {isManualEntry ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {isManualEntry ? (
+                  <X className="w-3.5 h-3.5" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5" />
+                )}
                 {isManualEntry ? "Cancel Manual" : "Manual Entry"}
               </button>
               <button
@@ -532,10 +564,14 @@ export default function DeliveryChallanForm({
             <div className="p-4 bg-gray-50 rounded-xl mb-4 border-2 border-blue-200">
               <div className="flex justify-between items-center mb-3">
                 <h4 className="font-medium text-gray-700">
-                  {editingPackageIndex !== null ? "Edit Package" : "Add Manual Package"}
+                  {editingPackageIndex !== null
+                    ? "Edit Package"
+                    : "Add Manual Package"}
                 </h4>
                 <span className="text-xs text-gray-500">
-                  {editingPackageIndex !== null ? `Editing package ${editingPackageIndex + 1}` : "Enter package details"}
+                  {editingPackageIndex !== null
+                    ? `Editing package ${editingPackageIndex + 1}`
+                    : "Enter package details"}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -695,7 +731,9 @@ export default function DeliveryChallanForm({
                   </label>
                   <input
                     type="number"
-                    value={packageForm.unitPrice * packageForm.dispatchedQuantity}
+                    value={
+                      packageForm.unitPrice * packageForm.dispatchedQuantity
+                    }
                     className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-100"
                     readOnly
                   />
@@ -758,7 +796,9 @@ export default function DeliveryChallanForm({
                         invoiceNumber: "",
                         orderDate: new Date().toISOString(),
                         dispatchDate: new Date().toISOString(),
-                        expectedDeliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                        expectedDeliveryDate: new Date(
+                          Date.now() + 2 * 24 * 60 * 60 * 1000,
+                        ).toISOString(),
                         itemCode: "",
                         itemName: "",
                         uom: "Pcs",
@@ -786,7 +826,9 @@ export default function DeliveryChallanForm({
                   className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  {editingPackageIndex !== null ? "Update Package" : "Add Package"}
+                  {editingPackageIndex !== null
+                    ? "Update Package"
+                    : "Add Package"}
                 </button>
               </div>
             </div>
@@ -855,7 +897,11 @@ export default function DeliveryChallanForm({
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            {submitting ? "Saving..." : isEditMode ? "Update Challan" : "Create Challan"}
+            {submitting
+              ? "Saving..."
+              : isEditMode
+                ? "Update Challan"
+                : "Create Challan"}
           </button>
         </div>
       </form>
@@ -863,7 +909,10 @@ export default function DeliveryChallanForm({
       {/* Package Selector Modal with Pagination */}
       {showPackageSelector && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowPackageSelector(false)} />
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowPackageSelector(false)}
+          />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
@@ -917,10 +966,16 @@ export default function DeliveryChallanForm({
                             <th className="px-3 py-2 text-left w-10">
                               <input
                                 type="checkbox"
-                                checked={selectedPackageIndices.length === availablePackages.length && availablePackages.length > 0}
+                                checked={
+                                  selectedPackageIndices.length ===
+                                    availablePackages.length &&
+                                  availablePackages.length > 0
+                                }
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedPackageIndices(availablePackages.map((_, i) => i));
+                                    setSelectedPackageIndices(
+                                      availablePackages.map((_, i) => i),
+                                    );
                                   } else {
                                     setSelectedPackageIndices([]);
                                   }
@@ -938,11 +993,17 @@ export default function DeliveryChallanForm({
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {availablePackages.map((pkg, index) => (
-                            <tr key={index} className="hover:bg-gray-50 cursor-pointer" onClick={() => togglePackageSelection(index)}>
+                            <tr
+                              key={index}
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => togglePackageSelection(index)}
+                            >
                               <td className="px-3 py-2">
                                 <input
                                   type="checkbox"
-                                  checked={selectedPackageIndices.includes(index)}
+                                  checked={selectedPackageIndices.includes(
+                                    index,
+                                  )}
                                   onChange={() => togglePackageSelection(index)}
                                   onClick={(e) => e.stopPropagation()}
                                   className="rounded border-gray-300"
@@ -951,14 +1012,26 @@ export default function DeliveryChallanForm({
                               <td className="px-3 py-2 font-medium text-blue-600">
                                 {pkg.labelNumber || "N/A"}
                               </td>
-                              <td className="px-3 py-2">{pkg.packageNumber || "N/A"}</td>
-                              <td className="px-3 py-2">{pkg.soNumber || "N/A"}</td>
-                              <td className="px-3 py-2">{pkg.customerName || "N/A"}</td>
                               <td className="px-3 py-2">
-                                <div className="font-medium">{pkg.itemName || "N/A"}</div>
-                                <div className="text-xs text-gray-500">{pkg.itemCode}</div>
+                                {pkg.packageNumber || "N/A"}
                               </td>
-                              <td className="px-3 py-2">{pkg.quantity || pkg.dispatchedQuantity || 1}</td>
+                              <td className="px-3 py-2">
+                                {pkg.soNumber || "N/A"}
+                              </td>
+                              <td className="px-3 py-2">
+                                {pkg.customerName || "N/A"}
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="font-medium">
+                                  {pkg.itemName || "N/A"}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {pkg.itemCode}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                {pkg.quantity || pkg.dispatchedQuantity || 1}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -969,20 +1042,29 @@ export default function DeliveryChallanForm({
                     {packageTotalPages > 0 && (
                       <div className="mt-4 px-2 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2">
                         <div className="text-sm text-gray-500">
-                          Page {packageCurrentPage + 1} of {packageTotalPages} | Total: {packageTotalElements} packages
+                          Page {packageCurrentPage + 1} of {packageTotalPages} |
+                          Total: {packageTotalElements} packages
                         </div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handlePackagePageChange(packageCurrentPage - 1)}
+                            onClick={() =>
+                              handlePackagePageChange(packageCurrentPage - 1)
+                            }
                             disabled={packageCurrentPage === 0}
                             className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <span className="text-sm">{packageCurrentPage + 1}</span>
+                          <span className="text-sm">
+                            {packageCurrentPage + 1}
+                          </span>
                           <button
-                            onClick={() => handlePackagePageChange(packageCurrentPage + 1)}
-                            disabled={packageCurrentPage === packageTotalPages - 1}
+                            onClick={() =>
+                              handlePackagePageChange(packageCurrentPage + 1)
+                            }
+                            disabled={
+                              packageCurrentPage === packageTotalPages - 1
+                            }
                             className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <ChevronRight className="w-4 h-4" />

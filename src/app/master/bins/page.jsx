@@ -28,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SheetFooter } from "@/components/ui/sheet";
+import UomSelect from "@/components/UomSelect";
+import UomModal from "../items/components/UomModal";
 import {
   Table,
   TableBody,
@@ -146,6 +148,7 @@ export default function BinsPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [showUomModal, setShowUomModal] = useState(false);
 
   // State for barcode preview
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
@@ -538,6 +541,13 @@ export default function BinsPage() {
         description="Manage bins inside racks for item storage."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowUomModal(true)}
+            >
+              <Boxes className="mr-1.5 size-3.5" /> UOM
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -955,19 +965,20 @@ export default function BinsPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="unit">Unit of Measurement</Label>
-            <select
+            <UomSelect
               id="unit"
               name="unit"
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={formData.unit}
               onChange={handleInputChange}
-            >
-              <option value="cm">Centimeter (cm)</option>
-              <option value="m">Meter (m)</option>
-              <option value="mm">Millimeter (mm)</option>
-              <option value="inch">Inch (in)</option>
-              <option value="ft">Feet (ft)</option>
-            </select>
+              placeholder="Select unit..."
+              fallbackOptions={[
+                { value: "cm", label: "Centimeter (cm)" },
+                { value: "m", label: "Meter (m)" },
+                { value: "mm", label: "Millimeter (mm)" },
+                { value: "inch", label: "Inch (in)" },
+                { value: "ft", label: "Feet (ft)" },
+              ]}
+            />
             <p className="text-xs text-muted-foreground">
               Select the unit for length, width, and height measurements
             </p>
@@ -1053,24 +1064,25 @@ export default function BinsPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="capacityUnit">Capacity Unit</Label>
-            <select
+            <UomSelect
               id="capacityUnit"
               name="capacityUnit"
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={formData.capacityUnit}
               onChange={handleInputChange}
-            >
-              <option value="pic">Pieces (pic)</option>
-              <option value="kg">Kilograms (kg)</option>
-              <option value="g">Grams (g)</option>
-              <option value="lb">Pounds (lb)</option>
-              <option value="oz">Ounces (oz)</option>
-              <option value="l">Liters (l)</option>
-              <option value="ml">Milliliters (ml)</option>
-              <option value="gal">Gallons (gal)</option>
-              <option value="ctn">Cartons (ctn)</option>
-              <option value="pal">Pallets (pal)</option>
-            </select>
+              placeholder="Select capacity unit..."
+              fallbackOptions={[
+                { value: "pic", label: "Pieces (pic)" },
+                { value: "kg", label: "Kilograms (kg)" },
+                { value: "g", label: "Grams (g)" },
+                { value: "lb", label: "Pounds (lb)" },
+                { value: "oz", label: "Ounces (oz)" },
+                { value: "l", label: "Liters (l)" },
+                { value: "ml", label: "Milliliters (ml)" },
+                { value: "gal", label: "Gallons (gal)" },
+                { value: "ctn", label: "Cartons (ctn)" },
+                { value: "pal", label: "Pallets (pal)" },
+              ]}
+            />
             <p className="text-xs text-muted-foreground">
               Unit for capacity measurements (min/max capacity)
             </p>
@@ -1520,6 +1532,11 @@ export default function BinsPage() {
           </>
         )}
       </div>
+
+      <UomModal
+        isOpen={showUomModal}
+        onClose={() => setShowUomModal(false)}
+      />
     </div>
   );
 }

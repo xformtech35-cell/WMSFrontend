@@ -404,7 +404,7 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
             {totals.gst > 0 && (
               <View style={styles.tableRow}>
                 <Text style={[styles.tableCell, { width: '68%' }]}></Text>
-                <Text style={[styles.tableCellRight, { width: '15%' }]}>GST</Text>
+                <Text style={[styles.tableCellRight, { width: '15%' }]}>Tax</Text>
                 <Text style={[styles.tableCellRight, { width: '17%' }]}>₹{formatNumber(totals.gst)}</Text>
               </View>
             )}

@@ -2,7 +2,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, Building, Mail, MapPin, Briefcase, User, Phone } from "lucide-react";
+import {
+  X,
+  Save,
+  Building,
+  Mail,
+  MapPin,
+  Briefcase,
+  User,
+  Phone,
+} from "lucide-react";
 
 const CustomerForm = ({
   isOpen,
@@ -168,9 +177,13 @@ const CustomerForm = ({
       industryType: formData.industryType?.trim() || "",
       website: formData.website?.trim() || "",
       paymentTerms: formData.paymentTerms?.trim() || "",
-      creditLimit: formData.creditLimit ? parseFloat(formData.creditLimit) : null,
+      creditLimit: formData.creditLimit
+        ? parseFloat(formData.creditLimit)
+        : null,
       creditDays: formData.creditDays ? parseInt(formData.creditDays) : null,
-      discountPercentage: formData.discountPercentage ? parseFloat(formData.discountPercentage) : null,
+      discountPercentage: formData.discountPercentage
+        ? parseFloat(formData.discountPercentage)
+        : null,
       status: formData.status,
       notes: formData.notes?.trim() || "",
       createdBy: "system_user",
@@ -500,7 +513,7 @@ const CustomerForm = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                GST Number
+                Tax Number
               </label>
               <input
                 type="text"
@@ -637,8 +650,8 @@ const CustomerForm = ({
               {isSubmitting
                 ? "Saving..."
                 : editingCustomer
-                ? "Update Customer"
-                : "Add Customer"}
+                  ? "Update Customer"
+                  : "Add Customer"}
             </button>
           </div>
         </form>

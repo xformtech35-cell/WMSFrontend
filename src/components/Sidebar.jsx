@@ -84,6 +84,7 @@ import {
   UserCog,
   KeyRound,
   Shield,
+  Percent,
 
   // Additional menu icons
   ShoppingBag,
@@ -518,6 +519,34 @@ const ALL_MENU_ITEMS = [
     href: "/master/items",
     label: "Items",
     icon: Package,
+    group: "Admin/Masters",
+    permission: P.MASTER_VIEW,
+  },
+  {
+    href: "/master/uom",
+    label: "UOM Master",
+    icon: Ruler,
+    group: "Admin/Masters",
+    permission: P.MASTER_VIEW,
+  },
+  {
+    href: "/master/categories",
+    label: "Category Master",
+    icon: Layers,
+    group: "Admin/Masters",
+    permission: P.MASTER_VIEW,
+  },
+  {
+    href: "/master/brands",
+    label: "Brand Master",
+    icon: Tag,
+    group: "Admin/Masters",
+    permission: P.MASTER_VIEW,
+  },
+  {
+    href: "/master/gst",
+    label: "Tax Master",
+    icon: Percent,
     group: "Admin/Masters",
     permission: P.MASTER_VIEW,
   },

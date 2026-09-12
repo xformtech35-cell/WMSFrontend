@@ -577,7 +577,7 @@ export default function PurchaseOrderViewModal({
                     </div>
                   )}
                   <div className="flex justify-between py-1">
-                    <span className="text-sm text-gray-600">Total GST</span>
+                    <span className="text-sm text-gray-600">Total Tax</span>
                     <span className="text-sm font-medium text-gray-900">
                       {formatCurrency(po.totalGst)}
                     </span>
@@ -659,7 +659,7 @@ export default function PurchaseOrderViewModal({
               >
                 Close
               </button>
-              {po.status === "DRAFT" && (
+              {(po.status === "DRAFT" || po.status === "PENDING") && (
                 <>
                   <button
                     onClick={() => onEdit && onEdit(po)}
@@ -667,13 +667,6 @@ export default function PurchaseOrderViewModal({
                   >
                     <Edit className="w-4 h-4" />
                     Edit PO
-                  </button>
-                  <button
-                    onClick={() => onSubmit && onSubmit(po)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    Submit PO
                   </button>
                 </>
               )}

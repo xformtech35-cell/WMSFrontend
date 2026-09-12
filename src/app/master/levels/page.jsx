@@ -25,6 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SheetFooter } from "@/components/ui/sheet";
+import UomSelect from "@/components/UomSelect";
+import UomModal from "../items/components/UomModal";
 import {
   Table,
   TableBody,
@@ -111,6 +113,7 @@ export default function LevelsPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [showUomModal, setShowUomModal] = useState(false);
 
   // State for barcode preview
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
@@ -461,6 +464,13 @@ export default function LevelsPage() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setShowUomModal(true)}
+            >
+              <Layers className="mr-1.5 size-3.5" /> UOM
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => exportLevelsExcel(filtered)}
               disabled={!filtered.length}
             >
@@ -673,20 +683,23 @@ export default function LevelsPage() {
                 onChange={handleInputChange}
                 className={`flex-1 ${formErrors.heightCm ? "border-red-500" : ""}`}
               />
-              <select
+             
+            </div>
+             <UomSelect
                 id="unit"
                 name="unit"
-                className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm"
                 value={formData.unit}
                 onChange={handleInputChange}
-              >
-                <option value="cm">cm</option>
-                <option value="m">m</option>
-                <option value="mm">mm</option>
-                <option value="inch">in</option>
-                <option value="ft">ft</option>
-              </select>
-            </div>
+                className="w-28"
+                placeholder="unit..."
+                fallbackOptions={[
+                  { value: "cm", label: "cm" },
+                  { value: "m", label: "m" },
+                  { value: "mm", label: "mm" },
+                  { value: "inch", label: "in" },
+                  { value: "ft", label: "ft" },
+                ]}
+              />
             {formErrors.heightCm && (
               <p className="text-xs text-red-500">{formErrors.heightCm}</p>
             )}
@@ -771,23 +784,24 @@ export default function LevelsPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="capacityUnit">Capacity Unit</Label>
-            <select
+            <UomSelect
               id="capacityUnit"
               name="capacityUnit"
               value={formData.capacityUnit}
               onChange={handleInputChange}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="pallet">Pallet Positions</option>
-              <option value="bin">Bin Positions</option>
-              <option value="sqft">Square Feet (sq ft)</option>
-              <option value="sqm">Square Meters (m²)</option>
-              <option value="cft">Cubic Feet (ft³)</option>
-              <option value="cbm">Cubic Meters (m³)</option>
-              <option value="ton">Tons</option>
-              <option value="kg">Kilograms (KG)</option>
-              <option value="lbs">Pounds (LBS)</option>
-            </select>
+              placeholder="Select capacity unit..."
+              fallbackOptions={[
+                { value: "pallet", label: "Pallet Positions" },
+                { value: "bin", label: "Bin Positions" },
+                { value: "sqft", label: "Square Feet (sq ft)" },
+                { value: "sqm", label: "Square Meters (m²)" },
+                { value: "cft", label: "Cubic Feet (ft³)" },
+                { value: "cbm", label: "Cubic Meters (m³)" },
+                { value: "ton", label: "Tons" },
+                { value: "kg", label: "Kilograms (KG)" },
+                { value: "lbs", label: "Pounds (LBS)" },
+              ]}
+            />
           </div>
 
           <div className="flex items-center justify-between rounded-md border p-3">
@@ -1073,6 +1087,11 @@ export default function LevelsPage() {
           </>
         )}
       </div>
+
+      <UomModal
+        isOpen={showUomModal}
+        onClose={() => setShowUomModal(false)}
+      />
     </div>
   );
 }

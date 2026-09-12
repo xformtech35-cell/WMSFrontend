@@ -114,7 +114,7 @@ export default function UsersPage() {
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
-    queryFn: () => api.get('/users').then((r) => r.data),
+    queryFn: () => api.get('/users').then((r) => r.data?.content ?? []),
     staleTime: 5 * 60 * 1000,
   });
 

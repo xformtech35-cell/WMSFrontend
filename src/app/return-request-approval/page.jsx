@@ -37,8 +37,6 @@ import api from "@/lib/api";
 import VendorReturnView from "./components/VendorReturnView";
 import VendorReturnOrderForm from "./components/VendorReturnOrderForm";
 
-
-
 // API function for vendor return requests
 const getVendorReturnRequestsAPI = async (
   page = 0,
@@ -69,32 +67,55 @@ const getVendorReturnRequestByIdAPI = async (id) => {
 };
 
 // Approve API - Send approvedBy as userId
+// const approveVendorReturnAPI = async (id, approvedBy) => {
+//   const requestBody = {
+//     approvedBy: approvedBy,
+//   };
+//   return apiRequest(
+//     `/vendor-returns/requests/${id}/approve`,
+//     "PATCH",
+//     null,
+//     requestBody,
+//   );
+// };
+// Approve API - Send approvedBy as a QUERY parameter
 const approveVendorReturnAPI = async (id, approvedBy) => {
-  const requestBody = {
-    approvedBy: approvedBy,
-  };
+  const params = new URLSearchParams();
+  params.append("approvedBy", approvedBy);
+
   return apiRequest(
-    `/vendor-returns/requests/${id}/approve`,
+    `/vendor-returns/requests/${id}/approve?${params.toString()}`,
     "PATCH",
-    null,
-    requestBody,
+    null, // query params already in URL
+    null, // no body needed
   );
 };
-
 // Reject API - Send rejectedBy as userId and rejectionReason
+// const rejectVendorReturnAPI = async (id, rejectedBy, rejectionReason) => {
+//   const requestBody = {
+//     rejectedBy: rejectedBy,
+//     rejectionReason: rejectionReason || "",
+//   };
+//   return apiRequest(
+//     `/vendor-returns/requests/${id}/reject`,
+//     "PATCH",
+//     null,
+//     requestBody,
+//   );
+// };
 const rejectVendorReturnAPI = async (id, rejectedBy, rejectionReason) => {
-  const requestBody = {
-    rejectedBy: rejectedBy,
-    rejectionReason: rejectionReason || "",
-  };
+  const params = new URLSearchParams();
+  params.append("rejectedBy", rejectedBy);
+  // If rejectionReason is also @RequestParam on the backend:
+  params.append("rejectionReason", rejectionReason || "");
+
   return apiRequest(
-    `/vendor-returns/requests/${id}/reject`,
+    `/vendor-returns/requests/${id}/reject?${params.toString()}`,
     "PATCH",
     null,
-    requestBody,
+    null, // remove body if backend uses query params
   );
 };
-
 // Main Component
 export default function VendorReturnRequestPage() {
   // List State
@@ -419,7 +440,7 @@ export default function VendorReturnRequestPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">

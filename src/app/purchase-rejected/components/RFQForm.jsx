@@ -673,7 +673,7 @@ export default function RFQForm({
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Contact Person</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Phone</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">VAT/GST</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Tax</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-600">Status</th>
               </tr>
             </thead>

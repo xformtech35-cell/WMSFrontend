@@ -473,7 +473,7 @@ export default function CustomerPage() {
       "Country",
       "Customer Type",
       "Status",
-      "GST Number",
+      "Tax Number",
       "PAN Number",
       "Contact Person",
       "Total Orders",

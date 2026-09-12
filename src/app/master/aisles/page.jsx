@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SheetFooter } from "@/components/ui/sheet";
+import UomSelect from "@/components/UomSelect";
+import UomModal from "../items/components/UomModal";
 import {
   Table,
   TableBody,
@@ -96,6 +98,7 @@ export default function AislesPage() {
   // State for modal
   const [open, setOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [showUomModal, setShowUomModal] = useState(false);
 
   // State for barcode preview
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
@@ -407,6 +410,13 @@ export default function AislesPage() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setShowUomModal(true)}
+            >
+              <Waypoints className="mr-1.5 size-3.5" /> UOM
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => exportAislesExcel(filtered)}
               disabled={!filtered.length}
             >
@@ -596,19 +606,20 @@ export default function AislesPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="unit">Unit of Measurement</Label>
-            <select
+            <UomSelect
               id="unit"
               name="unit"
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={formData.unit}
               onChange={handleInputChange}
-            >
-              <option value="Meter">Meter (m)</option>
-              <option value="Feet">Feet (ft)</option>
-              <option value="Centimeter">Centimeter (cm)</option>
-              <option value="Inch">Inch (in)</option>
-              <option value="Yard">Yard (yd)</option>
-            </select>
+              placeholder="Select unit..."
+              fallbackOptions={[
+                { value: "Meter", label: "Meter (m)" },
+                { value: "Feet", label: "Feet (ft)" },
+                { value: "Centimeter", label: "Centimeter (cm)" },
+                { value: "Inch", label: "Inch (in)" },
+                { value: "Yard", label: "Yard (yd)" },
+              ]}
+            />
             <p className="text-xs text-muted-foreground">
               Select the unit for width and length measurements
             </p>
@@ -649,23 +660,24 @@ export default function AislesPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="capacityUnit">Capacity Unit</Label>
-            <select
+            <UomSelect
               id="capacityUnit"
               name="capacityUnit"
               value={formData.capacityUnit}
               onChange={handleInputChange}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="pallet">Pallet Positions</option>
-              <option value="bin">Bin Positions</option>
-              <option value="sqft">Square Feet (sq ft)</option>
-              <option value="sqm">Square Meters (m²)</option>
-              <option value="cft">Cubic Feet (ft³)</option>
-              <option value="cbm">Cubic Meters (m³)</option>
-              <option value="ton">Tons</option>
-              <option value="kg">Kilograms (KG)</option>
-              <option value="lbs">Pounds (LBS)</option>
-            </select>
+              placeholder="Select capacity unit..."
+              fallbackOptions={[
+                { value: "pallet", label: "Pallet Positions" },
+                { value: "bin", label: "Bin Positions" },
+                { value: "sqft", label: "Square Feet (sq ft)" },
+                { value: "sqm", label: "Square Meters (m²)" },
+                { value: "cft", label: "Cubic Feet (ft³)" },
+                { value: "cbm", label: "Cubic Meters (m³)" },
+                { value: "ton", label: "Tons" },
+                { value: "kg", label: "Kilograms (KG)" },
+                { value: "lbs", label: "Pounds (LBS)" },
+              ]}
+            />
           </div>
 
           <div className="flex items-center space-x-2 pt-1">
@@ -923,6 +935,11 @@ export default function AislesPage() {
           </>
         )}
       </div>
+
+      <UomModal
+        isOpen={showUomModal}
+        onClose={() => setShowUomModal(false)}
+      />
     </div>
   );
 }

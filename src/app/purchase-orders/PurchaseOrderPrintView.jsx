@@ -496,7 +496,7 @@ export default function PurchaseOrderPrintView({
                   <td
                     style={{ border: "1px solid #D1D5DB", textAlign: "right" }}
                   >
-                    GST
+                    Tax
                   </td>
                   <td
                     style={{ border: "1px solid #D1D5DB", textAlign: "right" }}

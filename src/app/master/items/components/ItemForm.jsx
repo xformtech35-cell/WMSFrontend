@@ -12,8 +12,7 @@ import {
   Download,
 } from "lucide-react";
 import api from "@/lib/api";
-
-
+import UomSelect from "@/components/UomSelect";
 
 const createItemAPI = async (itemData) => {
   return apiRequest("/items", "POST", itemData);
@@ -45,6 +44,12 @@ export default function ItemForm({
   const [importResult, setImportResult] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // UOM, Category, Brand & Tax options state
+  const [uomOptions, setUomOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [brandOptions, setBrandOptions] = useState([]);
+  const [gstOptions, setGstOptions] = useState([]);
+
   const [formData, setFormData] = useState({
     itemCode: "",
     itemName: "",
@@ -65,6 +70,83 @@ export default function ItemForm({
     isActive: true,
     notes: "",
   });
+
+  useEffect(() => {
+    if (isOpen && mode !== "import") {
+      fetchUomOptions();
+      fetchCategoryOptions();
+      fetchBrandOptions();
+      fetchGstOptions();
+    }
+  }, [isOpen, mode]);
+
+  const fetchUomOptions = async () => {
+    try {
+      const response = await apiRequest("/uoms?page=0&size=100");
+      let list = [];
+      if (response && response.content) {
+        list = response.content;
+      } else if (Array.isArray(response)) {
+        list = response;
+      }
+      if (list && list.length > 0) {
+        setUomOptions(list);
+      }
+    } catch (err) {
+      console.error("Error fetching UOM options:", err);
+    }
+  };
+
+  const fetchCategoryOptions = async () => {
+    try {
+      const response = await apiRequest("/categories?page=0&size=100");
+      let list = [];
+      if (response && response.content) {
+        list = response.content;
+      } else if (Array.isArray(response)) {
+        list = response;
+      }
+      if (list && list.length > 0) {
+        setCategoryOptions(list);
+      }
+    } catch (err) {
+      console.error("Error fetching Category options:", err);
+    }
+  };
+
+  const fetchBrandOptions = async () => {
+    try {
+      const response = await apiRequest("/brands?page=0&size=100");
+      let list = [];
+      if (response && response.content) {
+        list = response.content;
+      } else if (Array.isArray(response)) {
+        list = response;
+      }
+      if (list && list.length > 0) {
+        setBrandOptions(list);
+      }
+    } catch (err) {
+      console.error("Error fetching Brand options:", err);
+    }
+  };
+
+  const fetchGstOptions = async () => {
+    try {
+      const response = await apiRequest("/gst?page=0&size=100");
+      let list = [];
+      if (response && response.content) {
+        list = response.content;
+      } else if (Array.isArray(response)) {
+        list = response;
+      }
+      if (list && list.length > 0) {
+        setGstOptions(list);
+      }
+    } catch (err) {
+      console.error("Error fetching Tax options:", err);
+    }
+  };
 
   // Load data when in edit mode
   useEffect(() => {
@@ -290,7 +372,7 @@ export default function ItemForm({
         return;
       }
 
-      // Calculate CGST and SGST if GST is applicable
+      // Calculate CGST and SGST if Tax is applicable
       if (formData.isGstApplicable && formData.gstRate > 0) {
         const halfGst = formData.gstRate / 2;
         formData.cgstRate = halfGst;
@@ -619,45 +701,80 @@ export default function ItemForm({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     UOM
                   </label>
-                  <select
+                  <UomSelect
                     name="uom"
                     value={formData.uom}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
-                    <option value="Nos">Nos</option>
-                    <option value="Kg">Kg</option>
-                    <option value="Gm">Gm</option>
-                    <option value="Ltr">Ltr</option>
-                    <option value="Mtr">Mtr</option>
-                    <option value="Pcs">Pcs</option>
-                    <option value="Box">Box</option>
-                    <option value="Pack">Pack</option>
-                  </select>
+                    fallbackOptions={[
+                      "Nos",
+                      "Kg",
+                      "KG",
+                      "Gm",
+                      "Ltr",
+                      "Mtr",
+                      "Pcs",
+                      "Box",
+                      "Pack",
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Category
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                  >
+                    <option value="">Select Category</option>
+                    {categoryOptions.map((cat) => (
+                      <option key={cat.id || cat.code} value={cat.name}>
+                        {cat.name} ({cat.code})
+                      </option>
+                    ))}
+                    {formData.category &&
+                      !categoryOptions.some(
+                        (c) =>
+                          c.name?.toLowerCase() ===
+                            formData.category?.toLowerCase() ||
+                          c.code?.toLowerCase() ===
+                            formData.category?.toLowerCase(),
+                      ) && (
+                        <option value={formData.category}>
+                          {formData.category}
+                        </option>
+                      )}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Brand
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="brand"
                     value={formData.brand}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                  >
+                    <option value="">Select Brand</option>
+                    {brandOptions.map((b) => (
+                      <option key={b.id || b.code} value={b.name}>
+                        {b.name} ({b.code})
+                      </option>
+                    ))}
+                    {formData.brand &&
+                      !brandOptions.some(
+                        (b) =>
+                          b.name?.toLowerCase() ===
+                            formData.brand?.toLowerCase() ||
+                          b.code?.toLowerCase() ===
+                            formData.brand?.toLowerCase(),
+                      ) && (
+                        <option value={formData.brand}>{formData.brand}</option>
+                      )}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -675,21 +792,47 @@ export default function ItemForm({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    GST Rate (%)
+                    Tax Rate (%)
                   </label>
-                  <input
-                    type="number"
+                  <select
                     name="gstRate"
                     value={formData.gstRate}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        gstRate: parseFloat(e.target.value) || 0,
+                      }))
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                  >
+                    {gstOptions.length > 0 ? (
+                      gstOptions.map((g) => (
+                        <option key={g.id || g.code} value={g.rate}>
+                          {g.name} ({g.rate}%)
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value={0}>0%</option>
+                        <option value={5}>5%</option>
+                        <option value={12}>12%</option>
+                        <option value={18}>18%</option>
+                        <option value={28}>28%</option>
+                      </>
+                    )}
+                    {formData.gstRate !== undefined &&
+                      formData.gstRate !== null &&
+                      gstOptions.length > 0 &&
+                      !gstOptions.some((g) => g.rate === formData.gstRate) && (
+                        <option value={formData.gstRate}>
+                          {formData.gstRate}%
+                        </option>
+                      )}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    GST HSN Code
+                    Tax HSN Code
                   </label>
                   <input
                     type="text"
@@ -785,7 +928,7 @@ export default function ItemForm({
                       className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                     />
                     <span className="text-sm text-gray-700">
-                      GST Applicable
+                      Tax Applicable
                     </span>
                   </label>
                   <label className="flex items-center gap-2">

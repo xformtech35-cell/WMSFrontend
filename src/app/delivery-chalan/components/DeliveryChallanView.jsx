@@ -50,20 +50,26 @@ export default function DeliveryChallanView({
   };
 
   const totalPackages = viewingChallan.packages?.length || 0;
-  const totalQuantity = viewingChallan.packages?.reduce((sum, pkg) => sum + (pkg.dispatchedQuantity || 0), 0) || 0;
-  const totalWeight = viewingChallan.packages?.reduce((sum, pkg) => sum + (pkg.weight || 0), 0) || 0;
+  const totalQuantity =
+    viewingChallan.packages?.reduce(
+      (sum, pkg) => sum + (pkg.dispatchedQuantity || 0),
+      0,
+    ) || 0;
+  const totalWeight =
+    viewingChallan.packages?.reduce((sum, pkg) => sum + (pkg.weight || 0), 0) ||
+    0;
 
   const handlePrint = () => {
     // Get the print content HTML
-    const printContent = document.getElementById('print-content');
+    const printContent = document.getElementById("print-content");
     if (!printContent) {
-      alert('Print content not found');
+      alert("Print content not found");
       return;
     }
 
-    const win = window.open('', '_blank', 'width=1200,height=800');
+    const win = window.open("", "_blank", "width=1200,height=800");
     if (!win) {
-      alert('Please allow popups for this site');
+      alert("Please allow popups for this site");
       return;
     }
 
@@ -74,7 +80,7 @@ export default function DeliveryChallanView({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Delivery Challan - ${viewingChallan.challanNumber || viewingChallan.shipmentNumber || 'N/A'}</title>
+          <title>Delivery Challan - ${viewingChallan.challanNumber || viewingChallan.shipmentNumber || "N/A"}</title>
           <style>
             @media print {
               * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -384,9 +390,13 @@ export default function DeliveryChallanView({
           </h2>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <p className="text-sm text-gray-500">
-              {viewingChallan.challanNumber || viewingChallan.shipmentNumber || "N/A"}
+              {viewingChallan.challanNumber ||
+                viewingChallan.shipmentNumber ||
+                "N/A"}
             </p>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(viewingChallan.status)}`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(viewingChallan.status)}`}
+            >
               {viewingChallan.status || "DRAFT"}
             </span>
             {viewingChallan.soNumber && (
@@ -412,28 +422,40 @@ export default function DeliveryChallanView({
               <Package className="w-4 h-4" />
               <span className="text-xs font-medium uppercase">Packages</span>
             </div>
-            <p className="text-2xl font-bold text-blue-700 mt-1">{totalPackages}</p>
+            <p className="text-2xl font-bold text-blue-700 mt-1">
+              {totalPackages}
+            </p>
           </div>
           <div className="bg-green-50 rounded-xl p-4 border border-green-100">
             <div className="flex items-center gap-2 text-green-600">
               <Box className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase">Total Quantity</span>
+              <span className="text-xs font-medium uppercase">
+                Total Quantity
+              </span>
             </div>
-            <p className="text-2xl font-bold text-green-700 mt-1">{totalQuantity}</p>
+            <p className="text-2xl font-bold text-green-700 mt-1">
+              {totalQuantity}
+            </p>
           </div>
           <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
             <div className="flex items-center gap-2 text-purple-600">
               <Weight className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase">Total Weight</span>
+              <span className="text-xs font-medium uppercase">
+                Total Weight
+              </span>
             </div>
-            <p className="text-2xl font-bold text-purple-700 mt-1">{totalWeight.toFixed(2)} g</p>
+            <p className="text-2xl font-bold text-purple-700 mt-1">
+              {totalWeight.toFixed(2)} g
+            </p>
           </div>
           <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
             <div className="flex items-center gap-2 text-orange-600">
               <Clock className="w-4 h-4" />
               <span className="text-xs font-medium uppercase">Created</span>
             </div>
-            <p className="text-sm font-medium text-orange-700 mt-1">{formatDate(viewingChallan.createdAt)}</p>
+            <p className="text-sm font-medium text-orange-700 mt-1">
+              {formatDate(viewingChallan.createdAt)}
+            </p>
           </div>
         </div>
 
@@ -567,34 +589,73 @@ export default function DeliveryChallanView({
               {totalPackages} package(s)
             </span>
           </div>
-          
+
           {viewingChallan.packages && viewingChallan.packages.length > 0 ? (
             <div className="overflow-x-auto border border-gray-200 rounded-xl">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SO Number</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Package #</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Weight (g)</th>
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      #
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Invoice #
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      SO Number
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Package #
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Item
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Qty
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Weight (g)
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {viewingChallan.packages.map((pkg, index) => (
-                    <tr key={pkg.id || index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 py-3 text-sm text-gray-500">{index + 1}</td>
-                      <td className="px-3 py-3 text-sm font-medium text-blue-600">{pkg.invoiceNumber || "N/A"}</td>
-                      <td className="px-3 py-3 font-medium text-gray-900 text-sm">{pkg.soNumber || "N/A"}</td>
-                      <td className="px-3 py-3 text-sm font-mono text-gray-600">{pkg.packageNumber || "N/A"}</td>
+                    <tr
+                      key={pkg.id || index}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-3 py-3 text-sm text-gray-500">
+                        {index + 1}
+                      </td>
+                      <td className="px-3 py-3 text-sm font-medium text-blue-600">
+                        {pkg.invoiceNumber || "N/A"}
+                      </td>
+                      <td className="px-3 py-3 font-medium text-gray-900 text-sm">
+                        {pkg.soNumber || "N/A"}
+                      </td>
+                      <td className="px-3 py-3 text-sm font-mono text-gray-600">
+                        {pkg.packageNumber || "N/A"}
+                      </td>
                       <td className="px-3 py-3 text-sm">
-                        <div className="font-medium text-gray-900">{pkg.customerName || "N/A"}</div>
-                        {pkg.customerCode && <div className="text-xs text-gray-500">Code: {pkg.customerCode}</div>}
-                        {pkg.customerGst && <div className="text-xs text-gray-500">GST: {pkg.customerGst}</div>}
+                        <div className="font-medium text-gray-900">
+                          {pkg.customerName || "N/A"}
+                        </div>
+                        {pkg.customerCode && (
+                          <div className="text-xs text-gray-500">
+                            Code: {pkg.customerCode}
+                          </div>
+                        )}
+                        {pkg.customerGst && (
+                          <div className="text-xs text-gray-500">
+                            Tax: {pkg.customerGst}
+                          </div>
+                        )}
                         {pkg.customerPhone && (
                           <div className="text-xs text-gray-500 flex items-center gap-1">
                             <Phone className="w-3 h-3" /> {pkg.customerPhone}
@@ -608,15 +669,33 @@ export default function DeliveryChallanView({
                         )}
                       </td>
                       <td className="px-3 py-3">
-                        <div className="font-medium text-gray-900 text-sm">{pkg.itemName || "N/A"}</div>
-                        <div className="text-xs text-gray-500">Code: {pkg.itemCode}</div>
-                        {pkg.uom && <div className="text-xs text-gray-500">UOM: {pkg.uom}</div>}
-                        {pkg.batchNumber && <div className="text-xs text-gray-500">Batch: {pkg.batchNumber}</div>}
+                        <div className="font-medium text-gray-900 text-sm">
+                          {pkg.itemName || "N/A"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Code: {pkg.itemCode}
+                        </div>
+                        {pkg.uom && (
+                          <div className="text-xs text-gray-500">
+                            UOM: {pkg.uom}
+                          </div>
+                        )}
+                        {pkg.batchNumber && (
+                          <div className="text-xs text-gray-500">
+                            Batch: {pkg.batchNumber}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-3 py-3 text-center text-sm">{pkg.dispatchedQuantity || 0}</td>
-                      <td className="px-3 py-3 text-center text-sm">{pkg.weight ? pkg.weight.toFixed(2) : "N/A"}</td>
+                      <td className="px-3 py-3 text-center text-sm">
+                        {pkg.dispatchedQuantity || 0}
+                      </td>
+                      <td className="px-3 py-3 text-center text-sm">
+                        {pkg.weight ? pkg.weight.toFixed(2) : "N/A"}
+                      </td>
                       <td className="px-3 py-3 text-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(pkg.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(pkg.status)}`}
+                        >
                           {pkg.status || "PENDING"}
                         </span>
                       </td>
@@ -628,7 +707,9 @@ export default function DeliveryChallanView({
           ) : (
             <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-200">
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">No packages in this challan</p>
+              <p className="text-gray-500 text-sm">
+                No packages in this challan
+              </p>
             </div>
           )}
         </div>
@@ -640,24 +721,39 @@ export default function DeliveryChallanView({
               <Clipboard className="w-3 h-3" />
               Remarks
             </label>
-            <p className="text-sm text-gray-700 mt-1">{viewingChallan.remarks}</p>
+            <p className="text-sm text-gray-700 mt-1">
+              {viewingChallan.remarks}
+            </p>
           </div>
         )}
 
         {/* Hidden Print Content */}
-        <div id="print-content" style={{ display: 'none' }}>
+        <div id="print-content" style={{ display: "none" }}>
           {/* Header */}
           <div className="header">
             <div className="company-info">
-              <h1>{viewingChallan.companyName || 'ABC CORPORATION'}</h1>
-              <div className="subtitle">{viewingChallan.companyAddress || '123 Business Park, Mumbai - 400001'}</div>
-              <div className="subtitle">GST: {viewingChallan.companyGst || '27AABC1234D1ZP'} | PAN: {viewingChallan.companyPan || 'ABCDE1234F'}</div>
-              <div className="address">Phone: {viewingChallan.companyPhone || '+91 98765 43210'} | Email: {viewingChallan.companyEmail || 'info@abccorp.com'}</div>
+              <h1>{viewingChallan.companyName || "ABC CORPORATION"}</h1>
+              <div className="subtitle">
+                {viewingChallan.companyAddress ||
+                  "123 Business Park, Mumbai - 400001"}
+              </div>
+              <div className="subtitle">
+                Tax: {viewingChallan.companyGst || "27AABC1234D1ZP"} | PAN:{" "}
+                {viewingChallan.companyPan || "ABCDE1234F"}
+              </div>
+              <div className="address">
+                Phone: {viewingChallan.companyPhone || "+91 98765 43210"} |
+                Email: {viewingChallan.companyEmail || "info@abccorp.com"}
+              </div>
             </div>
             <div className="doc-title">
               <h2>Delivery Challan</h2>
-              <div className="doc-number">{viewingChallan.challanNumber || viewingChallan.shipmentNumber || 'N/A'}</div>
-              <div className="status">{viewingChallan.status || 'DRAFT'}</div>
+              <div className="doc-number">
+                {viewingChallan.challanNumber ||
+                  viewingChallan.shipmentNumber ||
+                  "N/A"}
+              </div>
+              <div className="status">{viewingChallan.status || "DRAFT"}</div>
             </div>
           </div>
 
@@ -665,35 +761,47 @@ export default function DeliveryChallanView({
           <div className="details-grid">
             <div className="detail-item">
               <span className="label">Shipment Number</span>
-              <span className="value">{viewingChallan.shipmentNumber || 'N/A'}</span>
+              <span className="value">
+                {viewingChallan.shipmentNumber || "N/A"}
+              </span>
             </div>
             <div className="detail-item">
               <span className="label">SO Number</span>
-              <span className="value">{viewingChallan.soNumber || 'N/A'}</span>
+              <span className="value">{viewingChallan.soNumber || "N/A"}</span>
             </div>
             <div className="detail-item">
               <span className="label">Transporter</span>
-              <span className="value">{viewingChallan.transporter || 'N/A'}</span>
+              <span className="value">
+                {viewingChallan.transporter || "N/A"}
+              </span>
             </div>
             <div className="detail-item">
               <span className="label">Vehicle Number</span>
-              <span className="value">{viewingChallan.vehicleNumber || 'N/A'}</span>
+              <span className="value">
+                {viewingChallan.vehicleNumber || "N/A"}
+              </span>
             </div>
             <div className="detail-item">
               <span className="label">Driver Name</span>
-              <span className="value">{viewingChallan.driverName || 'N/A'}</span>
+              <span className="value">
+                {viewingChallan.driverName || "N/A"}
+              </span>
             </div>
             <div className="detail-item">
               <span className="label">Driver Phone</span>
-              <span className="value">{viewingChallan.driverPhone || 'N/A'}</span>
+              <span className="value">
+                {viewingChallan.driverPhone || "N/A"}
+              </span>
             </div>
             <div className="detail-item">
               <span className="label">Created Date</span>
-              <span className="value">{formatDate(viewingChallan.createdAt)}</span>
+              <span className="value">
+                {formatDate(viewingChallan.createdAt)}
+              </span>
             </div>
             <div className="detail-item">
               <span className="label">Created By</span>
-              <span className="value">{viewingChallan.createdBy || 'N/A'}</span>
+              <span className="value">{viewingChallan.createdBy || "N/A"}</span>
             </div>
           </div>
 
@@ -713,7 +821,12 @@ export default function DeliveryChallanView({
             </div>
             <div className="summary-card">
               <div className="label">Status</div>
-              <div className="value" style={{fontSize: '14px', fontWeight: '600'}}>{viewingChallan.status || 'DRAFT'}</div>
+              <div
+                className="value"
+                style={{ fontSize: "14px", fontWeight: "600" }}
+              >
+                {viewingChallan.status || "DRAFT"}
+              </div>
             </div>
           </div>
 
@@ -737,29 +850,59 @@ export default function DeliveryChallanView({
               {viewingChallan.packages?.map((pkg, index) => (
                 <tr key={pkg.id || index}>
                   <td>{index + 1}</td>
-                  <td>{pkg.invoiceNumber || 'N/A'}</td>
-                  <td>{pkg.soNumber || 'N/A'}</td>
-                  <td>{pkg.packageNumber || 'N/A'}</td>
+                  <td>{pkg.invoiceNumber || "N/A"}</td>
+                  <td>{pkg.soNumber || "N/A"}</td>
+                  <td>{pkg.packageNumber || "N/A"}</td>
                   <td>
                     <div className="customer-detail">
-                      <div className="name">{pkg.customerName || 'N/A'}</div>
-                      {pkg.customerCode && <div className="code">Code: {pkg.customerCode}</div>}
-                      {pkg.customerGst && <div className="code">GST: {pkg.customerGst}</div>}
-                      {pkg.customerPhone && <div className="code">📞 {pkg.customerPhone}</div>}
-                      {pkg.customerAddress && <div className="code">📍 {pkg.customerAddress}</div>}
+                      <div className="name">{pkg.customerName || "N/A"}</div>
+                      {pkg.customerCode && (
+                        <div className="code">Code: {pkg.customerCode}</div>
+                      )}
+                      {pkg.customerGst && (
+                        <div className="code">Tax: {pkg.customerGst}</div>
+                      )}
+                      {pkg.customerPhone && (
+                        <div className="code">📞 {pkg.customerPhone}</div>
+                      )}
+                      {pkg.customerAddress && (
+                        <div className="code">📍 {pkg.customerAddress}</div>
+                      )}
                     </div>
                   </td>
                   <td>
-                    <div><strong>{pkg.itemName || 'N/A'}</strong></div>
-                    <div style={{fontSize: '10px', color: '#6b7280'}}>Code: {pkg.itemCode || 'N/A'}</div>
-                    {pkg.batchNumber && <div style={{fontSize: '10px', color: '#6b7280'}}>Batch: {pkg.batchNumber}</div>}
-                    {pkg.uom && <div style={{fontSize: '10px', color: '#6b7280'}}>UOM: {pkg.uom}</div>}
+                    <div>
+                      <strong>{pkg.itemName || "N/A"}</strong>
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                      Code: {pkg.itemCode || "N/A"}
+                    </div>
+                    {pkg.batchNumber && (
+                      <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                        Batch: {pkg.batchNumber}
+                      </div>
+                    )}
+                    {pkg.uom && (
+                      <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                        UOM: {pkg.uom}
+                      </div>
+                    )}
                   </td>
                   <td className="text-center">{pkg.dispatchedQuantity || 0}</td>
-                  <td className="text-center">{pkg.weight ? pkg.weight.toFixed(2) : 'N/A'}</td>
                   <td className="text-center">
-                    <span style={{background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '600'}}>
-                      {pkg.status || 'PENDING'}
+                    {pkg.weight ? pkg.weight.toFixed(2) : "N/A"}
+                  </td>
+                  <td className="text-center">
+                    <span
+                      style={{
+                        background: "#f3f4f6",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        fontSize: "10px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {pkg.status || "PENDING"}
                     </span>
                   </td>
                 </tr>
@@ -771,17 +914,29 @@ export default function DeliveryChallanView({
           {viewingChallan.remarks && (
             <div className="remarks-box">
               <div className="label">Remarks</div>
-              <div style={{marginTop: '4px'}}>{viewingChallan.remarks}</div>
+              <div style={{ marginTop: "4px" }}>{viewingChallan.remarks}</div>
             </div>
           )}
 
           {/* Footer */}
           <div className="footer">
             <div>
-              <div><strong>Terms & Conditions:</strong></div>
-              <div style={{fontSize: '11px', marginTop: '4px', lineHeight: '1.6'}}>
-                1. Goods once dispatched cannot be returned without prior approval.<br />
-                2. The receiver must verify the package count and condition before signing.<br />
+              <div>
+                <strong>Terms & Conditions:</strong>
+              </div>
+              <div
+                style={{
+                  fontSize: "11px",
+                  marginTop: "4px",
+                  lineHeight: "1.6",
+                }}
+              >
+                1. Goods once dispatched cannot be returned without prior
+                approval.
+                <br />
+                2. The receiver must verify the package count and condition
+                before signing.
+                <br />
                 3. Any discrepancy must be reported within 24 hours of receipt.
               </div>
             </div>
@@ -789,18 +944,32 @@ export default function DeliveryChallanView({
               <div>
                 <div className="line"></div>
                 <div className="label">Receiver's Signature</div>
-                <div style={{fontSize: '10px', color: '#9ca3af'}}>Date: __________</div>
+                <div style={{ fontSize: "10px", color: "#9ca3af" }}>
+                  Date: __________
+                </div>
               </div>
               <div>
                 <div className="line"></div>
                 <div className="label">Authorized Signatory</div>
-                <div style={{fontSize: '10px', color: '#9ca3af'}}>Date: __________</div>
+                <div style={{ fontSize: "10px", color: "#9ca3af" }}>
+                  Date: __________
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{textAlign: 'center', fontSize: '10px', color: '#9ca3af', marginTop: '20px', borderTop: '1px solid #e5e7eb', paddingTop: '12px'}}>
-            This is a system-generated delivery challan. | {formatDate(new Date())}
+          <div
+            style={{
+              textAlign: "center",
+              fontSize: "10px",
+              color: "#9ca3af",
+              marginTop: "20px",
+              borderTop: "1px solid #e5e7eb",
+              paddingTop: "12px",
+            }}
+          >
+            This is a system-generated delivery challan. |{" "}
+            {formatDate(new Date())}
           </div>
         </div>
 
@@ -813,8 +982,6 @@ export default function DeliveryChallanView({
             <Printer className="w-4 h-4" />
             Print Official Challan
           </button>
-         
-         
         </div>
       </div>
     </div>
