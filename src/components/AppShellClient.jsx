@@ -39,6 +39,7 @@ const ROUTE_TITLES = {
   "/master/uom": "UOM Master",
   "/master/categories": "Category Master",
   "/master/brands": "Brand Master",
+  "/master/departments": "Department Master",
   "/master/gst": "Tax Master",
   "/returns": "Returns / RMA",
 };

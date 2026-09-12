@@ -172,18 +172,17 @@ const MappingBin = ({ bin, onSelect }) => {
         hover:bg-[#f2faf3]
       "
       title={
-        bin?.occupiedWeightG > 0
-          ? `${binCode} · ${(bin.occupiedWeightG / 1000).toFixed(1)}kg`
-          : binCode
+        bin?.stockSummary?.availableSlots > 0
+          ? `available slots ${bin.stockSummary.availableSlots}`
+          : `${binCode} No available slots`
       }
     >
       <span className="truncate">{binCode}</span>
 
-      {bin?.status && (
+      {bin?.stockSummary?.availableSlots > 0 && (
         <span
           className={cn(
-            "absolute right-1 top-1 h-1.5 w-1.5 rounded-full",
-            getStatusDotClass(bin.status),
+            `absolute right-1 top-1 h-1.5 w-1.5 rounded-full ${bin?.stockSummary?.availableSlots > 0 ? "bg-emerald-500" : "bg-gray-300"}`,
           )}
         />
       )}

@@ -2,6 +2,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import UserSelect from "@/components/UserSelect";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -1142,18 +1143,18 @@ export default function PickListPageConfiAll() {
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Confirmed By *
                           </label>
-                          <div className="relative">
-                            <UserIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              name="confirmedBy"
-                              value={confirmationData.confirmedBy}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Enter confirmer name"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                              required
-                            />
-                          </div>
+                          <UserSelect
+                            name="confirmedBy"
+                            value={confirmationData.confirmedBy}
+                            onChange={(user, e) => {
+                              setConfirmationData((prev) => ({
+                                ...prev,
+                                confirmedBy: e.target.value,
+                              }));
+                            }}
+                            valueKey="username"
+                            placeholder="Select confirmer user..."
+                          />
                         </div>
                       </div>
                     </div>
@@ -1314,14 +1315,17 @@ export default function PickListPageConfiAll() {
                               Packed By *
                             </div>
                           </label>
-                          <input
-                            type="text"
+                          <UserSelect
                             name="packedBy"
                             value={packageData.packedBy}
-                            onChange={handlePackageInputChange}
-                            placeholder="Enter packer name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            required
+                            onChange={(user, e) => {
+                              setPackageData((prev) => ({
+                                ...prev,
+                                packedBy: e.target.value,
+                              }));
+                            }}
+                            valueKey="username"
+                            placeholder="Select packer user..."
                           />
                         </div>
                       </div>

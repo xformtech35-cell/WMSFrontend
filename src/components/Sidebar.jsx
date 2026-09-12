@@ -544,6 +544,13 @@ const ALL_MENU_ITEMS = [
     permission: P.MASTER_VIEW,
   },
   {
+    href: "/master/departments",
+    label: "Department Master",
+    icon: Building2,
+    group: "Admin/Masters",
+    permission: P.MASTER_VIEW,
+  },
+  {
     href: "/master/gst",
     label: "Tax Master",
     icon: Percent,

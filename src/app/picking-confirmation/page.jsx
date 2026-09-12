@@ -2,6 +2,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import UserSelect from "@/components/UserSelect";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -1215,17 +1216,18 @@ export default function PickListPageConfi() {
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Confirmed By *
                           </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              name="confirmedBy"
-                              value={confirmationData.confirmedBy}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Enter confirmer name"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                              required
-                            />
-                          </div>
+                          <UserSelect
+                            name="confirmedBy"
+                            value={confirmationData.confirmedBy}
+                            onChange={(user, e) => {
+                              setConfirmationData((prev) => ({
+                                ...prev,
+                                confirmedBy: e.target.value,
+                              }));
+                            }}
+                            valueKey="username"
+                            placeholder="Select confirmer user..."
+                          />
                         </div>
                       </div>
                     </div>

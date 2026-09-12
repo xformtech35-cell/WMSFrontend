@@ -148,6 +148,7 @@ export default function PurchaseRequestForm({
 
   const [suppliers, setSuppliers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
@@ -155,6 +156,7 @@ export default function PurchaseRequestForm({
   const [savedPRId, setSavedPRId] = useState(null);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
   const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(true);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showItemSelector, setShowItemSelector] = useState(false);
   const [users, setUsers] = useState([]);
@@ -198,6 +200,7 @@ export default function PurchaseRequestForm({
   useEffect(() => {
     loadSuppliers();
     loadWarehouses();
+    loadDepartments();
     fetchMasterData();
   }, []);
 
@@ -212,7 +215,8 @@ export default function PurchaseRequestForm({
     try {
       setIsLoadingSuppliers(true);
       const supplierList = await getSuppliersAPI();
-      setSuppliers(supplierList || []);
+      const list = supplierList?.content || (Array.isArray(supplierList) ? supplierList : []);
+      setSuppliers(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("Error loading suppliers:", error);
       setErrorMessage("Failed to load suppliers.");
@@ -225,12 +229,26 @@ export default function PurchaseRequestForm({
     try {
       setIsLoadingWarehouses(true);
       const warehouseList = await getWarehousesAPI();
-      setWarehouses(warehouseList || []);
+      const list = warehouseList?.content || (Array.isArray(warehouseList) ? warehouseList : []);
+      setWarehouses(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error("Error loading warehouses:", error);
       setErrorMessage("Failed to load warehouses.");
     } finally {
       setIsLoadingWarehouses(false);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      setIsLoadingDepartments(true);
+      const res = await apiRequest("/departments");
+      const list = res?.content || (Array.isArray(res) ? res : []);
+      setDepartments(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.warn("Failed to fetch departments from API:", error);
+    } finally {
+      setIsLoadingDepartments(false);
     }
   };
 
@@ -639,15 +657,31 @@ export default function PurchaseRequestForm({
                       onChange={handleInputChange}
                       className="w-full pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                       required
+                      disabled={isLoadingDepartments}
                     >
                       <option value="">Select Department</option>
-                      <option value="Warehouse">Warehouse</option>
-                      <option value="Production">Production</option>
-                      <option value="Quality">Quality</option>
-                      <option value="Logistics">Logistics</option>
-                      <option value="Maintenance">Maintenance</option>
-                      <option value="Others">Others</option>
+                      {Array.isArray(departments) &&
+                        departments.map((dept) => (
+                          <option key={dept.id || dept.code} value={dept.name || dept.code}>
+                            {dept.name} ({dept.code})
+                          </option>
+                        ))}
+                      {(!Array.isArray(departments) || departments.length === 0) && (
+                        <>
+                          <option value="Warehouse">Warehouse</option>
+                          <option value="Production">Production</option>
+                          <option value="Quality">Quality</option>
+                          <option value="Logistics">Logistics</option>
+                          <option value="Maintenance">Maintenance</option>
+                          <option value="Others">Others</option>
+                        </>
+                      )}
                     </select>
+                    {isLoadingDepartments && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Loading departments...
+                      </p>
+                    )}
                   </div>
                 </div>
 

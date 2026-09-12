@@ -85,6 +85,7 @@ PICKING: "PICKING",
 PICKING_CONFIRMATION: "PICKING_CONFIRMATION",
   SHIPPING_VIEW: "SHIPPING_VIEW",
   SHIPPING_CONFIRM: "SHIPPING_CONFIRM",
+  LABELS: "LABELS",
 
   // ============================================================
   // Additional Fulfillment

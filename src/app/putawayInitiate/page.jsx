@@ -34,6 +34,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import UserSelect from "@/components/UserSelect";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
 import PageHeader from "@/components/PageHeader";
@@ -1135,28 +1136,27 @@ export default function PutawayInitiate() {
                     <Label htmlFor="assignedTo" className="text-sm font-medium">
                       Assign To <span className="text-red-500">*</span>
                     </Label>
-                    <select
-                      id="assignedTo"
+                    <UserSelect
+                      name="assignedTo"
                       value={putawayForm.assignedTo}
-                      onChange={(e) =>
+                      onChange={(user, e) => {
                         setPutawayForm((prev) => ({
                           ...prev,
                           assignedTo: e.target.value,
-                        }))
-                      }
-                      className={`mt-1 w-full h-10 rounded-md border ${
-                        putawayErrors.assignedTo
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      } bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
-                    >
-                      <option value="">-- Select User --</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.username}>
-                          {user.name || user.username || `User ${user.id}`}
-                        </option>
-                      ))}
-                    </select>
+                        }));
+                        if (putawayErrors.assignedTo) {
+                          setPutawayErrors((prev) => ({
+                            ...prev,
+                            assignedTo: undefined,
+                          }));
+                        }
+                      }}
+                      valueKey="username"
+                      placeholder="Select User..."
+                      className={`mt-1 ${
+                        putawayErrors.assignedTo ? "border-red-500" : ""
+                      }`}
+                    />
                     {putawayErrors.assignedTo && (
                       <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />

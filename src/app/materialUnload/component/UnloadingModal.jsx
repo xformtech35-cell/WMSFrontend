@@ -14,6 +14,7 @@ import {
   Warehouse,
   ChevronDown,
 } from "lucide-react";
+import UserSelect from "@/components/UserSelect";
 import api from "@/lib/api";
 
 const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
@@ -298,17 +299,18 @@ const UnloadingModal = ({ isOpen, onClose, inbound, onSuccess }) => {
                   Unloaded By
                   <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="unloadedBy"
-                    value={formData.unloadedBy}
-                    onChange={handleChange}
-                    placeholder="Name of person who unloaded"
-                    className="w-full  pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                    required
-                  />
-                </div>
+                <UserSelect
+                  name="unloadedBy"
+                  value={formData.unloadedBy}
+                  onChange={(user, e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      unloadedBy: e.target.value,
+                    }));
+                  }}
+                  valueKey="username"
+                  placeholder="Select person who unloaded..."
+                />
               </div>
             </div>
 

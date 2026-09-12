@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import UserSelect from "@/components/UserSelect";
 import {
   Eye,
   Search,
@@ -665,14 +666,17 @@ export default function DispatchPage() {
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Confirmed By *
                       </label>
-                      <input
-                        type="text"
+                      <UserSelect
                         name="confirmedBy"
                         value={shipmentData.confirmedBy}
-                        onChange={handleShipmentChange}
-                        placeholder="e.g., Amit Sharma"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        required
+                        onChange={(user, e) => {
+                          setShipmentData((prev) => ({
+                            ...prev,
+                            confirmedBy: e.target.value,
+                          }));
+                        }}
+                        valueKey="username"
+                        placeholder="Select confirmed by user..."
                       />
                     </div>
 

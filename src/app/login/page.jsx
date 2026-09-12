@@ -56,6 +56,7 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/login', values);
       localStorage.setItem('wms_token', data.token);
       localStorage.setItem('wms_username', data.username);
+      localStorage.setItem('wms_name', data.fullName);
       localStorage.setItem('userid', data.id);
       localStorage.setItem('wms_role', data.role);
       localStorage.setItem('wms_permissions', JSON.stringify(data.permissions ?? []));

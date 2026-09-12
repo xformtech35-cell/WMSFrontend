@@ -1,7 +1,30 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import api from '@/lib/api';
+import React, { useState, useEffect, useRef } from "react";
+import api from "@/lib/api";
+
+const getLoggedInUser = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    const keys = ["wms_username", "username", "user", "userid", "wms_user", "authUser"];
+    for (const key of keys) {
+      const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (val) {
+        if (val.trim().startsWith("{")) {
+          const obj = JSON.parse(val);
+          if (obj.username) return obj.username;
+          if (obj.name) return obj.name;
+          if (obj.id) return String(obj.id);
+        } else {
+          return val;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to get logged in user from storage:", e);
+  }
+  return "";
+};
 
 /**
  * Common UserSelect component with search, pagination, and dropdown selection.
@@ -21,6 +44,7 @@ export default function UserSelect({
   className = "",
   containerClassName = "",
   pageSize = 10,
+  defaultToLoggedInUser = true,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,9 +69,9 @@ export default function UserSelect({
     if (!triggerRef.current) return;
 
     const rect = triggerRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const viewportHeight =
+      window.innerHeight || document.documentElement.clientHeight;
 
-    // Measure actual rendered dropdown height or fallback to ~280px
     const dropdownHeight = dropdownRef.current
       ? dropdownRef.current.offsetHeight
       : 280;
@@ -57,7 +81,6 @@ export default function UserSelect({
 
     let top = rect.bottom + 4;
 
-    // If dropdown overflows bottom of window and space above is larger, flip to open upwards
     if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
       top = rect.top - dropdownHeight - 4;
     }
@@ -76,7 +99,6 @@ export default function UserSelect({
 
     updateDropdownPosition();
 
-    // Re-measure exact offsetHeight after DOM updates
     const rafId = requestAnimationFrame(() => {
       updateDropdownPosition();
     });
@@ -155,6 +177,29 @@ export default function UserSelect({
     fetchUsers(0, "");
   }, []);
 
+  // Auto-select logged-in user as default if no value is set
+  useEffect(() => {
+    if (defaultToLoggedInUser && !value && onChange) {
+      const loggedUser = getLoggedInUser();
+      if (loggedUser) {
+        const matched = users.find(
+          (u) =>
+            String(u[valueKey] ?? "").toLowerCase() === String(loggedUser).toLowerCase() ||
+            String(u.username ?? "").toLowerCase() === String(loggedUser).toLowerCase() ||
+            String(u.id ?? "") === String(loggedUser) ||
+            String(u.email ?? "").toLowerCase() === String(loggedUser).toLowerCase()
+        );
+        const valToSet = matched
+          ? matched[valueKey] || matched.username || matched.id
+          : loggedUser;
+
+        onChange(matched || null, {
+          target: { name, value: valToSet },
+        });
+      }
+    }
+  }, [value, users, defaultToLoggedInUser, valueKey, name]);
+
   const handleSearch = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
@@ -176,7 +221,10 @@ export default function UserSelect({
     setSearchTerm("");
 
     if (onChange) {
-      const val = user[valueKey] !== undefined ? user[valueKey] : user.username || user.id;
+      const val =
+        user[valueKey] !== undefined
+          ? user[valueKey]
+          : user.username || user.id;
       onChange(user, {
         target: { name, value: val },
       });
@@ -186,14 +234,20 @@ export default function UserSelect({
   // Find selected user representation
   const selectedUser = users.find(
     (u) =>
-      u[valueKey] === value ||
-      u.username === value ||
-      u.id === value ||
-      u.email === value
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      (String(u[valueKey] ?? "").toLowerCase() === String(value).toLowerCase() ||
+        String(u.username ?? "").toLowerCase() === String(value).toLowerCase() ||
+        String(u.id ?? "") === String(value) ||
+        String(u.email ?? "").toLowerCase() === String(value).toLowerCase())
   );
 
   const displayValue = selectedUser
-    ? selectedUser[displayKey] || selectedUser.username || selectedUser.name || selectedUser.fullName
+    ? selectedUser.fullName ||
+      selectedUser.name ||
+      selectedUser[displayKey] ||
+      selectedUser.username
     : value || "";
 
   return (
@@ -211,11 +265,15 @@ export default function UserSelect({
           disabled
             ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
             : isOpen
-            ? "border-blue-500 ring-2 ring-blue-500/20 text-gray-900"
-            : "border-gray-300 hover:border-gray-400 text-gray-900"
+              ? "border-blue-500 ring-2 ring-blue-500/20 text-gray-900"
+              : "border-gray-300 hover:border-gray-400 text-gray-900"
         } ${className}`}
       >
-        <span className={displayValue ? "text-gray-900 font-medium" : "text-gray-400"}>
+        <span
+          className={
+            displayValue ? "text-gray-900 font-medium" : "text-gray-400"
+          }
+        >
           {displayValue || placeholder}
         </span>
         <svg
@@ -224,7 +282,12 @@ export default function UserSelect({
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </div>
 
@@ -266,25 +329,53 @@ export default function UserSelect({
             ) : (
               users.map((user) => {
                 const isSelected =
-                  user[valueKey] === value ||
-                  user.username === value ||
-                  user.id === value;
+                  value !== undefined &&
+                  value !== null &&
+                  value !== "" &&
+                  (String(user[valueKey] ?? "").toLowerCase() === String(value).toLowerCase() ||
+                    String(user.username ?? "").toLowerCase() === String(value).toLowerCase() ||
+                    String(user.id ?? "") === String(value));
 
                 const primaryLabel =
-                  user[displayKey] || user.username || user.name || user.fullName || "User";
-                const secondaryLabel = user[subDisplayKey] || user.email || user.role || "";
+                  user.fullName || user.name || user.username || `User ${user.id}`;
+                const secondaryLabel =
+                  user[subDisplayKey] ||
+                  user.email ||
+                  user.role ||
+                  (user.fullName || user.name ? `@${user.username}` : "");
 
                 return (
                   <div
                     key={user.id || user.username}
-                    className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
-                      isSelected ? "bg-blue-50 text-blue-700 font-semibold" : "hover:bg-gray-50 text-gray-900"
+                    className={`px-3 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                      isSelected
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "hover:bg-gray-50 text-gray-900"
                     }`}
                     onClick={() => handleSelect(user)}
                   >
-                    <div className="font-medium">{primaryLabel}</div>
-                    {secondaryLabel && (
-                      <div className="text-xs text-gray-500">{secondaryLabel}</div>
+                    <div>
+                      <div className="font-medium">{primaryLabel}</div>
+                      {secondaryLabel && (
+                        <div className="text-xs text-gray-500">
+                          {secondaryLabel}
+                        </div>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <svg
+                        className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
                     )}
                   </div>
                 );

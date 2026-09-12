@@ -695,7 +695,6 @@ export default function ShipmentConfirmation() {
               onClick={handleDeliveryClose}
             />
             <div
-              onClick={handleDeliveryClose}
               className="fixed inset-0 flex items-center justify-center z-50 p-4"
             >
               <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto">

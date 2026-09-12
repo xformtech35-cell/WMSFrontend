@@ -38,16 +38,21 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 
-
-
-const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getSalesOrdersAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
     if (size) params.append("size", size);
     if (searchTerm) params.append("search", searchTerm);
     if (status && status !== "ALL") params.append("status", status);
-
+    const role = localStorage.getItem("wms_role");
+    const assign = localStorage.getItem("wms_name");
+    // if (role !== "ADMIN") params.append("assignedTo", assign);
     const url = `/outbound/pick-lists${params.toString() ? `?${params.toString()}` : ""}`;
     const response = await api.get(url);
     console.log("GET sales orders response:", response);
@@ -61,7 +66,9 @@ const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = 
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -101,7 +108,10 @@ const deleteSalesOrderAPI = async (id) => {
 
 // Update pick list status
 const updatePickListStatusAPI = async (pickListNumber, status) => {
-  return apiRequest(`/outbound/pick-list/${pickListNumber}/status?status=${status}`, "PATCH");
+  return apiRequest(
+    `/outbound/pick-list/${pickListNumber}/status?status=${status}`,
+    "PATCH",
+  );
 };
 
 // Create pick task
@@ -211,7 +221,7 @@ export default function PickListPage() {
         setShowViewModal(true);
         return;
       }
-      
+
       setLoading(true);
       const fullSO = await getSalesOrderByIdAPI(so.soNumber);
       setViewingSO(fullSO);
@@ -290,23 +300,31 @@ export default function PickListPage() {
 
   // Handle status update
   const handleStatusUpdate = async (pickListNumber, status, actionLabel) => {
-    if (!window.confirm(`Are you sure you want to mark this pick list as ${actionLabel}?`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to mark this pick list as ${actionLabel}?`,
+      )
+    ) {
       return;
     }
 
     try {
       setUpdatingStatus(true);
       await updatePickListStatusAPI(pickListNumber, status);
-      setSuccessMessage(`Pick list ${pickListNumber} marked as ${actionLabel} successfully`);
+      setSuccessMessage(
+        `Pick list ${pickListNumber} marked as ${actionLabel} successfully`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
-      
+
       if (showViewModal) {
         handleViewClose();
       }
     } catch (error) {
       console.error("Status update error:", error);
-      setErrorMessage(error.message || `Failed to update pick list status to ${actionLabel}.`);
+      setErrorMessage(
+        error.message || `Failed to update pick list status to ${actionLabel}.`,
+      );
     } finally {
       setUpdatingStatus(false);
     }
@@ -372,7 +390,7 @@ export default function PickListPage() {
   // Handle Pick Task Submit
   const handlePickTaskSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!pickTaskData.pickListNumber) {
       setErrorMessage("Pick List Number is required");
@@ -399,14 +417,18 @@ export default function PickListPage() {
       setLoading(true);
       const response = await createPickTaskAPI(pickTaskData);
       console.log("Pick Task created:", response);
-      
-      setSuccessMessage(`Pick task created successfully for ${pickTaskData.pickListNumber}`);
+
+      setSuccessMessage(
+        `Pick task created successfully for ${pickTaskData.pickListNumber}`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
       handlePickTaskClose();
     } catch (error) {
       console.error("Pick Task creation error:", error);
-      setErrorMessage(error.message || "Failed to create pick task. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to create pick task. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -473,19 +495,44 @@ export default function PickListPage() {
   const getStatusActions = (currentStatus) => {
     const actions = {
       RELEASED: [
-        { status: "PICKING", label: "Start Picking", icon: Clock, color: "bg-blue-600 hover:bg-blue-700" },
+        {
+          status: "PICKING",
+          label: "Start Picking",
+          icon: Clock,
+          color: "bg-blue-600 hover:bg-blue-700",
+        },
       ],
       PICKING: [
-        { status: "PICKED", label: "Mark as Picked", icon: CheckSquare, color: "bg-green-600 hover:bg-green-700" },
+        {
+          status: "PICKED",
+          label: "Mark as Picked",
+          icon: CheckSquare,
+          color: "bg-green-600 hover:bg-green-700",
+        },
       ],
       PICKED: [
-        { status: "SHIPPED", label: "Mark as Shipped", icon: Truck, color: "bg-purple-600 hover:bg-purple-700" },
+        {
+          status: "SHIPPED",
+          label: "Mark as Shipped",
+          icon: Truck,
+          color: "bg-purple-600 hover:bg-purple-700",
+        },
       ],
       SHIPPED: [
-        { status: "DELIVERED", label: "Mark as Delivered", icon: CheckCircle, color: "bg-indigo-600 hover:bg-indigo-700" },
+        {
+          status: "DELIVERED",
+          label: "Mark as Delivered",
+          icon: CheckCircle,
+          color: "bg-indigo-600 hover:bg-indigo-700",
+        },
       ],
       PENDING: [
-        { status: "PICKED", label: "Mark as Picked", icon: CheckSquare, color: "bg-green-600 hover:bg-green-700" },
+        {
+          status: "PICKED",
+          label: "Mark as Picked",
+          icon: CheckSquare,
+          color: "bg-green-600 hover:bg-green-700",
+        },
       ],
     };
     return actions[currentStatus] || [];
@@ -550,7 +597,6 @@ export default function PickListPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                
                 <button
                   type="button"
                   onClick={loadSalesOrders}
@@ -714,16 +760,18 @@ export default function PickListPage() {
                             <Eye className="w-4 h-4" />
                           </button>
                           {/* {(so.status === "RELEASED" /|| so.status === "PENDING") && ( */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPickTask(so)}
-                              className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                              title="Picking"
-                            >
-                              <PackageSearch  className="w-4 h-4" />
-                            </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPickTask(so)}
+                            className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                            title="Picking"
+                          >
+                            <PackageSearch className="w-4 h-4" />
+                          </button>
                           {/* )} */}
-                          {(so.status === "DRAFT" || so.status === "PROCESSING" || so.status === "PENDING") && (
+                          {(so.status === "DRAFT" ||
+                            so.status === "PROCESSING" ||
+                            so.status === "PENDING") && (
                             <button
                               type="button"
                               onClick={() => handleEditClick(so)}
@@ -733,7 +781,9 @@ export default function PickListPage() {
                               <Edit className="w-4 h-4" />
                             </button>
                           )}
-                          {(so.status === "DRAFT" || so.status === "PROCESSING" || so.status === "PENDING") && (
+                          {(so.status === "DRAFT" ||
+                            so.status === "PROCESSING" ||
+                            so.status === "PENDING") && (
                             <button
                               type="button"
                               onClick={() => handleDelete(so.soNumber)}
@@ -805,7 +855,7 @@ export default function PickListPage() {
                     <XCircle className="w-6 h-6" />
                   </button>
                 </div>
-                
+
                 <div className="p-6">
                   {/* Status Update Actions */}
                   <div className="mb-6">
@@ -814,11 +864,11 @@ export default function PickListPage() {
                         <button
                           key={action.status}
                           type="button"
-                          onClick={() => 
+                          onClick={() =>
                             handleStatusUpdate(
-                              viewingSO.pickListNumber, 
-                              action.status, 
-                              action.label
+                              viewingSO.pickListNumber,
+                              action.status,
+                              action.label,
                             )
                           }
                           disabled={updatingStatus}
@@ -829,7 +879,8 @@ export default function PickListPage() {
                         </button>
                       ))}
                       {/* Create Pick Task button in view modal */}
-                      {(viewingSO.status === "RELEASED" || viewingSO.status === "PENDING") && (
+                      {(viewingSO.status === "RELEASED" ||
+                        viewingSO.status === "PENDING") && (
                         <button
                           type="button"
                           onClick={() => {
@@ -848,46 +899,78 @@ export default function PickListPage() {
                   {/* Basic Info Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickListNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Pick List Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickListNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.soNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        SO Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.soNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Status</label>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Status
+                      </label>
                       <p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
+                        >
                           {viewingSO.status}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Priority</label>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Priority
+                      </label>
                       <p>
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(viewingSO.priority)}`}>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(viewingSO.priority)}`}
+                        >
                           <Flag className="w-3 h-3" />
                           {viewingSO.priority}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Assigned To</label>
-                      <p className="font-medium text-gray-900">{viewingSO.assignedTo || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Warehouse</label>
-                      <p className="font-medium text-gray-900">{viewingSO.warehouseId}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Created</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingSO.createdAt)}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Completed</label>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Assigned To
+                      </label>
                       <p className="font-medium text-gray-900">
-                        {viewingSO.completedDate ? formatDate(viewingSO.completedDate) : "N/A"}
+                        {viewingSO.assignedTo || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Warehouse
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.warehouseId}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Created
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {formatDate(viewingSO.createdAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Completed
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.completedDate
+                          ? formatDate(viewingSO.completedDate)
+                          : "N/A"}
                       </p>
                     </div>
                   </div>
@@ -907,29 +990,59 @@ export default function PickListPage() {
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Code</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">UOM</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Required</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Picked</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Short</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                #
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Item Code
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Item Name
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                UOM
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Required
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Picked
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Short
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Status
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                Location
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {viewingSO.items.map((item, idx) => (
                               <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
-                                <td className="px-4 py-3 font-medium text-gray-900">{item.itemCode}</td>
+                                <td className="px-4 py-3 text-gray-500">
+                                  {idx + 1}
+                                </td>
+                                <td className="px-4 py-3 font-medium text-gray-900">
+                                  {item.itemCode}
+                                </td>
                                 <td className="px-4 py-3">{item.itemName}</td>
                                 <td className="px-4 py-3">{item.uom}</td>
-                                <td className="px-4 py-3 font-medium">{item.requiredQuantity}</td>
-                                <td className="px-4 py-3">{item.pickedQuantity || 0}</td>
-                                <td className="px-4 py-3">{item.shortQuantity || 0}</td>
+                                <td className="px-4 py-3 font-medium">
+                                  {item.requiredQuantity}
+                                </td>
                                 <td className="px-4 py-3">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}>
+                                  {item.pickedQuantity || 0}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {item.shortQuantity || 0}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}
+                                  >
                                     {item.status || "PENDING"}
                                   </span>
                                 </td>
@@ -947,8 +1060,12 @@ export default function PickListPage() {
                   {/* Remarks if any */}
                   {viewingSO.remarks && (
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <label className="text-xs text-gray-500 uppercase font-medium">Remarks</label>
-                      <p className="text-sm text-gray-700">{viewingSO.remarks}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Remarks
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingSO.remarks}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -990,20 +1107,36 @@ export default function PickListPage() {
                     <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickListNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Pick List Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.pickListNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.soNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            SO Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.soNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Warehouse</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.warehouseId}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Warehouse
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.warehouseId}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Priority</label>
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(selectedPickList?.priority)}`}>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Priority
+                          </label>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(selectedPickList?.priority)}`}
+                          >
                             <Flag className="w-3 h-3" />
                             {selectedPickList?.priority}
                           </span>
@@ -1119,7 +1252,9 @@ export default function PickListPage() {
                         <UserSelect
                           label="Select Picker"
                           name="pickerId"
-                          value={pickTaskData.pickerId || pickTaskData.pickerName}
+                          value={
+                            pickTaskData.pickerId || pickTaskData.pickerName
+                          }
                           onChange={handlePickerChange}
                           placeholder="Select Picker..."
                           required={true}
