@@ -20,6 +20,7 @@ import {
 import PurchaseRequestForm from "./components/PurchaseRequestForm";
 import PurchaseRequestView from "./components/PurchaseRequestView";
 import RFQForm from "../purchase-approval/components/RFQForm";
+import { FormattedDate } from "@/context/DateFormatContext";
 
 
 
@@ -427,7 +428,8 @@ export default function PurchaseRequestPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {formatDate(pr.prDate)}
+                        {/* {formatDate(pr.prDate)} */}
+                        <FormattedDate date={pr.prDate} />
                       </td>
                       <td className="px-4 py-3 text-sm">{pr.requestedBy}</td>
                       <td className="px-4 py-3 text-sm">{pr.department}</td>
@@ -441,7 +443,9 @@ export default function PurchaseRequestPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {formatDate(pr.requiredDate)}
+                        {/* {formatDate(pr.requiredDate)} */}
+                        <FormattedDate date={pr.requiredDate} />
+
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="bg-gray-100 px-2 py-1 rounded text-xs">

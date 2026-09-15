@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { DateFormatProvider } from '@/context/DateFormatContext';
 import queryClient from '@/lib/queryClient';
 
 const SESSION_MARKER = 'wms_session_initialized';
@@ -32,14 +33,16 @@ export default function AppProviders({ children }) {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={200}>
-          {children}
-          <Toaster
-            richColors
-            position="top-right"
-            toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }}
-          />
-        </TooltipProvider>
+        <DateFormatProvider>
+          <TooltipProvider delayDuration={200}>
+            {children}
+            <Toaster
+              richColors
+              position="top-right"
+              toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }}
+            />
+          </TooltipProvider>
+        </DateFormatProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
