@@ -33,7 +33,8 @@ import {
   UserCheck,
   Clipboard,
 } from "lucide-react";
-import api from "@/lib/api";
+import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 
 export default function ShipmentConfirmation() {
   // List State
@@ -403,17 +404,7 @@ export default function ShipmentConfirmation() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const getStatusColor = (status) => {
     const colors = {

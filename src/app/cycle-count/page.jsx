@@ -15,7 +15,7 @@ import { usePermissions } from '@/lib/hooks/usePermissions';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ClipboardCheck, ShieldAlert, Award, FileText, CheckCircle, XCircle, Play, Sparkles } from 'lucide-react';
-import { format } from 'date-fns';
+import { FormattedDate } from '@/context/DateFormatContext';
 
 export default function CycleCountPage() {
   const queryClient = useQueryClient();
@@ -297,7 +297,7 @@ export default function CycleCountPage() {
                           {task.sku && ` (${task.sku.skuCode})`}
                         </TableCell>
                         <TableCell className="text-xs text-slate-400">
-                          {format(new Date(task.scheduledDate), 'dd MMM yyyy')}
+                          <FormattedDate date={task.scheduledDate} />
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={task.status} />
@@ -438,7 +438,7 @@ export default function CycleCountPage() {
                       <TableCell className="text-xs text-slate-500">{adj.reason}</TableCell>
                       <TableCell className="text-xs text-slate-600">{adj.adjustedBy?.username ?? 'System'}</TableCell>
                       <TableCell className="text-xs text-slate-400">
-                        {format(new Date(adj.createdAt), 'dd MMM yyyy HH:mm')}
+                        <FormattedDate date={adj.createdAt} includeTime />
                       </TableCell>
                     </TableRow>
                   ))

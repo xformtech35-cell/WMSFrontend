@@ -1,5 +1,6 @@
 "use client";
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -91,27 +92,8 @@ const PurchaseReturnView = ({ data, onClose }) => {
     return colors[type] || colors.OTHER;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
+  const formatDateTime = (dateString) => formatDate(dateString, null, true);
 
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "₹0.00";

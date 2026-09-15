@@ -21,13 +21,17 @@ import {
   Clipboard,
 } from "lucide-react";
 
+import { useDateFormat } from "@/context/DateFormatContext";
+
 export default function DeliveryChallanView({
   viewingChallan,
   onClose,
   onEdit,
   generating = false,
-  formatDate,
+  formatDate: propFormatDate,
 }) {
+  const { formatDate: contextFormatDate } = useDateFormat();
+  const formatDate = propFormatDate || contextFormatDate;
   const printRef = useRef();
 
   if (!viewingChallan) return null;

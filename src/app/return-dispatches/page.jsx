@@ -1,6 +1,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import {
   Eye,
@@ -206,15 +207,7 @@ export default function ReturnDispatches() {
     if (newPage >= 0 && newPage < totalPages) setCurrentPage(newPage);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const d = new Date(dateString);
-    return d.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

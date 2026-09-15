@@ -38,9 +38,8 @@ import {
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import QualityInspectionModal from "./QualityInspectionModal";
 import { formatDateTime } from "@/lib/utils/common";
+import { FormattedDate, useDateFormat } from "@/context/DateFormatContext";
 import QualityApprovalInspectionModal from "./QualityInspectionModal";
-
-
 
 const getInboundsAPI = async (
   page = 0,
@@ -136,7 +135,7 @@ export default function GRN() {
       );
 
       if (response && response.content) {
-         const total = response.totalElements || 0;
+        const total = response.totalElements || 0;
 
         // If Pending filter is selected but there are no pending records,
         // automatically switch to All Records.
@@ -264,15 +263,7 @@ export default function GRN() {
     return icons[status] || <FileText className="w-4 h-4" />;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";
@@ -340,7 +331,6 @@ export default function GRN() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                
                 <button
                   type="button"
                   onClick={loadInbounds}
@@ -475,7 +465,8 @@ export default function GRN() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDateTime(inbound.grnDate || inbound.inboundDate)}
+                        {/* {formatDateTime(inbound.grnDate || inbound.inboundDate)} */}
+                        <FormattedDate date={inbound.inboundDate} />
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium text-blue-600">

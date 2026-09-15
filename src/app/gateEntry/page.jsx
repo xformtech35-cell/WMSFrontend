@@ -37,8 +37,7 @@ import {
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import GateEntryModal from "./component/GateEntryModal";
 import { formatDateTime } from "@/lib/utils/common";
-
-
+import { FormattedDate, useDateFormat } from "@/context/DateFormatContext";
 
 const getInboundsAPI = async (
   page = 0,
@@ -226,15 +225,7 @@ export default function GateEntry() {
     return icons[status] || <FileText className="w-4 h-4" />;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";
@@ -446,7 +437,8 @@ export default function GateEntry() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDateTime(inbound.inboundDate)}
+                        {/* {formatDateTime(inbound.inboundDate)} */}
+                        <FormattedDate date={inbound.inboundDate} />
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium text-blue-600">

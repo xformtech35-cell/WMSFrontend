@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { useDateFormat } from "@/context/DateFormatContext";
 import {
   X,
   Building2,
@@ -69,35 +70,9 @@ const SalesOrderDetails = ({ data, onClose }) => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return dateString;
-    }
-  };
+  const { formatDate } = useDateFormat();
 
-  const formatDateShort = (dateString) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return dateString;
-    }
-  };
+  const formatDateShort = (dateString) => formatDate(dateString);
 
   const DetailRow = ({ icon: Icon, label, value, valueClassName = "" }) => (
     <div className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">

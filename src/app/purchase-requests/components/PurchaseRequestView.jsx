@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef } from "react";
+import { useDateFormat } from "@/context/DateFormatContext";
 import {
   XCircle,
   Flag,
@@ -61,27 +62,8 @@ export default function PurchaseRequestView({ data, onClose }) {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
+  const formatDateTime = (dateString) => formatDate(dateString, null, true);
 
   const getTotalQuantity = () => {
     if (!data?.items) return 0;

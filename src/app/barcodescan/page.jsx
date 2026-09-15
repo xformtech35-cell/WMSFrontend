@@ -1,6 +1,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import { useState, useEffect, useRef } from "react";
 import {
   Barcode,
@@ -327,15 +328,7 @@ useEffect(() => {
     }
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleString();
-    } catch {
-      return dateStr;
-    }
-  };
+  const { formatDate } = useDateFormat();
 
   const getStatusColor = (status) => {
     const statusMap = {

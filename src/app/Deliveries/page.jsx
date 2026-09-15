@@ -31,6 +31,7 @@ import {
   Check,
 } from "lucide-react";
 import api from "@/lib/api";
+import { useDateFormat, FormattedDate } from "@/context/DateFormatContext";
 
 export default function Deliveries() {
   // List State
@@ -130,17 +131,7 @@ export default function Deliveries() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const getStatusColor = (status) => {
     const colors = {

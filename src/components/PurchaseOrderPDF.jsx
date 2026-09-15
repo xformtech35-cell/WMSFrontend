@@ -265,11 +265,7 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
 
   const totals = calculateTotals();
   const statusBadge = getStatusBadge(po.status);
-  const currentDate = new Date().toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  const currentDate = formatDate(new Date());
 
   return (
     <Document>

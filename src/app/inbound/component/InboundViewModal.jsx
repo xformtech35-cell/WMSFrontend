@@ -26,12 +26,13 @@ import {
 } from "lucide-react";
 import ImageGallery from "@/components/ImageGallery";
 import { API_ROOT } from "@/lib/config";
+import { useDateFormat } from "@/context/DateFormatContext";
 
 const InboundViewModal = ({
   inbound,
   onClose,
-  formatDate,
-  formatDateTime,
+  formatDate: propFormatDate,
+  formatDateTime: propFormatDateTime,
   formatCurrency,
   getStatusColor,
   getStageColor,
@@ -39,6 +40,9 @@ const InboundViewModal = ({
   onPrint,
   isgrn = false,
 }) => {
+  const { formatDate: contextFormatDate } = useDateFormat();
+  const formatDate = propFormatDate || contextFormatDate;
+  const formatDateTime = propFormatDateTime || ((d) => formatDate(d, null, true));
   const [activeTab, setActiveTab] = useState("overview");
 
   if (!inbound) return null;

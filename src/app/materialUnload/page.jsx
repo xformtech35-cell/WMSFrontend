@@ -36,6 +36,7 @@ import {
 import InboundViewModal from "../inbound/component/InboundViewModal";
 import UnloadingModal from "./component/UnloadingModal";
 import { formatDateTime } from "@/lib/utils/common";
+import { useDateFormat } from "@/context/DateFormatContext";
 
 
 
@@ -231,15 +232,7 @@ export default function MaterialUnload() {
     return icons[status] || <FileText className="w-4 h-4" />;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const formatCurrency = (amount) => {
     if (!amount) return "₹0.00";

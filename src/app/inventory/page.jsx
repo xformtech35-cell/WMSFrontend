@@ -22,6 +22,8 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -310,14 +312,7 @@ export default function InventoryStockPage() {
     return statusMap[status] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    try {
-      return format(new Date(dateString), "dd MMM yyyy HH:mm");
-    } catch {
-      return dateString;
-    }
-  };
+  const { formatDate } = useDateFormat();
 
   // Count active filters
   const activeFilterCount = Object.values(filters).filter(

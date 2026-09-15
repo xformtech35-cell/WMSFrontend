@@ -3,6 +3,7 @@
 
 import apiRequest from "@/components/apiRequest";
 import UserSelect from "@/components/UserSelect";
+import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -568,17 +569,7 @@ export default function PickListPageConfiAll() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   // Status action buttons configuration
   const getStatusActions = (currentStatus) => {

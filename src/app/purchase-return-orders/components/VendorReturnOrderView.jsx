@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { useDateFormat } from "@/context/DateFormatContext";
 import {
   X,
   FileText,
@@ -69,27 +70,8 @@ const VendorReturnOrderView = ({ data, onClose }) => {
     return colors[status] || colors.PENDING;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
+  const formatDateTime = (dateString) => formatDate(dateString, null, true);
 
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "₹0.00";

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import api from "@/lib/api";
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import UserSelect from "@/components/UserSelect";
 import {
   Eye,
@@ -499,27 +500,8 @@ export default function PackReturnOrder() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDateShort = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
+  const formatDateShort = (dateString) => formatDate(dateString);
 
   const renderProgressBar = (progress) => {
     const percentage = Math.round(progress || 0);

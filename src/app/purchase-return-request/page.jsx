@@ -1,6 +1,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import {
   Plus,
@@ -321,15 +322,7 @@ export default function VendorReturnRequestPage() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "₹0.00";

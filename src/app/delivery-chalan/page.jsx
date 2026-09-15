@@ -1,6 +1,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import {
   Plus,
@@ -323,17 +324,7 @@ export default function DeliveryChallan() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const handlePageChange = (newPage) => {
     if (newPage >= 0 && newPage < totalPages) {

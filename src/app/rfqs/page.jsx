@@ -1,5 +1,6 @@
 "use client";
 import apiRequest from "@/components/apiRequest";
+import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -144,15 +145,7 @@ export default function RFQPage() {
     return colors[status] || colors.DRAFT;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const handlePageChange = (newPage) => {
     if (newPage >= 0 && newPage < totalPages) {
