@@ -440,9 +440,14 @@ export default function DeliveryChallanForm({
               type="text"
               name="vehicleNumber"
               value={formData.vehicleNumber}
-              onChange={handleFormChange}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  vehicleNumber: e.target.value.toUpperCase(),
+                }))
+              }
               placeholder="e.g., MH12AB1234"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
             />
           </div>
           <div>

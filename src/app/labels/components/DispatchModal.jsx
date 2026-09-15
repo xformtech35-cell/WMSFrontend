@@ -51,7 +51,7 @@ export default function DispatchModal({
     const { name, value } = e.target;
     setDispatchData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "vehicleNumber" ? value.toUpperCase() : value,
     }));
   };
 

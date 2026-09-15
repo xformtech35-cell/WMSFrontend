@@ -35,6 +35,7 @@ import {
   MapPin as MapPinIcon,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserSelect from "@/components/UserSelect";
 
 export default function DispatchPage() {
   // List State
@@ -483,13 +484,7 @@ export default function DispatchPage() {
                           >
                             <Check className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Print Challan"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
+                          
                         </div>
                       </td>
                     </tr>

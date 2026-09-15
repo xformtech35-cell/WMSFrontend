@@ -320,9 +320,7 @@ export default function ReturnDispatches() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    POD
-                  </th>
+                  
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -411,19 +409,7 @@ export default function ReturnDispatches() {
                           {getStatusDisplayName(d)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {d.podReceived ? (
-                          <CheckCircle
-                            className="w-4 h-4 text-green-600 inline"
-                            title="POD received"
-                          />
-                        ) : (
-                          <XCircle
-                            className="w-4 h-4 text-gray-300 inline"
-                            title="POD not received"
-                          />
-                        )}
-                      </td>
+                       
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <button

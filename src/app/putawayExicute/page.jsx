@@ -160,6 +160,9 @@ export default function PutawayExicutePage() {
       if (filters.grnNumber?.trim()) {
         params.append("grnNumber", filters.grnNumber.trim());
       }
+      const role = localStorage.getItem("wms_role");
+      const assign = localStorage.getItem("wms_username");
+      if (role !== "ADMIN") params.append("assignedTo", assign);
       const response = await api.get(`/putaway?${params.toString()}`);
       const data = response.data?.data || response.data;
       const content = data?.content || response.data?.content || data || [];

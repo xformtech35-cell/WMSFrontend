@@ -36,6 +36,9 @@ const AuthImage = React.memo(function AuthImage({
     let objectUrl = null;
     let cancelled = false;
 
+    setImgSrc(null);
+    setError(false);
+
     const fetchImage = async () => {
       if (!userId) return;
 
@@ -44,6 +47,7 @@ const AuthImage = React.memo(function AuthImage({
           `/users/${userId}/profile-photo`,
           {
             responseType: 'blob',
+            skipToast: true,
           }
         );
 
@@ -70,18 +74,24 @@ const AuthImage = React.memo(function AuthImage({
   }, [userId]);
 
   if (error || !imgSrc) {
+    const isLarge = (width || 32) > 40;
     return (
       <div
         className={
           className ||
-          'w-8 h-8 rounded-full bg-muted flex items-center justify-center cursor-pointer'
+          'w-8 h-8 rounded-full bg-muted flex flex-col items-center justify-center cursor-pointer select-none text-muted-foreground'
         }
         onClick={onClick}
         style={{ width, height }}
       >
-        <span className="text-xs font-medium">
+        <span className={isLarge ? "text-4xl font-semibold mb-1" : "text-xs font-medium"}>
           {alt?.charAt(0)?.toUpperCase() || '?'}
         </span>
+        {isLarge && (
+          <span className="text-xs font-normal text-muted-foreground">
+            Image not present
+          </span>
+        )}
       </div>
     );
   }

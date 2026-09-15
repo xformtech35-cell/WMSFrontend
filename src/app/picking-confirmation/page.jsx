@@ -714,17 +714,7 @@ export default function PickListPageConfi() {
                             <Check className="w-4 h-4" />
                           </button>
                           {/* )} */}
-                          {(so.status === "PENDING" ||
-                            so.status === "DRAFT") && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(so.pickTaskNumber)}
-                              className="text-red-600 hover:text-red-800 transition-colors"
-                              title="Delete"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          )}
+                        
                         </div>
                       </td>
                     </tr>

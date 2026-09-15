@@ -205,7 +205,7 @@ export default function ShipmentConfirmation() {
     const { name, value } = e.target;
     setShipmentData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "vehicleNumber" ? value.toUpperCase() : value,
     }));
   };
 
@@ -635,13 +635,7 @@ export default function ShipmentConfirmation() {
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Print"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
+                       
                         </div>
                       </td>
                     </tr>
@@ -800,7 +794,7 @@ export default function ShipmentConfirmation() {
                       />
                     </div>
 
-                    <div className="md:col-span-2">
+                    {/* <div className="md:col-span-2">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Signature (Base64)
                       </label>
@@ -812,9 +806,9 @@ export default function ShipmentConfirmation() {
                         placeholder="Paste base64 encoded signature here..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm resize-none"
                       />
-                    </div>
+                    </div> */}
 
-                    <div className="md:col-span-2">
+                    {/* <div className="md:col-span-2">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Delivery Proof URL
                       </label>
@@ -826,7 +820,7 @@ export default function ShipmentConfirmation() {
                         placeholder="https://example.com/delivery-proof/12345"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                       />
-                    </div>
+                    </div> */}
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-medium text-gray-700 mb-1">

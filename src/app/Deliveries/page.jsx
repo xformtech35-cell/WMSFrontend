@@ -355,13 +355,7 @@ export default function Deliveries() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Print"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
+                          
                         </div>
                       </td>
                     </tr>

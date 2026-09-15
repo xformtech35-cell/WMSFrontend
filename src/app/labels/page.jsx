@@ -686,14 +686,7 @@ const handleDispatchSuccess = (data) => {
                           >
                             <Printer className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(pkg.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            title="Delete"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
+                           
                         </div>
                       </td>
                     </tr>

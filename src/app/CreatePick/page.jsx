@@ -465,9 +465,9 @@ export default function SalesOrderPage() {
                         <span className="bg-gray-100 px-2 py-1 rounded text-xs">
                           {so.items?.length || 0} items
                         </span>
-                        <span className="ml-2 text-xs text-gray-500">
+                        {/* <span className="ml-2 text-xs text-gray-500">
                           Qty: {so.totalQuantity || 0}
-                        </span>
+                        </span> */}
                       </td>
                       <td className="px-4 py-3">
                         <span
