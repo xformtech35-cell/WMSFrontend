@@ -52,7 +52,7 @@ const getPicklistsAPI = async (
   const role = localStorage.getItem("wms_role");
 
   const assign = localStorage.getItem("wms_username");
-  if (role !== "ADMIN") params.append("assignedTo", assign);
+  if (role !== "ADMIN") params.append("assignTo", assign);
   return apiRequest(
     `/vendor-returns/picklists/search?${params.toString()}`,
     "POST",
