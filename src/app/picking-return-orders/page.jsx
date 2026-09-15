@@ -31,8 +31,6 @@ import {
   X,
 } from "lucide-react";
 
-
-
 // API function for picklists
 const getPicklistsAPI = async (
   page = 0,
@@ -51,7 +49,10 @@ const getPicklistsAPI = async (
   if (status && status !== "ALL") {
     params.append("status", status);
   }
+  const role = localStorage.getItem("wms_role");
 
+  const assign = localStorage.getItem("wms_username");
+  if (role !== "ADMIN") params.append("assignedTo", assign);
   return apiRequest(
     `/vendor-returns/picklists/search?${params.toString()}`,
     "POST",
@@ -160,15 +161,17 @@ export default function VendorReturnPicklistsPage() {
     setSelectedPicklist(picklist);
     setSelectedOrderId(picklist.id);
     // Initialize with all lines selected by default
-    setSelectedLines(picklist.items?.map(item => ({ lineId: item.id })) || []);
+    setSelectedLines(
+      picklist.items?.map((item) => ({ lineId: item.id })) || [],
+    );
     setShowPickModal(true);
   };
 
   const handleLineToggle = (lineId) => {
-    setSelectedLines(prev => {
-      const exists = prev.some(item => item.lineId === lineId);
+    setSelectedLines((prev) => {
+      const exists = prev.some((item) => item.lineId === lineId);
       if (exists) {
-        return prev.filter(item => item.lineId !== lineId);
+        return prev.filter((item) => item.lineId !== lineId);
       } else {
         return [...prev, { lineId }];
       }
@@ -177,7 +180,9 @@ export default function VendorReturnPicklistsPage() {
 
   const handleSelectAllLines = () => {
     if (!selectedPicklist?.items) return;
-    const allLineIds = selectedPicklist.items.map(item => ({ lineId: item.id }));
+    const allLineIds = selectedPicklist.items.map((item) => ({
+      lineId: item.id,
+    }));
     setSelectedLines(allLineIds);
   };
 
@@ -194,14 +199,14 @@ export default function VendorReturnPicklistsPage() {
     try {
       setPickingItems(true);
       await pickItemsAPI(selectedOrderId, selectedLines);
-      
+
       setSuccessMessage(`Successfully picked ${selectedLines.length} item(s)!`);
       setShowSuccess(true);
       setShowPickModal(false);
       setSelectedPicklist(null);
       setSelectedOrderId(null);
       setSelectedLines([]);
-      
+
       // Reload picklists
       await loadPicklists();
     } catch (error) {
@@ -382,7 +387,7 @@ export default function VendorReturnPicklistsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -526,16 +531,18 @@ export default function VendorReturnPicklistsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {picklist.status !== "COMPLETED" && picklist.status !== "CANCELLED" && picklist.status !== "PENDING_QC" && (
-                            <button
-                              type="button"
-                              onClick={() => handlePickClick(picklist)}
-                              className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
-                              title="Pick Items"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )}
+                          {picklist.status !== "COMPLETED" &&
+                            picklist.status !== "CANCELLED" &&
+                            picklist.status !== "PENDING_QC" && (
+                              <button
+                                type="button"
+                                onClick={() => handlePickClick(picklist)}
+                                className="text-green-600 cursor-pointer hover:text-green-800 transition-colors"
+                                title="Pick Items"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -616,7 +623,9 @@ export default function VendorReturnPicklistsPage() {
               <div className="p-6 max-h-[70vh] overflow-y-auto">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    Select items to pick: <span className="font-medium">{selectedLines.length}</span> selected
+                    Select items to pick:{" "}
+                    <span className="font-medium">{selectedLines.length}</span>{" "}
+                    selected
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -643,7 +652,10 @@ export default function VendorReturnPicklistsPage() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                           <input
                             type="checkbox"
-                            checked={selectedLines.length === selectedPicklist.items?.length}
+                            checked={
+                              selectedLines.length ===
+                              selectedPicklist.items?.length
+                            }
                             onChange={(e) => {
                               if (e.target.checked) {
                                 handleSelectAllLines();
@@ -686,10 +698,15 @@ export default function VendorReturnPicklistsPage() {
                           <td className="px-3 py-2">
                             <input
                               type="checkbox"
-                              checked={selectedLines.some(line => line.lineId === item.id)}
+                              checked={selectedLines.some(
+                                (line) => line.lineId === item.id,
+                              )}
                               onChange={() => handleLineToggle(item.id)}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              disabled={item.status === "PICKED" || item.status === "PACKED"}
+                              disabled={
+                                item.status === "PICKED" ||
+                                item.status === "PACKED"
+                              }
                             />
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-500">

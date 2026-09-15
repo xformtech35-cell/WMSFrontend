@@ -34,6 +34,7 @@ import {
   Clipboard,
 } from "lucide-react";
 import apiRequest from "@/components/apiRequest";
+import api from "@/lib/api";
 import { useDateFormat } from "@/context/DateFormatContext";
 
 export default function ShipmentConfirmation() {

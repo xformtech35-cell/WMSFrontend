@@ -23,6 +23,7 @@ import { usePaginatedItems } from "@/lib/hooks/usePaginatedItems";
 import { CREATE } from "@/components/apiRequest";
 import PutawayDetailsModal from "./components/PutawayDetailsModal";
 import PutawayExecuteModal from "./components/PutawayExecuteModal";
+import UserFullName from "@/components/UserFullName";
 
 async function fetchApprovedGRNs(params = {}) {
   const response = await api.get(
@@ -785,7 +786,8 @@ export default function PutawayExicutePage() {
                       <div className="flex items-center gap-2">
                         <User className="w-3.5 h-3.5 text-gray-400" />
                         <span className="text-sm font-medium text-gray-800">
-                          {item.assignedTo || "-"}
+                          {/* {item.assignedTo || "-"} */}
+                          <UserFullName username={item.assignedTo || "N/A"} />
                         </span>
                       </div>
                     </td>

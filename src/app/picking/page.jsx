@@ -38,6 +38,7 @@ import {
   PackageSearch,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserFullName from "@/components/UserFullName";
 
 const getSalesOrdersAPI = async (
   page = 0,
@@ -52,8 +53,9 @@ const getSalesOrdersAPI = async (
     if (searchTerm) params.append("search", searchTerm);
     if (status && status !== "ALL") params.append("status", status);
     const role = localStorage.getItem("wms_role");
-    const assign = localStorage.getItem("wms_name");
-    // if (role !== "ADMIN") params.append("assignedTo", assign);
+    const assign = localStorage.getItem("wms_username");
+    if (role !== "ADMIN") params.append("assignedTo", assign);
+    console.log("Fetching sales orders with params:", params.toString());
     const url = `/outbound/pick-lists${params.toString() ? `?${params.toString()}` : ""}`;
     const response = await api.get(url);
     console.log("GET sales orders response:", response);
@@ -704,7 +706,7 @@ export default function PickListPage() {
                       </td>
                       <td
                         className="px-4 py-3 cursor-pointer"
-                        onClick={() => handleViewClick(so)}
+                      onClick={() => handleViewClick(so)}
                       >
                         <span className="text-sm">{so.soNumber}</span>
                       </td>
@@ -713,7 +715,8 @@ export default function PickListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {so.assignedTo || "N/A"}
+                          {/* {so.assignedTo || "N/A"} */}
+                          <UserFullName username={so.assignedTo || "N/A"} />
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">{so.warehouseId}</td>
@@ -849,43 +852,7 @@ export default function PickListPage() {
 
                 <div className="p-6">
                   {/* Status Update Actions */}
-                  <div className="mb-6">
-                    <div className="flex flex-wrap gap-2">
-                      {getStatusActions(viewingSO.status).map((action) => (
-                        <button
-                          key={action.status}
-                          type="button"
-                          onClick={() =>
-                            handleStatusUpdate(
-                              viewingSO.pickListNumber,
-                              action.status,
-                              action.label,
-                            )
-                          }
-                          disabled={updatingStatus}
-                          className={`px-4 py-2 rounded-lg flex items-center gap-2 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${action.color}`}
-                        >
-                          <action.icon className="w-4 h-4" />
-                          {updatingStatus ? "Processing..." : action.label}
-                        </button>
-                      ))}
-                      {/* Create Pick Task button in view modal */}
-                      {(viewingSO.status === "RELEASED" ||
-                        viewingSO.status === "PENDING") && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleViewClose();
-                            handleOpenPickTask(viewingSO);
-                          }}
-                          className="px-4 py-2 rounded-lg flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                        >
-                          <Package className="w-4 h-4" />
-                          Create Pick Task
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                   
 
                   {/* Basic Info Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
@@ -935,7 +902,8 @@ export default function PickListPage() {
                         Assigned To
                       </label>
                       <p className="font-medium text-gray-900">
-                        {viewingSO.assignedTo || "N/A"}
+                        {/* {viewingSO.assignedTo || "N/A"} */}
+                        <UserFullName username={viewingSO.assignedTo || "N/A"} />
                       </p>
                     </div>
                     <div>

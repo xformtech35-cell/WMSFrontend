@@ -47,6 +47,7 @@ import {
   PackagePlus,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserFullName from "@/components/UserFullName";
 
 
 
@@ -790,7 +791,9 @@ export default function PickListPageConfiAll() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {so.confirmedBy || "N/A"}
+                          {/* {so.confirmedBy || "N/A"} */}
+                                                    <UserFullName username={so.confirmedBy || "N/A"} />
+
                         </div>
                         <div className="text-xs text-gray-500">
                           {formatDate(so.confirmedDate)}
@@ -945,7 +948,12 @@ export default function PickListPageConfiAll() {
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">Confirmed By</label>
-                      <p className="font-medium text-gray-900">{viewingSO.confirmedBy}</p>
+                      <p className="font-medium text-gray-900">
+                        {/* {viewingSO.confirmedBy} */}
+                          <UserFullName username={viewingSO.confirmedBy || "N/A"} />
+
+                        
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">Created At</label>

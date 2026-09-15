@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import StatusBadge from "@/components/StatusBadge";
 import { Label } from "@/components/ui/label";
+import UserFullName from "@/components/UserFullName";
 export default function PutawayDetailsModal({
   open,
   onClose,
@@ -77,7 +78,10 @@ export default function PutawayDetailsModal({
                   Assigned To
                 </Label>
                 <p className="font-medium">
-                  {selectedPutaway.assignedTo || "-"}
+                  {/* {selectedPutaway.assignedTo || "-"} */}
+                  <UserFullName
+                    username={selectedPutaway.assignedTo || "N/A"}
+                  />
                 </p>
               </div>
               <div>

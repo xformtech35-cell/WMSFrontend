@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Truck,
 } from "lucide-react";
+import UserFullName from "@/components/UserFullName";
 
 const ViewPackageModal = ({
   viewingPackage,
@@ -196,6 +197,8 @@ const ViewPackageModal = ({
                 </label>
                 <p className="font-medium text-gray-900">
                   {viewingPackage.packedBy}
+                                            <UserFullName username={viewingPackage.packedBy || "N/A"} />
+
                 </p>
               </div>
               <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import apiRequest from "@/components/apiRequest";
+import UserSelect from "@/components/UserSelect";
 import { useDateFormat } from "@/context/DateFormatContext";
 import React, { useState, useEffect } from "react";
 import {
@@ -559,9 +560,7 @@ export default function VendorReturnPicklistsPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Supplier
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned To
-                  </th>
+                   
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Items
                   </th>
@@ -622,14 +621,7 @@ export default function VendorReturnPicklistsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center gap-1">
-                          <User className="w-3 h-3 text-gray-400" />
-                          <span className="text-gray-700">
-                            {picklist.assignedTo || "Unassigned"}
-                          </span>
-                        </div>
-                      </td>
+                      
                       <td className="px-4 py-3 text-sm text-right">
                         {picklist.totalItems || 0}
                       </td>
@@ -1062,28 +1054,21 @@ export default function VendorReturnPicklistsPage() {
                                 </button>
                               </div>
                             </td>
-                            <td className="px-3 py-2">
-                              <select
-                                value={qcItem.verifiedBy || ""}
-                                onChange={(e) =>
+                            <td className="px-3 py-2 min-w-[180px]">
+                              <UserSelect
+                                name="verifiedBy"
+                                value={qcItem.verifiedBy}
+                                onChange={(user, e) =>
                                   handleQcLineChange(
                                     index,
                                     "verifiedBy",
-                                    e.target.value
-                                      ? Number(e.target.value)
-                                      : null,
+                                    user?.id || (e.target.value ? Number(e.target.value) : null),
                                   )
                                 }
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                disabled={loadingUsers}
-                              >
-                                <option value="">Select Verifier</option>
-                                {users.map((user) => (
-                                  <option key={user.id} value={user.id}>
-                                    {getUserDisplayName(user)}
-                                  </option>
-                                ))}
-                              </select>
+                                valueKey="id"
+                                placeholder="Select Verifier..."
+                                containerClassName="w-full"
+                              />
                             </td>
                             <td className="px-3 py-2">
                               <input

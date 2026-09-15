@@ -42,6 +42,7 @@ import {
   Save,
 } from "lucide-react";
 import api from "@/lib/api";
+import UserFullName from "@/components/UserFullName";
 
 const getSalesOrdersAPI = async (
   page = 0,
@@ -667,7 +668,8 @@ export default function PickListPageConfi() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {so.pickerName || "N/A"}
+                          {/* {so.pickerName || "N/A"} */}
+                          <UserFullName username={so.pickerName || "N/A"} />
                         </div>
                         <div className="text-xs text-gray-500">
                           ID: {so.pickerId || "N/A"}
@@ -891,20 +893,14 @@ export default function PickListPageConfi() {
                         {viewingSO.pickedQuantity || 0}
                       </p>
                     </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Picker ID
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickerId || "N/A"}
-                      </p>
-                    </div>
+                    
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Picker Name
                       </label>
                       <p className="font-medium text-gray-900">
-                        {viewingSO.pickerName || "N/A"}
+                        {/* {viewingSO.pickerName || "N/A"} */}
+                        <UserFullName username={viewingSO.pickerName || "N/A"} />
                       </p>
                     </div>
                     <div>

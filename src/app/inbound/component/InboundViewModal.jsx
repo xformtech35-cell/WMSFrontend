@@ -27,6 +27,7 @@ import {
 import ImageGallery from "@/components/ImageGallery";
 import { API_ROOT } from "@/lib/config";
 import { useDateFormat } from "@/context/DateFormatContext";
+import UserFullName from "@/components/UserFullName";
 
 const InboundViewModal = ({
   inbound,
@@ -42,7 +43,8 @@ const InboundViewModal = ({
 }) => {
   const { formatDate: contextFormatDate } = useDateFormat();
   const formatDate = propFormatDate || contextFormatDate;
-  const formatDateTime = propFormatDateTime || ((d) => formatDate(d, null, true));
+  const formatDateTime =
+    propFormatDateTime || ((d) => formatDate(d, null, true));
   const [activeTab, setActiveTab] = useState("overview");
 
   if (!inbound) return null;
@@ -184,11 +186,9 @@ const InboundViewModal = ({
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-1">
-                      Arrival Rock
-                    </p>
+                    <p className="text-xs text-gray-500 mb-1">Arrival Rock</p>
                     <p className="text-sm font-medium text-gray-900">
-                     {inbound.rock
+                      {inbound.rock
                         ? `${inbound?.rock.name} -${inbound?.rock?.warehouse?.name} `
                         : "Not Arrived"}
                     </p>
@@ -432,7 +432,8 @@ const InboundViewModal = ({
                       <div>
                         <p className="text-xs text-gray-500">Unloaded By</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {inbound.unloadedBy || "N/A"}
+                          {/* {inbound.unloadedBy || "N/A"} */}
+                          <UserFullName username={inbound.unloadedBy || "N/A"} />
                         </p>
                       </div>
                       <div>
