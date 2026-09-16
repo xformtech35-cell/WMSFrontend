@@ -706,7 +706,7 @@ export default function PickListPage() {
                       </td>
                       <td
                         className="px-4 py-3 cursor-pointer"
-                      onClick={() => handleViewClick(so)}
+                        onClick={() => handleViewClick(so)}
                       >
                         <span className="text-sm">{so.soNumber}</span>
                       </td>
@@ -852,7 +852,6 @@ export default function PickListPage() {
 
                 <div className="p-6">
                   {/* Status Update Actions */}
-                   
 
                   {/* Basic Info Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
@@ -903,7 +902,9 @@ export default function PickListPage() {
                       </label>
                       <p className="font-medium text-gray-900">
                         {/* {viewingSO.assignedTo || "N/A"} */}
-                        <UserFullName username={viewingSO.assignedTo || "N/A"} />
+                        <UserFullName
+                          username={viewingSO.assignedTo || "N/A"}
+                        />
                       </p>
                     </div>
                     <div>
@@ -1167,6 +1168,12 @@ export default function PickListPage() {
                               type="text"
                               name="itemBarcode"
                               value={pickTaskData.itemBarcode}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                }
+                              }}
+                              autoFocus
                               onChange={handlePickTaskInputChange}
                               placeholder="Scan or enter item barcode"
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -1175,7 +1182,7 @@ export default function PickListPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Bin ID
@@ -1205,7 +1212,7 @@ export default function PickListPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                           />
                         </div>
-                      </div>
+                      </div> */}
 
                       <div>
                         <UserSelect

@@ -164,7 +164,11 @@ export default function QRCodeGeneratorPage() {
   const [isLoadingAutoLocation, setIsLoadingAutoLocation] = useState(false);
 
   // Fetch Auto Putaway suggestion from POST /inventory-stock/filter
-  const fetchAutoLocationSuggestion = async (itemCode, quantity, warehouseIdVal) => {
+  const fetchAutoLocationSuggestion = async (
+    itemCode,
+    quantity,
+    warehouseIdVal,
+  ) => {
     if (!itemCode || !quantity || Number(quantity) <= 0) {
       setAutoLocationData(null);
       return;
@@ -176,20 +180,34 @@ export default function QRCodeGeneratorPage() {
       let selectedWId;
       if (warehouseIdVal) {
         const foundWh = warehouses.find(
-          (w) => String(w.id) === String(warehouseIdVal) || w.warehouseId === warehouseIdVal
+          (w) =>
+            String(w.id) === String(warehouseIdVal) ||
+            w.warehouseId === warehouseIdVal,
         );
         selectedWId = foundWh?.warehouseId || foundWh?.id || warehouseIdVal;
       }
 
-      const payload = {
+      // const payload = {
+      //   itemCode: itemCode.trim(),
+      //   quantity: Number(quantity),
+      // };
+      // if (selectedWId) {
+      //   payload.warehouseId = selectedWId;
+      // }
+
+      // const response = await api.post("/inventory-stock/filter", payload);
+      const params = {
         itemCode: itemCode.trim(),
         quantity: Number(quantity),
       };
+
       if (selectedWId) {
-        payload.warehouseId = selectedWId;
+        params.warehouseId = selectedWId;
       }
 
-      const response = await api.post("/inventory-stock/filter", payload);
+      const response = await api.post("/inventory-stock/filter", null, {
+        params,
+      });
       const data = response.data?.data || response.data;
       setAutoLocationData(data);
 
@@ -197,33 +215,56 @@ export default function QRCodeGeneratorPage() {
         const sug = data.locationSuggestion;
 
         const matchedWarehouse = warehouses.find(
-          (w) => String(w.warehouseId) === String(sug.warehouseId) || String(w.id) === String(sug.warehouseId) || w.name === sug.warehouseId
+          (w) =>
+            String(w.warehouseId) === String(sug.warehouseId) ||
+            String(w.id) === String(sug.warehouseId) ||
+            w.name === sug.warehouseId,
         );
         const matchedZone = zones.find(
-          (z) => String(z.zoneId) === String(sug.zone) || String(z.id) === String(sug.zone) || z.name === sug.zone
+          (z) =>
+            String(z.zoneId) === String(sug.zone) ||
+            String(z.id) === String(sug.zone) ||
+            z.name === sug.zone,
         );
         const matchedAisle = aisles.find(
-          (a) => String(a.aisleId) === String(sug.aisle) || String(a.aisleNumber) === String(sug.aisle) || String(a.id) === String(sug.aisle)
+          (a) =>
+            String(a.aisleId) === String(sug.aisle) ||
+            String(a.aisleNumber) === String(sug.aisle) ||
+            String(a.id) === String(sug.aisle),
         );
         const matchedRack = racks.find(
-          (r) => String(r.rackId) === String(sug.rack) || String(r.id) === String(sug.rack) || r.name === sug.rack
+          (r) =>
+            String(r.rackId) === String(sug.rack) ||
+            String(r.id) === String(sug.rack) ||
+            r.name === sug.rack,
         );
         const matchedLevel = levels.find(
-          (l) => String(l.levelId) === String(sug.level) || String(l.id) === String(sug.level) || l.name === sug.level
+          (l) =>
+            String(l.levelId) === String(sug.level) ||
+            String(l.id) === String(sug.level) ||
+            l.name === sug.level,
         );
         const matchedBin = bins.find(
-          (b) => b.barcode === sug.binBarcode || b.binId === sug.binId || b.barcode === sug.binId || String(b.id) === String(sug.binId)
+          (b) =>
+            b.barcode === sug.binBarcode ||
+            b.binId === sug.binId ||
+            b.barcode === sug.binId ||
+            String(b.id) === String(sug.binId),
         );
 
         setFormData((prev) => ({
           ...prev,
-          warehouseId: matchedWarehouse ? String(matchedWarehouse.id) : (prev.warehouseId || sug.warehouseId || ""),
+          warehouseId: matchedWarehouse
+            ? String(matchedWarehouse.id)
+            : prev.warehouseId || sug.warehouseId || "",
           zoneId: matchedZone ? String(matchedZone.id) : "",
           aisleId: matchedAisle ? String(matchedAisle.id) : "",
           rackId: matchedRack ? String(matchedRack.id) : "",
           levelId: matchedLevel ? String(matchedLevel.id) : "",
           shelfId: sug.shelf || "",
-          binId: matchedBin ? String(matchedBin.id) : (sug.binBarcode || sug.binId || ""),
+          binId: matchedBin
+            ? String(matchedBin.id)
+            : sug.binBarcode || sug.binId || "",
         }));
       }
     } catch (error) {
@@ -235,13 +276,33 @@ export default function QRCodeGeneratorPage() {
   };
 
   useEffect(() => {
-    if (locationMode === "auto" && formData.itemCode && formData.quantity && Number(formData.quantity) > 0) {
+    if (
+      locationMode === "auto" &&
+      formData.itemCode &&
+      formData.quantity &&
+      Number(formData.quantity) > 0
+    ) {
       const timer = setTimeout(() => {
-        fetchAutoLocationSuggestion(formData.itemCode, formData.quantity, formData.warehouseId);
+        fetchAutoLocationSuggestion(
+          formData.itemCode,
+          formData.quantity,
+          formData.warehouseId,
+        );
       }, 350);
       return () => clearTimeout(timer);
     }
-  }, [locationMode, formData.itemCode, formData.quantity, formData.warehouseId, warehouses, zones, aisles, racks, levels, bins]);
+  }, [
+    locationMode,
+    formData.itemCode,
+    formData.quantity,
+    formData.warehouseId,
+    warehouses,
+    zones,
+    aisles,
+    racks,
+    levels,
+    bins,
+  ]);
 
   // Fetch master data and QR codes on mount
   useEffect(() => {
@@ -374,15 +435,21 @@ export default function QRCodeGeneratorPage() {
       const content = Array.isArray(rawData)
         ? rawData
         : Array.isArray(rawData?.content)
-        ? rawData.content
-        : Array.isArray(rawData?.items)
-        ? rawData.items
-        : Array.isArray(rawData?.data)
-        ? rawData.data
-        : [];
+          ? rawData.content
+          : Array.isArray(rawData?.items)
+            ? rawData.items
+            : Array.isArray(rawData?.data)
+              ? rawData.data
+              : [];
 
       const totalElements = rawData?.totalElements ?? content.length;
-      const totalPages = rawData?.totalPages ?? Math.ceil((totalElements || content.length) / (rawData?.size || pagination.pageSize || 20)) ?? 1;
+      const totalPages =
+        rawData?.totalPages ??
+        Math.ceil(
+          (totalElements || content.length) /
+            (rawData?.size || pagination.pageSize || 20),
+        ) ??
+        1;
       const currentPage = rawData?.number ?? page;
       const pageSize = rawData?.size ?? pagination.pageSize;
       const first = rawData?.first ?? true;
@@ -1312,7 +1379,9 @@ export default function QRCodeGeneratorPage() {
                           Warehouse Location
                         </h3>
                         <div className="flex items-center gap-4 bg-gray-100 p-1 rounded-lg text-xs font-medium">
-                          <label className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer transition-colors ${locationMode === "auto" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+                          <label
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer transition-colors ${locationMode === "auto" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                          >
                             <input
                               type="radio"
                               name="locationMode"
@@ -1323,7 +1392,9 @@ export default function QRCodeGeneratorPage() {
                             />
                             Auto Putaway
                           </label>
-                          <label className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer transition-colors ${locationMode === "custom" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+                          <label
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer transition-colors ${locationMode === "custom" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                          >
                             <input
                               type="radio"
                               name="locationMode"
@@ -1341,7 +1412,12 @@ export default function QRCodeGeneratorPage() {
                         <div className="space-y-4 rounded-xl border bg-blue-50/40 p-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <Label htmlFor="warehouseId" className="text-xs text-gray-600">Filter Warehouse (Optional)</Label>
+                              <Label
+                                htmlFor="warehouseId"
+                                className="text-xs text-gray-600"
+                              >
+                                Filter Warehouse (Optional)
+                              </Label>
                               <select
                                 id="warehouseId"
                                 name="warehouseId"
@@ -1349,10 +1425,13 @@ export default function QRCodeGeneratorPage() {
                                 value={formData.warehouseId}
                                 onChange={handleInputChange}
                               >
-                                <option value="">All Warehouses (Auto-suggest)</option>
+                                <option value="">
+                                  All Warehouses (Auto-suggest)
+                                </option>
                                 {warehouses.map((w) => (
                                   <option key={w.id} value={w.id}>
-                                    {w.name} {w.warehouseId ? `(${w.warehouseId})` : ""}
+                                    {w.name}{" "}
+                                    {w.warehouseId ? `(${w.warehouseId})` : ""}
                                   </option>
                                 ))}
                               </select>
@@ -1370,34 +1449,65 @@ export default function QRCodeGeneratorPage() {
                                 <span className="text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
                                   Suggested Location
                                 </span>
-                                <div className="text-xs text-gray-500">
-                                  Slots Available: <span className="font-semibold text-green-600">{autoLocationData.availableSlots ?? "-"}</span> / {autoLocationData.totalBinCapacity ?? "-"}
-                                </div>
+                               
                               </div>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                                 <div>
-                                  <span className="text-gray-500 block">Warehouse</span>
-                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.warehouseId || "-"}</span>
+                                  <span className="text-gray-500 block">
+                                    Warehouse
+                                  </span>
+                                  <span className="font-semibold text-gray-800">
+                                    {autoLocationData.locationSuggestion
+                                      .warehouseId || "-"}
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-gray-500 block">Zone</span>
-                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.zone || "-"}</span>
+                                  <span className="text-gray-500 block">
+                                    Zone
+                                  </span>
+                                  <span className="font-semibold text-gray-800">
+                                    {autoLocationData.locationSuggestion.zone ||
+                                      "-"}
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-gray-500 block">Aisle</span>
-                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.aisle || "-"}</span>
+                                  <span className="text-gray-500 block">
+                                    Aisle
+                                  </span>
+                                  <span className="font-semibold text-gray-800">
+                                    {autoLocationData.locationSuggestion
+                                      .aisle || "-"}
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-gray-500 block">Rack</span>
-                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.rack || "-"}</span>
+                                  <span className="text-gray-500 block">
+                                    Rack
+                                  </span>
+                                  <span className="font-semibold text-gray-800">
+                                    {autoLocationData.locationSuggestion.rack ||
+                                      "-"}
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-gray-500 block">Level</span>
-                                  <span className="font-semibold text-gray-800">{autoLocationData.locationSuggestion.level || "-"}</span>
+                                  <span className="text-gray-500 block">
+                                    Level
+                                  </span>
+                                  <span className="font-semibold text-gray-800">
+                                    {autoLocationData.locationSuggestion
+                                      .level || "-"}
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-gray-500 block">Bin / Barcode</span>
-                                  <span className="font-bold text-blue-600">{autoLocationData.locationSuggestion.binBarcode || autoLocationData.locationSuggestion.binId || "-"}</span>
+                                  <span className="text-gray-500 block">
+                                    Bin / Barcode
+                                  </span>
+                                  <span className="font-bold text-blue-600">
+                                    {autoLocationData.locationSuggestion
+                                      .binBarcode ||
+                                      autoLocationData.locationSuggestion
+                                        .binId ||
+                                      "-"}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1469,7 +1579,9 @@ export default function QRCodeGeneratorPage() {
                               <option value="">Select aisle</option>
                               {filteredAisles.map((a) => (
                                 <option key={a.id} value={a.id}>
-                                  {a.aisleNumber || a.aisleId || `Aisle ${a.id}`}
+                                  {a.aisleNumber ||
+                                    a.aisleId ||
+                                    `Aisle ${a.id}`}
                                   {a.name ? ` - ${a.name}` : ""}
                                 </option>
                               ))}
@@ -1489,7 +1601,9 @@ export default function QRCodeGeneratorPage() {
                               <option value="">Select rack</option>
                               {filteredRacks.map((r) => (
                                 <option key={r.id} value={r.id}>
-                                  {r.rackId || r.rackIdentifier || `Rack ${r.id}`}
+                                  {r.rackId ||
+                                    r.rackIdentifier ||
+                                    `Rack ${r.id}`}
                                   {r.name ? ` - ${r.name}` : ""}
                                 </option>
                               ))}
@@ -1544,7 +1658,8 @@ export default function QRCodeGeneratorPage() {
                               {filteredBins.map((b) => (
                                 <option key={b.id} value={b.id}>
                                   {b.barcode || b.binId || `Bin ${b.id}`} -{" "}
-                                  {b.stockSummary?.availableSlots || 0} available
+                                  {b.stockSummary?.availableSlots || 0}{" "}
+                                  available
                                 </option>
                               ))}
                             </select>

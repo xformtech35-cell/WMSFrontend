@@ -12,12 +12,14 @@ import {
 import StatusBadge from "@/components/StatusBadge";
 import { Label } from "@/components/ui/label";
 import UserFullName from "@/components/UserFullName";
+import { useDateFormat } from "@/context/DateFormatContext";
 export default function PutawayDetailsModal({
   open,
   onClose,
   selectedPutaway,
 }) {
   if (!open || !selectedPutaway) return null;
+  const { formatDate } = useDateFormat();
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -113,12 +115,7 @@ export default function PutawayDetailsModal({
                   Created At
                 </Label>
                 <p className="font-medium text-sm">
-                  {selectedPutaway.createdAt
-                    ? format(
-                        new Date(selectedPutaway.createdAt),
-                        "dd MMM yyyy HH:mm",
-                      )
-                    : "-"}
+                  {formatDate(selectedPutaway.createdAt)}
                 </p>
               </div>
             </div>
