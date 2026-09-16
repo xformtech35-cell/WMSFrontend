@@ -35,8 +35,7 @@ import {
   Users,
 } from "lucide-react";
 import api from "@/lib/api";
-
-
+import UserFullName from "@/components/UserFullName";
 
 // API function for picklists
 const getPicklistsAPI = async (
@@ -521,7 +520,7 @@ export default function VendorReturnPicklistsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -560,7 +559,7 @@ export default function VendorReturnPicklistsPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Supplier
                   </th>
-                   
+
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Items
                   </th>
@@ -621,7 +620,7 @@ export default function VendorReturnPicklistsPage() {
                           </div>
                         </div>
                       </td>
-                      
+
                       <td className="px-4 py-3 text-sm text-right">
                         {picklist.totalItems || 0}
                       </td>
@@ -1062,7 +1061,10 @@ export default function VendorReturnPicklistsPage() {
                                   handleQcLineChange(
                                     index,
                                     "verifiedBy",
-                                    user?.id || (e.target.value ? Number(e.target.value) : null),
+                                    user?.id ||
+                                      (e.target.value
+                                        ? Number(e.target.value)
+                                        : null),
                                   )
                                 }
                                 valueKey="id"
@@ -1174,7 +1176,10 @@ export default function VendorReturnPicklistsPage() {
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-xs text-gray-500">Assigned To</div>
                     <div className="font-medium text-sm">
-                      {viewingPicklist.assignedTo || "Unassigned"}
+                      {/* {viewingPicklist.assignedTo || "Unassigned"} */}
+                      <UserFullName
+                        username={viewingPicklist.assignedTo || "N/A"}
+                      />
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">

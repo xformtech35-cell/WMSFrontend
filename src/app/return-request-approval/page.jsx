@@ -2,6 +2,7 @@
 
 import apiRequest from "@/components/apiRequest";
 import { useDateFormat } from "@/context/DateFormatContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import React, { useState, useEffect } from "react";
 import {
   Plus,
@@ -344,11 +345,7 @@ export default function VendorReturnRequestPage() {
   };
 
   const { formatDate } = useDateFormat();
-
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return "₹0.00";
-    return `₹${Number(amount).toFixed(2)}`;
-  };
+  const { formatCurrency } = useCurrency();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

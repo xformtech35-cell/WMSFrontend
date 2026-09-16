@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useCurrency } from "@/context/CurrencyContext";
 import {
   X,
   Save,
@@ -67,10 +68,7 @@ const VendorReturnOrderForm = ({
     return date.toISOString().split('T')[0];
   };
 
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return "₹0.00";
-    return `₹${Number(amount).toFixed(2)}`;
-  };
+  const { formatCurrency, currencySymbol } = useCurrency();
 
   const validateForm = () => {
     const newErrors = {};

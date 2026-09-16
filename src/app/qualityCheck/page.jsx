@@ -2,6 +2,7 @@
 "use client";
 import apiRequest from "@/components/apiRequest";
 import { FormattedDate, useDateFormat } from "@/context/DateFormatContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -223,13 +224,7 @@ export default function InboundPage() {
   };
 
   const { formatDate } = useDateFormat();
-
-
-
-  const formatCurrency = (amount) => {
-    if (!amount) return "₹0.00";
-    return `₹${amount.toFixed(2)}`;
-  };
+  const { formatCurrency } = useCurrency();
 
   const handlePageChange = (newPage) => {
     if (newPage >= 0 && newPage < totalPages) {

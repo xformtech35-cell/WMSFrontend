@@ -495,7 +495,9 @@ export default function VendorReturnPicklistsPage() {
                           <User className="w-3 h-3 text-gray-400" />
                           <span className="text-gray-700">
                             {/* {picklist.assignedTo || "Unassigned"} */}
-                            <UserFullName username={picklist.assignedTo || "N/A"} />
+                            <UserFullName
+                              username={picklist.assignedTo || "N/A"}
+                            />
                           </span>
                         </div>
                       </td>
@@ -828,7 +830,10 @@ export default function VendorReturnPicklistsPage() {
                   <div className="bg-gray-50 rounded-lg p-3">
                     <div className="text-xs text-gray-500">Assigned To</div>
                     <div className="font-medium text-sm">
-                      {viewingPicklist.assignedTo || "Unassigned"}
+                      {/* {viewingPicklist.assignedTo || "Unassigned"} */}
+                      <UserFullName
+                        username={viewingPicklist.assignedTo || "N/A"}
+                      />
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">

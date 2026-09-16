@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useDateFormat } from "@/context/DateFormatContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import {
   FileText,
   X,
@@ -60,12 +61,8 @@ const VendorReturnView = ({ data, onClose, onApprove, onReject, users }) => {
   };
 
   const { formatDate } = useDateFormat();
+  const { formatCurrency, currencySymbol } = useCurrency();
   const formatDateTime = (dateString) => formatDate(dateString, null, true);
-
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return "₹0.00";
-    return `₹${Number(amount).toFixed(2)}`;
-  };
 
   const handleApprove = async () => {
     if (!onApprove) return;

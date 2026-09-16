@@ -2,6 +2,7 @@
 
 import apiRequest from "@/components/apiRequest";
 import { useDateFormat } from "@/context/DateFormatContext";
+import { useCurrency } from "@/context/CurrencyContext";
 import React, { useState, useEffect } from "react";
 import {
   Eye,
@@ -265,11 +266,7 @@ export default function VendorReturnOrdersPage() {
   };
 
   const { formatDate } = useDateFormat();
-
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return "₹0.00";
-    return `₹${Number(amount).toFixed(2)}`;
-  };
+  const { formatCurrency } = useCurrency();
 
   const getStatusDisplayName = (status) => {
     const names = {
