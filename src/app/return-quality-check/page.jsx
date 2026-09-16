@@ -531,11 +531,11 @@ export default function VendorReturnPicklistsPage() {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="ALL">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="IN_PROGRESS">In Progress</option>
+                <option value="PENDING_QC">Pending QC</option>
+                <option value="PENDING_PICKING">Pending Picking</option>
                 <option value="PACKED">Packed</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
+                {/* <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option> */}
               </select>
             </div>
 

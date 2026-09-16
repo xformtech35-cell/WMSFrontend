@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import UserSelect from "@/components/UserSelect";
 import { useDateFormat } from "@/context/DateFormatContext";
 import {
   FileText,
@@ -474,21 +475,15 @@ const VendorReturnView = ({ data, onClose, onApprove, onReject, users }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select Approver *
                 </label>
-                <select
+                <UserSelect
+                  name="approver"
                   value={selectedApprover}
-                  onChange={(e) => setSelectedApprover(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Select Approver</option>
-                  {users?.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name ||
-                        user.username ||
-                        user.email ||
-                        `User ${user.id}`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(user, e) => {
+                    setSelectedApprover(user?.id || e.target.value);
+                  }}
+                  valueKey="id"
+                  placeholder="Select Approver..."
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
@@ -556,21 +551,15 @@ const VendorReturnView = ({ data, onClose, onApprove, onReject, users }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select Rejector *
                 </label>
-                <select
+                <UserSelect
+                  name="rejector"
                   value={selectedRejector}
-                  onChange={(e) => setSelectedRejector(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  <option value="">Select Rejector</option>
-                  {users?.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name ||
-                        user.username ||
-                        user.email ||
-                        `User ${user.id}`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(user, e) => {
+                    setSelectedRejector(user?.id || e.target.value);
+                  }}
+                  valueKey="id"
+                  placeholder="Select Rejector..."
+                />
               </div>
 
               <div>
