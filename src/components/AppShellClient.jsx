@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import DateFormatDropdown from "@/components/DateFormatDropdown";
+import CurrencyDropdown from "@/components/CurrencyDropdown";
 
 const PUBLIC_ROUTES = ["/login", "/guide", "/forgot-password"];
 
@@ -269,6 +270,7 @@ export default function AppShellClient({ children }) {
             </div>
             <div className="flex items-center gap-2.5 sm:gap-4">
               <DateFormatDropdown />
+              <CurrencyDropdown />
               <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-[10px] font-bold text-muted-foreground shadow-sm uppercase tracking-wider">
                 <span
                   className={cn(

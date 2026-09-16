@@ -18,6 +18,7 @@ import {
 import apiRequest from "@/components/apiRequest";
 import ItemPickerModal from "./ItemPickerModal";
 import SupplierPickerModal from "./SupplierPickerModal";
+import { FormattedCurrency, useCurrency } from "@/context/CurrencyContext";
 
 export default function PurchaseOrderFormModal({
   isOpen,
@@ -80,7 +81,8 @@ export default function PurchaseOrderFormModal({
           supplierEmail: editPoData.supplierEmail || "",
           supplierPhone: editPoData.supplierPhone || "",
           shippingAddress: editPoData.shippingAddress || "",
-          billingAddress: editPoData.billingAddress || editPoData.shippingAddress || "",
+          billingAddress:
+            editPoData.billingAddress || editPoData.shippingAddress || "",
           purchaseRequestNumber: editPoData.purchaseRequestNumber || "",
           purchaseRequestId: editPoData.purchaseRequestId || null,
           createdBy: editPoData.createdBy || 1,
@@ -131,7 +133,8 @@ export default function PurchaseOrderFormModal({
       discountAmount: 0,
       shippingCharges: 0,
       remarks: "",
-      termsAndConditions: "Payment within 30 days. Delivery at warehouse dock 3.",
+      termsAndConditions:
+        "Payment within 30 days. Delivery at warehouse dock 3.",
       supplierName: "",
       supplierEmail: "",
       supplierPhone: "",
@@ -186,14 +189,16 @@ export default function PurchaseOrderFormModal({
       supplierName: supplier.name || supplier.supplierName || "",
       supplierEmail: supplier.email || supplier.supplierEmail || "",
       supplierPhone: supplier.phone || supplier.supplierPhone || "",
-      shippingAddress: supplier.address || supplier.shippingAddress || prev.shippingAddress,
+      shippingAddress:
+        supplier.address || supplier.shippingAddress || prev.shippingAddress,
     }));
   };
 
   // Select Item from ItemPickerModal
   const handleItemSelect = (item) => {
     const qty = 100;
-    const unitPrice = item.purchasePrice || item.unitPrice || item.price || 250.0;
+    const unitPrice =
+      item.purchasePrice || item.unitPrice || item.price || 250.0;
     const gstRate = item.gstRate || item.taxRate || 18.0;
     const discPct = 0;
     const discAmt = (unitPrice * qty * discPct) / 100;
@@ -332,7 +337,8 @@ export default function PurchaseOrderFormModal({
 
       if (isEditing) {
         payload.poNumber = formData.poNumber;
-        payload.billingAddress = formData.billingAddress || formData.shippingAddress;
+        payload.billingAddress =
+          formData.billingAddress || formData.shippingAddress;
         if (formData.purchaseRequestId) {
           payload.purchaseRequestId = formData.purchaseRequestId;
         }
@@ -341,14 +347,18 @@ export default function PurchaseOrderFormModal({
         await apiRequest("/purchase-orders", "POST", payload);
       }
 
-      onSuccess(isEditing ? "Purchase Order updated successfully!" : "Purchase Order created successfully!");
+      onSuccess(
+        isEditing
+          ? "Purchase Order updated successfully!"
+          : "Purchase Order created successfully!",
+      );
       onClose();
     } catch (error) {
       console.error("Error saving purchase order:", error);
       setErrorMessage(
         error?.response?.data?.message ||
           error?.message ||
-          "Failed to save purchase order."
+          "Failed to save purchase order.",
       );
     } finally {
       setSaving(false);
@@ -356,9 +366,12 @@ export default function PurchaseOrderFormModal({
   };
 
   if (!isOpen) return null;
+  const { currencySymbol, currencyCode } = useCurrency();
 
   // Selected item codes for disabling in ItemPickerModal
-  const selectedItemCodes = formData.lines.map((l) => l.itemCode || l.itemId).filter(Boolean);
+  const selectedItemCodes = formData.lines
+    .map((l) => l.itemCode || l.itemId)
+    .filter(Boolean);
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
@@ -367,7 +380,9 @@ export default function PurchaseOrderFormModal({
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex items-center justify-between text-white">
           <div>
             <h2 className="text-xl font-bold">
-              {isEditing ? `Edit Purchase Order #${editPoData.poNumber || editPoData.id}` : "Create Purchase Order"}
+              {isEditing
+                ? `Edit Purchase Order #${editPoData.poNumber || editPoData.id}`
+                : "Create Purchase Order"}
             </h2>
             <p className="text-blue-100 text-xs mt-0.5">
               Fill in supplier details, line items, and financial parameters
@@ -390,12 +405,16 @@ export default function PurchaseOrderFormModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-6 overflow-y-auto max-h-[75vh]"
+        >
           {/* Supplier & Header Details */}
           <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-blue-600" /> Supplier & Information
+                <Building2 className="w-4 h-4 text-blue-600" /> Supplier &
+                Information
               </h3>
               <button
                 type="button"
@@ -530,7 +549,8 @@ export default function PurchaseOrderFormModal({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Package className="w-4 h-4 text-indigo-600" /> Line Items ({formData.lines.length})
+                <Package className="w-4 h-4 text-indigo-600" /> Line Items (
+                {formData.lines.length})
               </h3>
               <button
                 type="button"
@@ -550,33 +570,47 @@ export default function PurchaseOrderFormModal({
                     <th className="px-3 py-2.5">HSN</th>
                     <th className="px-3 py-2.5">UOM</th>
                     <th className="px-3 py-2.5 w-20">Qty</th>
-                    <th className="px-3 py-2.5 w-24">Price (₹)</th>
+                    <th className="px-3 py-2.5 w-24">
+                      Price ({currencySymbol})
+                    </th>
                     <th className="px-3 py-2.5 w-20">Disc %</th>
                     <th className="px-3 py-2.5 w-20">Tax %</th>
-                    <th className="px-3 py-2.5 text-right">Total (₹)</th>
+                    <th className="px-3 py-2.5 text-right">Total ({currencySymbol})</th>
                     <th className="px-3 py-2.5 text-center">Remove</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {formData.lines.length === 0 ? (
                     <tr>
-                      <td colSpan="10" className="py-8 text-center text-gray-400">
-                        No line items added yet. Click &quot;Select Item from Master&quot; to add lines.
+                      <td
+                        colSpan="10"
+                        className="py-8 text-center text-gray-400"
+                      >
+                        No line items added yet. Click &quot;Select Item from
+                        Master&quot; to add lines.
                       </td>
                     </tr>
                   ) : (
                     formData.lines.map((line, idx) => (
                       <tr key={idx} className="hover:bg-gray-50/60">
-                        <td className="px-3 py-2 font-semibold text-blue-600">{line.itemCode}</td>
-                        <td className="px-3 py-2 font-medium text-gray-900">{line.itemName}</td>
-                        <td className="px-3 py-2 text-gray-500">{line.hsnCode}</td>
+                        <td className="px-3 py-2 font-semibold text-blue-600">
+                          {line.itemCode}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-gray-900">
+                          {line.itemName}
+                        </td>
+                        <td className="px-3 py-2 text-gray-500">
+                          {line.hsnCode}
+                        </td>
                         <td className="px-3 py-2 text-gray-700">{line.uom}</td>
                         <td className="px-3 py-2">
                           <input
                             type="number"
                             min="1"
                             value={line.quantity}
-                            onChange={(e) => handleLineChange(idx, "quantity", e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(idx, "quantity", e.target.value)
+                            }
                             className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium"
                           />
                         </td>
@@ -586,7 +620,9 @@ export default function PurchaseOrderFormModal({
                             step="0.01"
                             min="0"
                             value={line.unitPrice}
-                            onChange={(e) => handleLineChange(idx, "unitPrice", e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(idx, "unitPrice", e.target.value)
+                            }
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium"
                           />
                         </td>
@@ -597,7 +633,13 @@ export default function PurchaseOrderFormModal({
                             min="0"
                             max="100"
                             value={line.discountPercentage}
-                            onChange={(e) => handleLineChange(idx, "discountPercentage", e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(
+                                idx,
+                                "discountPercentage",
+                                e.target.value,
+                              )
+                            }
                             className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium"
                           />
                         </td>
@@ -608,12 +650,15 @@ export default function PurchaseOrderFormModal({
                             min="0"
                             max="100"
                             value={line.gstRate}
-                            onChange={(e) => handleLineChange(idx, "gstRate", e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(idx, "gstRate", e.target.value)
+                            }
                             className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium"
                           />
                         </td>
                         <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                          ₹{line.totalWithGst ? Number(line.totalWithGst).toFixed(2) : "0.00"}
+                          {/* ₹{line.totalWithGst ? Number(line.totalWithGst).toFixed(2) : "0.00"} */}
+                          <FormattedCurrency value={line.totalWithGst} />
                         </td>
                         <td className="px-3 py-2 text-center">
                           <button
@@ -670,11 +715,17 @@ export default function PurchaseOrderFormModal({
               </h4>
               <div className="flex justify-between py-1 text-gray-600">
                 <span>Subtotal:</span>
-                <span className="font-medium text-gray-900">₹{formData.subtotal.toFixed(2)}</span>
+                <span className="font-medium text-gray-900">
+                  {/* ₹{formData.subtotal.toFixed(2)} */}
+                  <FormattedCurrency value={formData.subtotal} />
+                </span>
               </div>
               <div className="flex justify-between py-1 text-gray-600">
                 <span>Total Tax:</span>
-                <span className="font-medium text-gray-900">₹{formData.totalGst.toFixed(2)}</span>
+                <span className="font-medium text-gray-900">
+                  {/* ₹{formData.totalGst.toFixed(2)} */}
+                  <FormattedCurrency value={formData.totalGst} />
+                </span>
               </div>
               <div className="flex justify-between py-1 text-gray-600 items-center">
                 <span>Discount Amount:</span>
@@ -702,7 +753,10 @@ export default function PurchaseOrderFormModal({
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 text-sm font-bold text-gray-900">
                 <span>Grand Total:</span>
-                <span className="text-green-600">₹{formData.grandTotal.toFixed(2)}</span>
+                <span className="text-green-600">
+                  {/* ₹{formData.grandTotal.toFixed(2)} */}
+                  <FormattedCurrency value={formData.grandTotal} />
+                </span>
               </div>
             </div>
           </div>

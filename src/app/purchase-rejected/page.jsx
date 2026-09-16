@@ -29,6 +29,7 @@ import {
   Info,
 } from "lucide-react";
 import PurchaseReturnUpdateForm from "./components/PurchaseReturnUpdateForm";
+import { FormattedCurrency } from "@/context/CurrencyContext";
 
 // API function for purchase returns
 const getPurchaseReturnsAPI = async (
@@ -176,7 +177,8 @@ const PurchaseReturnView = ({ data, onClose }) => {
                   Total Amount
                 </div>
                 <p className="font-medium text-green-600 text-lg">
-                  {formatCurrency(data.totalAmount)}
+                  {/* {formatCurrency(data.totalAmount)} */}
+                  <FormattedCurrency value={data.totalAmount} />
                 </p>
                 <p className="text-xs text-gray-500">
                   Qty: {data.totalQuantity}
@@ -312,10 +314,12 @@ const PurchaseReturnView = ({ data, onClose }) => {
                           {line.returnQuantity}
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
-                          {formatCurrency(line.unitPrice)}
+                          {/* {formatCurrency(line.unitPrice)} */}
+                          <FormattedCurrency value={line.unitPrice} />
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-medium">
-                          {formatCurrency(line.totalAmount)}
+                          {/* {formatCurrency(line.totalAmount)} */}
+                          <FormattedCurrency value={line.totalAmount} />
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {line.reason || "-"}
@@ -329,7 +333,8 @@ const PurchaseReturnView = ({ data, onClose }) => {
                         Total
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-green-600">
-                        {formatCurrency(data.totalAmount)}
+                        {/* {formatCurrency(data.totalAmount)} */}
+                        <FormattedCurrency value={data.totalAmount} />
                       </td>
                       <td className="px-4 py-3"></td>
                     </tr>
@@ -777,7 +782,8 @@ export default function PurchaseReturnPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium">
-                        {formatCurrency(returnData.totalAmount)}
+                        {/* {formatCurrency(returnData.totalAmount)} */}
+                        <FormattedCurrency value={returnData.totalAmount} />
                       </td>
                       <td className="px-4 py-3">
                         <span

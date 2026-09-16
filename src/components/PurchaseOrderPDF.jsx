@@ -1,6 +1,6 @@
 // components/PurchaseOrderPDF.jsx
 "use client";
-import React from 'react';
+import { formatCurrency } from '@/lib/utils/common';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 
 // Register fonts
@@ -196,11 +196,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const formatCurrency = (amount) => {
-  if (!amount) return '₹0.00';
-  return `₹${amount.toFixed(2)}`;
-};
-
 const formatNumber = (num) => {
   if (!num) return '0.00';
   return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -350,8 +345,8 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
               <Text style={[styles.tableCell, { width: '28%' }]}>Description</Text>
               <Text style={[styles.tableCellCenter, { width: '8%' }]}>UOM</Text>
               <Text style={[styles.tableCellRight, { width: '10%' }]}>Qty</Text>
-              <Text style={[styles.tableCellRight, { width: '15%' }]}>Unit Price (₹)</Text>
-              <Text style={[styles.tableCellRight, { width: '19%' }]}>Total (₹)</Text>
+              <Text style={[styles.tableCellRight, { width: '15%' }]}>Unit Price</Text>
+              <Text style={[styles.tableCellRight, { width: '19%' }]}>Total</Text>
             </View>
 
             {/* Table Body */}
@@ -378,14 +373,14 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
             <View style={styles.tableRow}>
               <Text style={[styles.tableCell, { width: '68%' }]}></Text>
               <Text style={[styles.tableCellRight, { width: '15%', fontWeight: 'bold' }]}>Subtotal</Text>
-              <Text style={[styles.tableCellRight, { width: '17%' }]}>₹{formatNumber(totals.subtotal)}</Text>
+              <Text style={[styles.tableCellRight, { width: '17%' }]}>{formatCurrency(totals.subtotal)}</Text>
             </View>
 
             {totals.discount > 0 && (
               <View style={styles.tableRow}>
                 <Text style={[styles.tableCell, { width: '68%' }]}></Text>
                 <Text style={[styles.tableCellRight, { width: '15%', color: '#DC2626' }]}>Discount</Text>
-                <Text style={[styles.tableCellRight, { width: '17%', color: '#DC2626' }]}>-₹{formatNumber(totals.discount)}</Text>
+                <Text style={[styles.tableCellRight, { width: '17%', color: '#DC2626' }]}>-{formatCurrency(totals.discount)}</Text>
               </View>
             )}
 
@@ -393,7 +388,7 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
               <View style={styles.tableRow}>
                 <Text style={[styles.tableCell, { width: '68%' }]}></Text>
                 <Text style={[styles.tableCellRight, { width: '15%' }]}>Shipping</Text>
-                <Text style={[styles.tableCellRight, { width: '17%' }]}>₹{formatNumber(totals.shipping)}</Text>
+                <Text style={[styles.tableCellRight, { width: '17%' }]}>{formatCurrency(totals.shipping)}</Text>
               </View>
             )}
 
@@ -401,7 +396,7 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
               <View style={styles.tableRow}>
                 <Text style={[styles.tableCell, { width: '68%' }]}></Text>
                 <Text style={[styles.tableCellRight, { width: '15%' }]}>Tax</Text>
-                <Text style={[styles.tableCellRight, { width: '17%' }]}>₹{formatNumber(totals.gst)}</Text>
+                <Text style={[styles.tableCellRight, { width: '17%' }]}>{formatCurrency(totals.gst)}</Text>
               </View>
             )}
 
@@ -409,7 +404,7 @@ export default function PurchaseOrderPDF({ po, formatDate }) {
               <Text style={[styles.tableCell, { width: '68%' }]}></Text>
               <Text style={[styles.tableCellRight, { width: '15%', fontSize: 12 }]}>GRAND TOTAL</Text>
               <Text style={[styles.tableCellRight, { width: '17%', fontSize: 13, color: '#2563EB' }]}>
-                ₹{formatNumber(totals.grandTotal)}
+                {formatCurrency(totals.grandTotal)}
               </Text>
             </View>
           </View>

@@ -61,3 +61,40 @@ export const formatDate = (dateInput, overrideFormat = null, includeTime = false
 export const formatDateTime = (dateString) => {
   return formatDate(dateString, null, true);
 };
+
+export const formatCurrency = (amount, overrideCurrency = null, customOptions = {}) => {
+  if (amount === undefined || amount === null || isNaN(Number(amount))) {
+    return "N/A";
+  }
+
+  const numAmount = Number(amount);
+  let currencyCode = overrideCurrency;
+  let currencyDisplay = customOptions.currencyDisplay || "symbol";
+
+  if (!currencyCode && typeof window !== "undefined") {
+    try {
+      currencyCode = localStorage.getItem("wms_currency_code");
+      const savedDisplay = localStorage.getItem("wms_currency_display");
+      if (savedDisplay) currencyDisplay = savedDisplay;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  if (!currencyCode) {
+    currencyCode = "USD";
+  }
+
+  try {
+    const formatter = new Intl.NumberFormat(customOptions.locale || "en-US", {
+      style: "currency",
+      currency: currencyCode,
+      currencyDisplay: currencyDisplay,
+      minimumFractionDigits: customOptions.minimumFractionDigits ?? (["JPY", "KRW", "VND"].includes(currencyCode) ? 0 : 2),
+      maximumFractionDigits: customOptions.maximumFractionDigits ?? (["JPY", "KRW", "VND"].includes(currencyCode) ? 0 : 2),
+    });
+    return formatter.format(numAmount);
+  } catch (err) {
+    return `${currencyCode} ${numAmount.toFixed(2)}`;
+  }
+};

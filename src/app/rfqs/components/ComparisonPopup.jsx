@@ -17,6 +17,7 @@ import {
   DollarSign,
   Percent,
 } from "lucide-react";
+import { FormattedCurrency } from "@/context/CurrencyContext";
 
 export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
   if (!data || data.length === 0) {
@@ -97,6 +98,8 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
     }
   });
 
+  const Savings = minPrice - maxPrice;
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen p-4">
@@ -138,7 +141,7 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                   {bestQuotation?.supplierName}
                 </p>
                 <p className="text-sm text-green-700">
-                  ₹{bestQuotation?.grandTotal?.toFixed(2)}
+                  <FormattedCurrency value={bestQuotation?.grandTotal} />
                 </p>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -147,7 +150,8 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                   <span className="text-sm font-medium">Average Price</span>
                 </div>
                 <p className="text-lg font-bold text-blue-900">
-                  ₹{avgPrice.toFixed(2)}
+                  {/* ₹{avgPrice.toFixed(2)} */}
+                  <FormattedCurrency value={avgPrice} />
                 </p>
                 <p className="text-sm text-blue-700">Across all suppliers</p>
               </div>
@@ -157,10 +161,12 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                   <span className="text-sm font-medium">Price Range</span>
                 </div>
                 <p className="text-lg font-bold text-purple-900">
-                  ₹{minPrice.toFixed(2)} - ₹{maxPrice.toFixed(2)}
+                  {/* ₹{minPrice.toFixed(2)} - ₹{maxPrice.toFixed(2)} */}
+                  <FormattedCurrency value={Savings} />
                 </p>
                 <p className="text-sm text-purple-700">
-                  Savings: ₹{(maxPrice - minPrice).toFixed(2)}
+                  Savings: <FormattedCurrency value={Savings} />₹
+                  {/* {(maxPrice - minPrice).toFixed(2)} */}
                 </p>
               </div>
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -221,7 +227,8 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-gray-900">
-                          ₹{quotation.grandTotal?.toFixed(2) || "0.00"}
+                          {/* ₹{quotation.grandTotal?.toFixed(2) || "0.00"} */}
+                          <FormattedCurrency value={quotation.grandTotal} />
                         </p>
                         {isBest && (
                           <span className="text-xs text-green-600 font-medium">
@@ -287,7 +294,9 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                                     ×{item.quantity}
                                   </span>
                                   <span className="font-medium text-gray-900">
-                                    ₹{item.unitPrice?.toFixed(2) || "0.00"}/unit
+                                    {/* ₹{item.unitPrice?.toFixed(2) || "0.00"} */}
+                                    <FormattedCurrency value={item.unitPrice} />
+                                    /unit
                                   </span>
                                 </div>
                               </div>
@@ -301,19 +310,24 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                         <div>
                           <span className="text-gray-500">Subtotal:</span>
                           <span className="ml-1 font-medium text-gray-900">
-                            ₹{quotation.subTotal?.toFixed(2) || "0.00"}
+                            {/* ₹{quotation.subTotal?.toFixed(2) || "0.00"} */}
+                            <FormattedCurrency value={quotation.subTotal} />
                           </span>
                         </div>
                         <div>
                           <span className="text-gray-500">Tax:</span>
                           <span className="ml-1 font-medium text-gray-900">
-                            ₹{quotation.gstTotal?.toFixed(2) || "0.00"}
+                            {/* ₹{quotation.gstTotal?.toFixed(2) || "0.00"} */}
+                            <FormattedCurrency value={quotation.gstTotal} />
                           </span>
                         </div>
                         <div>
                           <span className="text-gray-500">Discount:</span>
                           <span className="ml-1 font-medium text-gray-900">
-                            ₹{quotation.discountAmount?.toFixed(2) || "0.00"}
+                            {/* ₹{quotation.discountAmount?.toFixed(2) || "0.00"} */}
+                            <FormattedCurrency
+                              value={quotation.discountAmount}
+                            />
                           </span>
                         </div>
                       </div>
@@ -391,7 +405,10 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                                   <span
                                     className={`font-medium ${isMin ? "text-green-600" : isMax ? "text-red-600" : "text-gray-700"}`}
                                   >
-                                    ₹{supplierData.price.toFixed(2)}
+                                    {/* ₹{supplierData.price.toFixed(2)} */}
+                                    <FormattedCurrency
+                                      value={supplierData.price}
+                                    />
                                   </span>
                                 </div>
                               </td>
@@ -416,7 +433,8 @@ export default function ComparisonPopup({ data, onClose, onConvertToPO }) {
                     </h5>
                     <p className="text-sm text-green-800">
                       <strong>{bestQuotation.supplierName}</strong> offers the
-                      best quotation at ₹{bestQuotation.grandTotal?.toFixed(2)}{" "}
+                      best quotation at{" "}
+                      <FormattedCurrency value={bestQuotation.grandTotal} />{" "}
                       with a rank of #{bestQuotation.rank}.
                       {data.length > 1 &&
                         ` This is ${((1 - bestQuotation.grandTotal / maxPrice) * 100).toFixed(1)}% lower than the highest quote.`}

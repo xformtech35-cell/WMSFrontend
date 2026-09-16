@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { DateFormatProvider } from '@/context/DateFormatContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 import queryClient from '@/lib/queryClient';
 
 const SESSION_MARKER = 'wms_session_initialized';
@@ -34,14 +35,16 @@ export default function AppProviders({ children }) {
     >
       <QueryClientProvider client={queryClient}>
         <DateFormatProvider>
-          <TooltipProvider delayDuration={200}>
-            {children}
-            <Toaster
-              richColors
-              position="top-right"
-              toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }}
-            />
-          </TooltipProvider>
+          <CurrencyProvider>
+            <TooltipProvider delayDuration={200}>
+              {children}
+              <Toaster
+                richColors
+                position="top-right"
+                toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }}
+              />
+            </TooltipProvider>
+          </CurrencyProvider>
         </DateFormatProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import ComparisonPopup from "../components/ComparisonPopup";
-
-
+import { FormattedCurrency } from "@/context/CurrencyContext";
 
 const getRFQByIdAPI = async (id) => {
   return apiRequest(`/rfqs/${id}`);
@@ -809,10 +808,12 @@ function ItemsTab({ rfq }) {
                   {item.quantity || item.requestedQty || 0}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                  ₹{(item.estimatedUnitPrice || 0).toFixed(2)}
+                  {/* ₹{(item.estimatedUnitPrice || 0).toFixed(2)} */}
+                  <FormattedCurrency value={item.estimatedUnitPrice} />
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-                  ₹{(item.estimatedTotal || 0).toFixed(2)}
+                  {/* ₹{(item.estimatedTotal || 0).toFixed(2)} */}
+                  <FormattedCurrency value={item.estimatedTotal} />
                 </td>
               </tr>
             ))}
@@ -829,7 +830,7 @@ function ItemsTab({ rfq }) {
                 {rfq.items?.length || 0}
               </td>
               <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right border-t">
-                ₹
+                {/* ₹
                 {(
                   rfq.items?.reduce(
                     (sum, item) =>
@@ -838,7 +839,18 @@ function ItemsTab({ rfq }) {
                         (item.quantity || item.requestedQty || 0),
                     0,
                   ) || 0
-                ).toFixed(2)}
+                ).toFixed(2)} */}
+                <FormattedCurrency
+                  value={
+                    rfq.items?.reduce(
+                      (sum, item) =>
+                        sum +
+                        (item.estimatedUnitPrice || 0) *
+                          (item.quantity || item.requestedQty || 0),
+                      0,
+                    ) || 0
+                  }
+                />
               </td>
             </tr>
           </tfoot>
@@ -996,7 +1008,9 @@ function QuotationsTab({
                           : "text-gray-900"
                       }`}
                     >
-                      ₹{quotation.grandTotal?.toFixed(2) || "0.00"}
+                      <FormattedCurrency value={quotation.grandTotal} />
+                      {/* <br />
+                      ₹{quotation.grandTotal?.toFixed(2) || "0.00"} */}
                     </p>
                   </div>
                 </div>
@@ -1039,10 +1053,12 @@ function QuotationsTab({
                               {item.quantity}
                             </td>
                             <td className="px-3 py-2 text-gray-900 text-right">
-                              ₹{item.unitPrice?.toFixed(2) || "0.00"}
+                              {/* ₹{item.unitPrice?.toFixed(2) || "0.00"} */}
+                              <FormattedCurrency value={item.unitPrice} />
                             </td>
                             <td className="px-3 py-2 font-medium text-gray-900 text-right">
-                              ₹{item.totalAmount?.toFixed(2) || "0.00"}
+                              {/* ₹{item.totalAmount?.toFixed(2) || "0.00"} */}
+                              <FormattedCurrency value={item.totalAmount} />
                             </td>
                           </tr>
                         ))}
