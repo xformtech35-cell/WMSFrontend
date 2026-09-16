@@ -271,24 +271,12 @@ const DashboardPage = () => {
   ];
 
   // Zone utilization (sample data from API or generate)
-  const zoneUtilization =
-    data.chartsData?.zoneUtilization?.length > 0
-      ? data.chartsData.zoneUtilization
-      : [
-          { name: "Zone A", utilization: capacity.binUtilization || 0 },
-          {
-            name: "Zone B",
-            utilization: Math.min(100, (capacity.binUtilization || 0) * 0.9),
-          },
-          {
-            name: "Zone C",
-            utilization: Math.min(100, (capacity.binUtilization || 0) * 0.7),
-          },
-          {
-            name: "Zone D",
-            utilization: Math.min(100, (capacity.binUtilization || 0) * 0.8),
-          },
-        ];
+  const zoneUtilization = (data.chartsData?.zoneUtilization ?? []).map((z) => ({
+    name: z.zone,
+    utilization: z.utilization,
+    inboundUsage: z.inboundUsage,
+    outboundUsage: z.outboundUsage,
+  }));
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
@@ -328,7 +316,6 @@ const DashboardPage = () => {
 
       setWarehouses(data);
 
-     
       // Select first warehouse by default
       if (data.length > 0) {
         setSelectedWarehouseId(data[0].warehouseId || data[0].id);
