@@ -30,8 +30,6 @@ import {
 } from "lucide-react";
 import PurchaseReturnUpdateForm from "./components/PurchaseReturnUpdateForm";
 
-
-
 // API function for purchase returns
 const getPurchaseReturnsAPI = async (
   page = 0,
@@ -40,15 +38,15 @@ const getPurchaseReturnsAPI = async (
   status = "ALL",
 ) => {
   const params = new URLSearchParams();
-  params.append('page', page);
-  params.append('size', size);
-  
+  params.append("page", page);
+  params.append("size", size);
+
   if (searchTerm) {
-    params.append('searchTerm', searchTerm);
+    params.append("searchTerm", searchTerm);
   }
-  
+
   if (status && status !== "ALL") {
-    params.append('status', status);
+    params.append("status", status);
   }
 
   return apiRequest(`/purchase-returns/search?${params.toString()}`, "GET");
@@ -93,7 +91,7 @@ const PurchaseReturnView = ({ data, onClose }) => {
   };
 
   const { formatDate } = useDateFormat();
-  const formatDateTime = (dateString) => formatDate(dateString, null, true);
+  // const formatDateTime = (dateString) => formatDate(dateString, null, true);
 
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "₹0.00";
@@ -113,9 +111,7 @@ const PurchaseReturnView = ({ data, onClose }) => {
                 <FileText className="w-5 h-5" />
                 Purchase Return Details
               </h2>
-              <p className="text-green-100 text-sm">
-                {data.returnNumber}
-              </p>
+              <p className="text-green-100 text-sm">{data.returnNumber}</p>
             </div>
             <button
               onClick={onClose}
@@ -128,12 +124,16 @@ const PurchaseReturnView = ({ data, onClose }) => {
           <div className="p-6">
             {/* Status Badges */}
             <div className="flex flex-wrap gap-3 mb-6">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(data.status)}`}>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(data.status)}`}
+              >
                 Status: {data.status}
               </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getReturnTypeColor(data.returnType)}`}>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium ${getReturnTypeColor(data.returnType)}`}
+              >
                 <ArrowLeftRight className="w-3 h-3 inline mr-1" />
-                {data.returnType?.replace('_', ' ')}
+                {data.returnType?.replace("_", " ")}
               </span>
             </div>
 
@@ -146,7 +146,9 @@ const PurchaseReturnView = ({ data, onClose }) => {
                 </div>
                 <p className="font-medium text-gray-900">{data.supplierName}</p>
                 {data.supplierCode && (
-                  <p className="text-xs text-gray-500">Code: {data.supplierCode}</p>
+                  <p className="text-xs text-gray-500">
+                    Code: {data.supplierCode}
+                  </p>
                 )}
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -164,15 +166,21 @@ const PurchaseReturnView = ({ data, onClose }) => {
                   <Calendar className="w-4 h-4" />
                   Return Date
                 </div>
-                <p className="font-medium text-gray-900">{formatDate(data.returnDate)}</p>
+                <p className="font-medium text-gray-900">
+                  {formatDate(data.returnDate)}
+                </p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                   <CreditCard className="w-4 h-4" />
                   Total Amount
                 </div>
-                <p className="font-medium text-green-600 text-lg">{formatCurrency(data.totalAmount)}</p>
-                <p className="text-xs text-gray-500">Qty: {data.totalQuantity}</p>
+                <p className="font-medium text-green-600 text-lg">
+                  {formatCurrency(data.totalAmount)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Qty: {data.totalQuantity}
+                </p>
               </div>
             </div>
 
@@ -184,7 +192,9 @@ const PurchaseReturnView = ({ data, onClose }) => {
                     <FileText className="w-4 h-4" />
                     Invoice Number
                   </div>
-                  <p className="font-medium text-gray-900">{data.invoiceNumber}</p>
+                  <p className="font-medium text-gray-900">
+                    {data.invoiceNumber}
+                  </p>
                 </div>
               )}
               {data.trackingNumber && (
@@ -193,7 +203,9 @@ const PurchaseReturnView = ({ data, onClose }) => {
                     <Info className="w-4 h-4" />
                     Tracking Number
                   </div>
-                  <p className="font-medium text-gray-900">{data.trackingNumber}</p>
+                  <p className="font-medium text-gray-900">
+                    {data.trackingNumber}
+                  </p>
                 </div>
               )}
             </div>
@@ -223,7 +235,9 @@ const PurchaseReturnView = ({ data, onClose }) => {
             {/* Approval Info */}
             {(data.approvedBy || data.approvedDate || data.rejectionReason) && (
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-medium text-gray-900 mb-2">Approval Details</h4>
+                <h4 className="font-medium text-gray-900 mb-2">
+                  Approval Details
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {data.approvedBy && (
                     <div>
@@ -234,13 +248,17 @@ const PurchaseReturnView = ({ data, onClose }) => {
                   {data.approvedDate && (
                     <div>
                       <p className="text-xs text-gray-500">Approved Date</p>
-                      <p className="text-sm text-gray-900">{formatDateTime(data.approvedDate)}</p>
+                      <p className="text-sm text-gray-900">
+                        {formatDate(data.approvedDate)}
+                      </p>
                     </div>
                   )}
                   {data.rejectionReason && (
                     <div>
                       <p className="text-xs text-gray-500">Rejection Reason</p>
-                      <p className="text-sm text-red-600">{data.rejectionReason}</p>
+                      <p className="text-sm text-red-600">
+                        {data.rejectionReason}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -300,7 +318,7 @@ const PurchaseReturnView = ({ data, onClose }) => {
                           {formatCurrency(line.totalAmount)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {line.reason || '-'}
+                          {line.reason || "-"}
                         </td>
                       </tr>
                     ))}
@@ -323,7 +341,7 @@ const PurchaseReturnView = ({ data, onClose }) => {
             {/* Created At */}
             {data.createdAt && (
               <div className="mt-4 text-xs text-gray-400 text-right">
-                Created: {formatDateTime(data.createdAt)}
+                Created: {formatDate(data.createdAt)}
                 {data.createdBy && ` by ${data.createdBy}`}
               </div>
             )}
@@ -375,7 +393,7 @@ export default function PurchaseReturnPage() {
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [selectedPRForReturn, setSelectedPRForReturn] = useState(null);
 
-   const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [selectedReturnId, setSelectedReturnId] = useState(null);
 
   const handleUpdateClick = (returnId) => {
@@ -384,7 +402,7 @@ export default function PurchaseReturnPage() {
   };
 
   const handleUpdateSuccess = (updatedData) => {
-    console.log('Return updated:', updatedData);
+    console.log("Return updated:", updatedData);
     setShowUpdateForm(false);
     // Refresh the list
     loadPurchaseReturns();
@@ -529,7 +547,9 @@ export default function PurchaseReturnPage() {
   };
 
   const handleReturnSuccess = (result) => {
-    setSuccessMessage(`Purchase return created successfully! Reference: ${result.returnNumber || 'N/A'}`);
+    setSuccessMessage(
+      `Purchase return created successfully! Reference: ${result.returnNumber || "N/A"}`,
+    );
     setShowSuccess(true);
     setShowReturnForm(false);
     setSelectedPRForReturn(null);
@@ -570,15 +590,7 @@ export default function PurchaseReturnPage() {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const { formatDate } = useDateFormat();
 
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "₹0.00";
@@ -668,7 +680,7 @@ export default function PurchaseReturnPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
-                </div>
+              </div>
             </div>
 
             <div className="text-sm text-gray-500">
@@ -750,14 +762,18 @@ export default function PurchaseReturnPage() {
                           {returnData.poNumber}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">{returnData.supplierName}</td>
-                      <td className="px-4 py-3 text-sm">{returnData.invoiceNumber || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {returnData.supplierName}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {returnData.invoiceNumber || "N/A"}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getReturnTypeColor(returnData.returnType)}`}
                         >
                           <ArrowLeftRight className="w-3 h-3" />
-                          {returnData.returnType?.replace('_', ' ')}
+                          {returnData.returnType?.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium">
@@ -780,9 +796,11 @@ export default function PurchaseReturnPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleUpdateClick(returnData.id)}>
-        <Edit className="w-4 h-4" />
-      </button>
+                          <button
+                            onClick={() => handleUpdateClick(returnData.id)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -820,20 +838,16 @@ export default function PurchaseReturnPage() {
           )}
         </div>
 
-       
- {showUpdateForm && (
-        <PurchaseReturnUpdateForm
-          returnId={selectedReturnId}
-          onClose={() => setShowUpdateForm(false)}
-          onSuccess={handleUpdateSuccess}
-        />
-      )}
+        {showUpdateForm && (
+          <PurchaseReturnUpdateForm
+            returnId={selectedReturnId}
+            onClose={() => setShowUpdateForm(false)}
+            onSuccess={handleUpdateSuccess}
+          />
+        )}
         {/* View Modal */}
         {showViewModal && viewingReturn && (
-          <PurchaseReturnView
-            data={viewingReturn}
-            onClose={handleViewClose}
-          />
+          <PurchaseReturnView data={viewingReturn} onClose={handleViewClose} />
         )}
 
         {/* Return Form Modal */}

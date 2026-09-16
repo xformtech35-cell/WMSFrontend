@@ -620,7 +620,7 @@ export default function PackReturnOrder() {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="ALL">All Status</option>
-                <option value="PENDING">Pending</option>
+                <option value="PENDING_PICKING">Pending Picking</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="PENDING_QC">Pending QC</option>
                 <option value="QC_PASSED">QC Passed</option>

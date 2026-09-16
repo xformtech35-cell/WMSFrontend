@@ -26,8 +26,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import VendorReturnOrderView from "./components/VendorReturnOrderView";
-
-
+import UserFullName from "@/components/UserFullName";
 
 // API function for vendor return orders
 const getVendorReturnOrdersAPI = async (
@@ -41,7 +40,7 @@ const getVendorReturnOrdersAPI = async (
   params.append("size", size);
 
   if (searchTerm) {
-    params.append("searchTerm", searchTerm);
+    params.append("search", searchTerm);
   }
 
   if (status && status !== "ALL") {
@@ -370,7 +369,7 @@ export default function VendorReturnOrdersPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -650,7 +649,6 @@ export default function VendorReturnOrdersPage() {
                         })
                         .map((user) => {
                           const name =
-                            user.name ||
                             user.fullName ||
                             user.username ||
                             [user.firstName, user.lastName]
@@ -665,7 +663,7 @@ export default function VendorReturnOrdersPage() {
                                 e.preventDefault();
                               }}
                               onClick={() => {
-                                setAssignTo(String(name));
+                                setAssignTo(String(user.username));
                                 setAssignSearch(String(name));
                                 setShowUserDropdown(false);
                               }}
@@ -719,7 +717,8 @@ export default function VendorReturnOrdersPage() {
                     <div className="text-xs text-blue-600">Assigned To</div>
 
                     <div className="text-sm font-semibold text-blue-800">
-                      {assignTo}
+                      {/* {assignTo} */}
+                      <UserFullName username={assignTo || "N/A"} />
                     </div>
                   </div>
                 )}

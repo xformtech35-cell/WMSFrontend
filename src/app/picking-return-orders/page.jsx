@@ -30,6 +30,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import UserFullName from "@/components/UserFullName";
 
 // API function for picklists
 const getPicklistsAPI = async (
@@ -43,7 +44,7 @@ const getPicklistsAPI = async (
   params.append("size", size);
 
   if (searchTerm) {
-    params.append("searchTerm", searchTerm);
+    params.append("search", searchTerm);
   }
 
   if (status && status !== "ALL") {
@@ -397,10 +398,10 @@ export default function VendorReturnPicklistsPage() {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="ALL">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="PACKED">Packed</option>
-                <option value="COMPLETED">Completed</option>
+                <option value="PENDING_PICKING">Pending Picking</option>
+                <option value="PENDING_PACKING">Pending Packing</option>
+                <option value="Packed">Packed</option>
+                <option value="PENDING_QC">Pending QC</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
@@ -493,7 +494,8 @@ export default function VendorReturnPicklistsPage() {
                         <div className="flex items-center gap-1">
                           <User className="w-3 h-3 text-gray-400" />
                           <span className="text-gray-700">
-                            {picklist.assignedTo || "Unassigned"}
+                            {/* {picklist.assignedTo || "Unassigned"} */}
+                            <UserFullName username={picklist.assignedTo || "N/A"} />
                           </span>
                         </div>
                       </td>
