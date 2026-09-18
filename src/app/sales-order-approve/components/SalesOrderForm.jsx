@@ -27,8 +27,6 @@ import api from "@/lib/api";
 import { createPortal } from "react-dom";
 import { PUT } from "@/components/apiRequest";
 
-
-
 // Get all customers with pagination and search
 const getCustomersAPI = async (page = 0, size = 20, search = "") => {
   try {
@@ -49,41 +47,6 @@ const getCustomersAPI = async (page = 0, size = 20, search = "") => {
     return { data, totalElements };
   } catch (error) {
     console.warn("Failed to fetch customers, using fallback data");
-    return {
-      data: [
-        {
-          id: 1,
-          customerCode: "CUST-001",
-          customerName: "Acme Corporation",
-          companyName: "Acme Corp",
-        },
-        {
-          id: 2,
-          customerCode: "CUST-002",
-          customerName: "Global Traders",
-          companyName: "Global Traders Ltd",
-        },
-        {
-          id: 3,
-          customerCode: "CUST-003",
-          customerName: "Tech Solutions",
-          companyName: "Tech Solutions Pvt Ltd",
-        },
-        {
-          id: 4,
-          customerCode: "CUST-004",
-          customerName: "MediTech Solutions",
-          companyName: "MediTech Solutions Pvt Ltd",
-        },
-        {
-          id: 5,
-          customerCode: "CUST-005",
-          customerName: "Quick Logistics",
-          companyName: "Quick Logistics Inc",
-        },
-      ],
-      totalElements: 5,
-    };
   }
 };
 
@@ -150,67 +113,6 @@ const getItemsAPI = async (page = 0, size = 20, search = "") => {
     return { data, totalElements };
   } catch (error) {
     console.warn("Failed to fetch items, using fallback data");
-    return {
-      data: [
-        {
-          id: 1,
-          itemCode: "ITEM001",
-          itemName: "Product A",
-          uom: "Nos",
-          unitPrice: 100,
-        },
-        {
-          id: 2,
-          itemCode: "ITEM002",
-          itemName: "Product B",
-          uom: "Kg",
-          unitPrice: 50,
-        },
-        {
-          id: 3,
-          itemCode: "ITEM003",
-          itemName: "Product C",
-          uom: "Liters",
-          unitPrice: 75,
-        },
-        {
-          id: 4,
-          itemCode: "ITEM004",
-          itemName: "Product D",
-          uom: "Boxes",
-          unitPrice: 200,
-        },
-        {
-          id: 5,
-          itemCode: "ITEM005",
-          itemName: "Product E",
-          uom: "Pcs",
-          unitPrice: 30,
-        },
-        {
-          id: 6,
-          itemCode: "ITEM006",
-          itemName: "Product F",
-          uom: "Kg",
-          unitPrice: 80,
-        },
-        {
-          id: 7,
-          itemCode: "ITEM007",
-          itemName: "Product G",
-          uom: "Liters",
-          unitPrice: 120,
-        },
-        {
-          id: 8,
-          itemCode: "ITEM008",
-          itemName: "Product H",
-          uom: "Rolls",
-          unitPrice: 45,
-        },
-      ],
-      totalElements: 8,
-    };
   }
 };
 
@@ -708,7 +610,7 @@ export default function SalesOrderForm({
 }) {
   // Form State
   const [soData, setSoData] = useState({
-    soNumber: `SO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+    soNumber: "",
     customerCode: "",
     customerName: "",
     warehouseId: "",
@@ -909,9 +811,7 @@ export default function SalesOrderForm({
       setIsLoading(true);
 
       setSoData({
-        soNumber:
-          initialData.soNumber ||
-          `SO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+        soNumber: initialData.soNumber,
         customerCode: initialData.customerCode || "",
         customerName: initialData.customerName || "",
         warehouseId: initialData.warehouseId || "",
@@ -1200,34 +1100,6 @@ export default function SalesOrderForm({
     }
   };
 
-  // Handle Reserve all items
-  const handleReserveAllItems = async () => {
-    let hasError = false;
-    let successCount = 0;
-
-    for (const item of items) {
-      if (!item.itemCode) continue; // Skip empty items
-
-      try {
-        await handleReserveItem(item);
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to update item ${item.id}:`, error);
-        hasError = true;
-      }
-    }
-
-    if (successCount > 0 && onSuccess) {
-      onSuccess(`${successCount} item(s) updated successfully!`);
-    }
-
-    if (hasError) {
-      setErrorMessage(
-        "Some items failed to update. Please check the console for details.",
-      );
-    }
-  };
-
   // Auto-fill reserved quantity when ordered quantity changes
   const handleQuantityChange = (id, field, value) => {
     const numValue = parseFloat(value) || 0;
@@ -1247,27 +1119,6 @@ export default function SalesOrderForm({
       return item;
     });
     setItems(updatedItems);
-  };
-
-  const addItem = () => {
-    const newId = Math.max(...items.map((i) => i.id), 0) + 1;
-    setItems([
-      ...items,
-      {
-        id: newId,
-        itemCode: "",
-        itemName: "",
-        uom: "Pcs",
-        orderedQuantity: 1,
-        reservedQuantity: 0,
-        pickedQuantity: 0,
-        shippedQuantity: 0,
-        batchNumber: "",
-        sourceLocation: null,
-        reservations: [],
-        selectedReservationId: null,
-      },
-    ]);
   };
 
   const removeItem = (id) => {
@@ -1357,18 +1208,11 @@ export default function SalesOrderForm({
       const requestData = prepareRequestData();
 
       let result;
-      if (mode === "edit" && savedSOId) {
+      if (savedSOId) {
         result = await updateSalesOrderAPI(savedSOId, requestData);
         if (onSuccess) {
           onSuccess(`Sales Order updated successfully!`);
-        }
-      } else {
-        result = await createSalesOrderAPI(requestData);
-        setSavedSOId(result.id);
-        if (onSuccess) {
-          onSuccess(
-            `Sales Order created successfully! SO Number: ${result.soNumber}`,
-          );
+          hanldeConfirmAndProcess(soData.soNumber, onSuccess);
         }
       }
 
@@ -1963,10 +1807,12 @@ export default function SalesOrderForm({
             )}
             {mode === "edit" && (
               <button
-                type="button"
-                onClick={() =>
-                  hanldeConfirmAndProcess(soData.soNumber, onSuccess)
-                }
+                type="submit"
+                // onClick={(e) => {
+                //   handleSubmit(e).then(() => {
+                //     hanldeConfirmAndProcess(soData.soNumber, onSuccess);
+                //   });
+                // }}
                 className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700
                   text-white`}
               >
