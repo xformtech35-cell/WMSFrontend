@@ -32,9 +32,12 @@ import api from "@/lib/api";
 import SalesOrderForm from "./components/SalesOrderForm";
 import SalesOrderDetails from "./components/SalesOrderDetails";
 
-
-
-const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getSalesOrdersAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -55,7 +58,9 @@ const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = 
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -109,7 +114,8 @@ export default function SalesOrderPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("PROCESSING");
+  // const [statusFilter, setStatusFilter] = useState("ALL");
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editingSO, setEditingSO] = useState(null);
@@ -334,7 +340,6 @@ export default function SalesOrderPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-             
                 <button
                   type="button"
                   onClick={loadSalesOrders}
@@ -494,18 +499,18 @@ export default function SalesOrderPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {/* {(so.status === "DRAFT" || so.status === "PROCESSING") && ( */}
+                          {so.status === "PROCESSING" && (
                             <button
                               type="button"
                               onClick={() => handleEditClick(so)}
                               className="text-green-600 hover:text-green-800 transition-colors"
                               title="Create Pick Task"
                             >
-                              <ClipboardPlus  Plus   className="w-4 h-4" />
+                              <ClipboardPlus Plus className="w-4 h-4" />
                             </button>
-                          {/* )} */}
+                          )}
                           {/* {(so.status === "DRAFT" || so.status === "PROCESSING") && ( */}
-                            {/* <button
+                          {/* <button
                               type="button"
                               onClick={() => handleDelete(so.soNumber)}
                               className="text-red-600 hover:text-red-800 transition-colors"
@@ -580,10 +585,7 @@ export default function SalesOrderPage() {
                 onClick={handleViewClose}
               />
               <div className="relative bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <SalesOrderDetails
-                  data={viewingSO}
-                  onClose={handleViewClose}
-                />
+                <SalesOrderDetails data={viewingSO} onClose={handleViewClose} />
               </div>
             </div>
           </div>

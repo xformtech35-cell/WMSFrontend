@@ -271,76 +271,7 @@ export default function AppShellClient({ children }) {
             <div className="flex items-center gap-2.5 sm:gap-4">
               <DateFormatDropdown />
               <CurrencyDropdown />
-              <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-[10px] font-bold text-muted-foreground shadow-sm uppercase tracking-wider">
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    connected ? "bg-emerald-500" : "bg-slate-400 animate-pulse",
-                  )}
-                />
-                <span>{connected ? "Connected" : "Offline"}</span>
-              </div>
-              <div className="relative" ref={notificationsRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowNotifications((value) => !value)}
-                  className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs text-muted-foreground shadow-sm hover:bg-muted/40 transition-colors"
-                  aria-label="Notifications"
-                  aria-expanded={showNotifications}
-                >
-                  <div className="relative">
-                    <Bell className="size-3.5 text-primary" />
-                  </div>
-                  <span>Live notifications</span>
-                </button>
-
-                {/* {showNotifications && (
-                  <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl">
-                    <div className="border-b border-border px-4 py-3">
-                      <p className="text-sm font-semibold">Notifications</p>
-                      <p className="text-xs text-muted-foreground">
-                        Operational alerts from live KPIs
-                      </p>
-                    </div>
-                    <div className="max-h-80 overflow-auto p-2">
-                      {notifItems.length ? (
-                        notifItems.map((item) => (
-                          <Link
-                            key={item.key}
-                            href={item.href}
-                            onClick={() => setShowNotifications(false)}
-                            className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted"
-                          >
-                            <span
-                              className={cn(
-                                "mt-1 size-2.5 shrink-0 rounded-full",
-                                item.tone === "amber" && "bg-amber-500",
-                                item.tone === "blue" && "bg-sky-500",
-                                item.tone === "rose" && "bg-rose-500",
-                              )}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">
-                                {item.title}
-                              </p>
-                              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                                {item.detail}
-                              </p>
-                            </div>
-                          </Link>
-                        ))
-                      ) : (
-                        <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                          No notifications right now.
-                        </div>
-                      )}
-                    </div>
-                    <div className="border-t border-border bg-muted/40 px-4 py-3 text-center text-[10px] text-muted-foreground">
-                      Syncs with dashboard KPIs every 20 seconds.
-                    </div>
-                  </div>
-                )} */}
-              </div>
+             
             </div>
           </div>
         </header>

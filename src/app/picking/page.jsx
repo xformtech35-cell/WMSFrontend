@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import UserFullName from "@/components/UserFullName";
+import { shouldRestrictByAssignment } from "@/lib/permissionUtils";
 
 const getSalesOrdersAPI = async (
   page = 0,
@@ -52,9 +53,11 @@ const getSalesOrdersAPI = async (
     if (size) params.append("size", size);
     if (searchTerm) params.append("search", searchTerm);
     if (status && status !== "ALL") params.append("status", status);
-    const role = localStorage.getItem("wms_role");
     const assign = localStorage.getItem("wms_username");
-    if (role !== "ADMIN") params.append("assignedTo", assign);
+    if (shouldRestrictByAssignment("CAN_CHECK_ALL_PICK_LISTS")) {
+      params.append("assignedTo", assign);
+    }
+    // if (role !== "ADMIN") params.append("assignedTo", assign);
     console.log("Fetching sales orders with params:", params.toString());
     const url = `/outbound/pick-lists${params.toString() ? `?${params.toString()}` : ""}`;
     const response = await api.get(url);
@@ -138,7 +141,7 @@ export default function PickListPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("RELEASED");
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPickTaskModal, setShowPickTaskModal] = useState(false);
@@ -753,16 +756,16 @@ export default function PickListPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {/* {(so.status === "RELEASED" /|| so.status === "PENDING") && ( */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPickTask(so)}
-                            className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                            title="Picking"
-                          >
-                            <PackageSearch className="w-4 h-4" />
-                          </button>
-                          {/* )} */}
+                          {so.status === "RELEASED" && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPickTask(so)}
+                              className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                              title="Picking"
+                            >
+                              <PackageSearch className="w-4 h-4" />
+                            </button>
+                          )}
                           {(so.status === "DRAFT" ||
                             so.status === "PROCESSING" ||
                             so.status === "PENDING") && (

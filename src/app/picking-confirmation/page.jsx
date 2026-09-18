@@ -144,7 +144,7 @@ export default function PickListPageConfi() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("PENDING");
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPickTaskModal, setShowPickTaskModal] = useState(false);
@@ -692,13 +692,14 @@ export default function PickListPageConfi() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {/* {(so.status === "PENDING") && ( */}
+                          {(so.status === "PENDING") && (
                           <button
                             type="button"
                             onClick={() => {
                               // Open confirmation modal
                               setSelectedPickList(so);
                               setConfirmationData({
+                                
                                 pickTaskNumber: so.pickTaskNumber || "",
                                 itemCode: so.itemCode || "",
                                 pickedQuantity: so.requiredQuantity || 0,
@@ -713,7 +714,7 @@ export default function PickListPageConfi() {
                           >
                             <Check className="w-4 h-4" />
                           </button>
-                          {/* )} */}
+                           )}  
                         
                         </div>
                       </td>

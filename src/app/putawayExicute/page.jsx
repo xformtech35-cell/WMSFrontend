@@ -24,6 +24,7 @@ import { CREATE } from "@/components/apiRequest";
 import PutawayDetailsModal from "./components/PutawayDetailsModal";
 import PutawayExecuteModal from "./components/PutawayExecuteModal";
 import UserFullName from "@/components/UserFullName";
+import { shouldRestrictByAssignment } from "@/lib/permissionUtils";
 
 async function fetchApprovedGRNs(params = {}) {
   const response = await api.get(
@@ -160,9 +161,10 @@ export default function PutawayExicutePage() {
       if (filters.grnNumber?.trim()) {
         params.append("grnNumber", filters.grnNumber.trim());
       }
-      const role = localStorage.getItem("wms_role");
       const assign = localStorage.getItem("wms_username");
-      if (role !== "ADMIN") params.append("assignedTo", assign);
+      if (shouldRestrictByAssignment("CAN_CHECK_ALL_PUTAWAY_EXECUTE")) {
+        params.append("assignedTo", assign);
+      }
       const response = await api.get(`/putaway?${params.toString()}`);
       const data = response.data?.data || response.data;
       const content = data?.content || response.data?.content || data || [];
@@ -281,81 +283,6 @@ export default function PutawayExicutePage() {
         rockId: rock?.rockId || grn.rockId || "",
       }));
     }
-  };
-
-  const toggleItemSelection = (index) => {
-    const updatedItems = [...grnItems];
-    updatedItems[index].isSelected = !updatedItems[index].isSelected;
-    setGrnItems(updatedItems);
-  };
-
-  const addSelectedItemsToLines = () => {
-    const selectedItems = grnItems.filter((item) => item.isSelected);
-    if (selectedItems.length === 0) {
-      toast.error("Please select at least one item to add");
-      return;
-    }
-
-    const newLines = selectedItems.map((item) => ({
-      itemCode: item.itemCode,
-      itemName: item.itemName,
-      uom: item.uom || "Nos",
-      quantity: item.quantity || 0,
-      inboundLineId: item.inboundLineId,
-      batchNumber: item.batchNumber || "",
-      serialNumber: "",
-      suggestedBin: "",
-      remarks: "",
-    }));
-
-    setFormData((prev) => ({
-      ...prev,
-      lines: [...prev.lines, ...newLines],
-    }));
-
-    // Unselect added items
-    const updatedItems = grnItems.map((item) => ({
-      ...item,
-      isSelected: false,
-    }));
-    setGrnItems(updatedItems);
-
-    toast.success(`${selectedItems.length} item(s) added to putaway`);
-  };
-
-  const removeLine = (index) => {
-    const updatedLines = [...formData.lines];
-    updatedLines.splice(index, 1);
-    setFormData((prev) => ({
-      ...prev,
-      lines: updatedLines,
-    }));
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
-  };
-
-  const handleLineChange = (index, field, value) => {
-    const updatedLines = [...formData.lines];
-    updatedLines[index] = {
-      ...updatedLines[index],
-      [field]: value,
-    };
-    setFormData((prev) => ({
-      ...prev,
-      lines: updatedLines,
-    }));
   };
 
   const validateForm = () => {

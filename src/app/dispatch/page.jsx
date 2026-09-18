@@ -476,14 +476,15 @@ export default function DispatchPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleShipmentClick(dispatch)}
-                            className="text-green-600 hover:text-green-800 transition-colors"
-                            title="Confirm Shipment"
-                          >
+                          {dispatch.status === "DISPATCHED" && (
+                            <button
+                              type="button"
+                              onClick={() => handleShipmentClick(dispatch)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                              title="Confirm Shipment"
+                            >
                             <Check className="w-4 h-4" />
-                          </button>
+                          </button>)}
                           
                         </div>
                       </td>

@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import UserFullName from "@/components/UserFullName";
+import { shouldRestrictByAssignment } from "@/lib/permissionUtils";
 
 // API function for picklists
 const getPicklistsAPI = async (
@@ -53,7 +54,9 @@ const getPicklistsAPI = async (
   const role = localStorage.getItem("wms_role");
 
   const assign = localStorage.getItem("wms_username");
-  if (role !== "ADMIN") params.append("assignTo", assign);
+  if (shouldRestrictByAssignment("CAN_CHECK_ALL_PICKING_RETURN_ORDER")) {
+    params.append("assignTo", assign);
+  }
   return apiRequest(
     `/vendor-returns/picklists/search?${params.toString()}`,
     "POST",

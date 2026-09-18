@@ -172,7 +172,7 @@ export default function Packages() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("PACKED");
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPackageModal, setShowPackageModal] = useState(false);
   const [showShippingLabelModal, setShowShippingLabelModal] = useState(false);
@@ -802,7 +802,7 @@ export default function Packages() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {pkg.status !== "LABELED" && (
+                          {pkg.status === "PACKED" && (
                             <button
                               type="button"
                               onClick={() =>

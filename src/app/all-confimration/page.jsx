@@ -49,9 +49,12 @@ import {
 import api from "@/lib/api";
 import UserFullName from "@/components/UserFullName";
 
-
-
-const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = "ALL") => {
+const getSalesOrdersAPI = async (
+  page = 0,
+  size = 10,
+  searchTerm = "",
+  status = "ALL",
+) => {
   try {
     const params = new URLSearchParams();
     if (page !== undefined) params.append("page", page);
@@ -72,7 +75,9 @@ const getSalesOrdersAPI = async (page = 0, size = 10, searchTerm = "", status = 
           total: data.totalElements || data.content.length,
           page: data.number || page,
           size: data.size || size,
-          totalPages: data.totalPages || Math.ceil((data.totalElements || data.content.length) / size),
+          totalPages:
+            data.totalPages ||
+            Math.ceil((data.totalElements || data.content.length) / size),
           first: data.first,
           last: data.last,
         };
@@ -112,7 +117,10 @@ const deleteSalesOrderAPI = async (id) => {
 
 // Update pick list status
 const updatePickListStatusAPI = async (pickListNumber, status) => {
-  return apiRequest(`/outbound/pick-task/${pickListNumber}/status?status=${status}`, "PATCH");
+  return apiRequest(
+    `/outbound/pick-task/${pickListNumber}/status?status=${status}`,
+    "PATCH",
+  );
 };
 
 // Create pick task
@@ -146,7 +154,7 @@ export default function PickListPageConfiAll() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("CONFIRMED");
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPickTaskModal, setShowPickTaskModal] = useState(false);
@@ -194,6 +202,7 @@ export default function PickListPageConfiAll() {
     width: "",
     height: "",
     packedBy: "",
+    confirmationNumber: "",
   });
 
   // Debounce search term
@@ -308,23 +317,31 @@ export default function PickListPageConfiAll() {
 
   // Handle status update
   const handleStatusUpdate = async (pickTaskNumber, status, actionLabel) => {
-    if (!window.confirm(`Are you sure you want to mark this pick task as ${actionLabel}?`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to mark this pick task as ${actionLabel}?`,
+      )
+    ) {
       return;
     }
 
     try {
       setUpdatingStatus(true);
       await updatePickListStatusAPI(pickTaskNumber, status);
-      setSuccessMessage(`Pick task ${pickTaskNumber} marked as ${actionLabel} successfully`);
+      setSuccessMessage(
+        `Pick task ${pickTaskNumber} marked as ${actionLabel} successfully`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
-      
+
       if (showViewModal) {
         handleViewClose();
       }
     } catch (error) {
       console.error("Status update error:", error);
-      setErrorMessage(error.message || `Failed to update pick task status to ${actionLabel}.`);
+      setErrorMessage(
+        error.message || `Failed to update pick task status to ${actionLabel}.`,
+      );
     } finally {
       setUpdatingStatus(false);
     }
@@ -389,7 +406,7 @@ export default function PickListPageConfiAll() {
   // Handle Confirm Pick Submit
   const handleConfirmPickSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!confirmationData.pickTaskNumber) {
       setErrorMessage("Pick Task Number is required");
@@ -399,7 +416,10 @@ export default function PickListPageConfiAll() {
       setErrorMessage("Item Code is required");
       return;
     }
-    if (!confirmationData.pickedQuantity || confirmationData.pickedQuantity <= 0) {
+    if (
+      !confirmationData.pickedQuantity ||
+      confirmationData.pickedQuantity <= 0
+    ) {
       setErrorMessage("Picked Quantity must be greater than 0");
       return;
     }
@@ -412,14 +432,18 @@ export default function PickListPageConfiAll() {
       setLoading(true);
       const response = await confirmPickAPI(confirmationData);
       console.log("Pick Confirmation submitted:", response);
-      
-      setSuccessMessage(`Pick confirmation submitted successfully for ${confirmationData.pickTaskNumber}`);
+
+      setSuccessMessage(
+        `Pick confirmation submitted successfully for ${confirmationData.pickTaskNumber}`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
       handlePickTaskClose();
     } catch (error) {
       console.error("Pick Confirmation error:", error);
-      setErrorMessage(error.message || "Failed to confirm pick. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to confirm pick. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -428,7 +452,7 @@ export default function PickListPageConfiAll() {
   // Handle Create Package Submit
   const handleCreatePackageSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!packageData.soNumber) {
       setErrorMessage("SO Number is required");
@@ -476,6 +500,7 @@ export default function PickListPageConfiAll() {
     try {
       setLoading(true);
       const payload = {
+        confirmationNumber: packageData.confirmationNumber,
         soNumber: packageData.soNumber,
         pickListNumber: packageData.pickListNumber,
         itemCode: packageData.itemCode,
@@ -492,14 +517,18 @@ export default function PickListPageConfiAll() {
 
       const response = await createPackageAPI(payload);
       console.log("Package created:", response);
-      
-      setSuccessMessage(`Package created successfully for ${packageData.soNumber}`);
+
+      setSuccessMessage(
+        `Package created successfully for ${packageData.soNumber}`,
+      );
       setShowSuccess(true);
       loadSalesOrders();
       handlePackageClose();
     } catch (error) {
       console.error("Create Package error:", error);
-      setErrorMessage(error.message || "Failed to create package. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to create package. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -509,6 +538,7 @@ export default function PickListPageConfiAll() {
   const handleOpenPackageModal = (so) => {
     setSelectedPackageItem(so);
     setPackageData({
+      confirmationNumber: so.confirmationNumber || "",
       soNumber: so.soNumber || "",
       pickListNumber: so.pickListNumber || "",
       itemCode: so.itemCode || "",
@@ -571,25 +601,6 @@ export default function PickListPageConfiAll() {
   };
 
   const { formatDate } = useDateFormat();
-
-  // Status action buttons configuration
-  const getStatusActions = (currentStatus) => {
-    const actions = {
-      PENDING: [
-        { status: "CONFIRMED", label: "Confirm Pick", icon: Check, color: "bg-blue-600 hover:bg-blue-700" },
-      ],
-      CONFIRMED: [
-        { status: "PICKED", label: "Mark as Picked", icon: CheckSquare, color: "bg-green-600 hover:bg-green-700" },
-      ],
-      PICKED: [
-        { status: "SHIPPED", label: "Mark as Shipped", icon: Truck, color: "bg-purple-600 hover:bg-purple-700" },
-      ],
-      SHIPPED: [
-        { status: "DELIVERED", label: "Mark as Delivered", icon: CheckCircle, color: "bg-indigo-600 hover:bg-indigo-700" },
-      ],
-    };
-    return actions[currentStatus] || [];
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -760,12 +771,8 @@ export default function PickListPageConfiAll() {
                           {so.confirmationNumber || "N/A"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {so.pickTaskNumber}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {so.soNumber}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{so.pickTaskNumber}</td>
+                      <td className="px-4 py-3 text-sm">{so.soNumber}</td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
                           {so.itemCode}
@@ -792,8 +799,7 @@ export default function PickListPageConfiAll() {
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
                           {/* {so.confirmedBy || "N/A"} */}
-                                                    <UserFullName username={so.confirmedBy || "N/A"} />
-
+                          <UserFullName username={so.confirmedBy || "N/A"} />
                         </div>
                         <div className="text-xs text-gray-500">
                           {formatDate(so.confirmedDate)}
@@ -816,14 +822,16 @@ export default function PickListPageConfiAll() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPackageModal(so)}
-                            className="text-purple-600 hover:text-purple-800 transition-colors"
-                            title="Create Package"
-                          >
-                            <PackagePlus  className="w-4 h-4" />
-                          </button>
+                          {so?.status === "CONFIRMED" && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPackageModal(so)}
+                              className="text-purple-600 hover:text-purple-800 transition-colors"
+                              title="Create Package"
+                            >
+                              <PackagePlus className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -887,7 +895,7 @@ export default function PickListPageConfiAll() {
                     <XCircle className="w-6 h-6" />
                   </button>
                 </div>
-                
+
                 <div className="p-6">
                   {/* Basic Info Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
@@ -896,68 +904,120 @@ export default function PickListPageConfiAll() {
                         <Tag className="w-3 h-3" />
                         Confirmation Number
                       </label>
-                      <p className="font-medium text-gray-900">{viewingSO.confirmationNumber}</p>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.confirmationNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick Task Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickTaskNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Pick Task Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickTaskNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickListNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Pick List Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickListNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                      <p className="font-medium text-gray-900">{viewingSO.soNumber}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        SO Number
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.soNumber}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Status</label>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Status
+                      </label>
                       <p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
+                        >
                           {viewingSO.status}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Confirmed Date</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingSO.confirmedDate)}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Item Code</label>
-                      <p className="font-medium text-gray-900">{viewingSO.itemCode}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Item Name</label>
-                      <p className="font-medium text-gray-900">{viewingSO.itemName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.requiredQuantity}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Picked Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.pickedQuantity}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Short Quantity</label>
-                      <p className="font-medium text-gray-900">{viewingSO.shortQuantity || 0}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Barcode</label>
-                      <p className="font-medium text-gray-900">{viewingSO.barcode || "N/A"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Confirmed By</label>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Confirmed Date
+                      </label>
                       <p className="font-medium text-gray-900">
-                        {/* {viewingSO.confirmedBy} */}
-                          <UserFullName username={viewingSO.confirmedBy || "N/A"} />
-
-                        
+                        {formatDate(viewingSO.confirmedDate)}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">Created At</label>
-                      <p className="font-medium text-gray-900">{formatDate(viewingSO.createdAt)}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Item Code
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.itemCode}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Item Name
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.itemName}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Required Quantity
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.requiredQuantity}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Picked Quantity
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.pickedQuantity}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Short Quantity
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.shortQuantity || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Barcode
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {viewingSO.barcode || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Confirmed By
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {/* {viewingSO.confirmedBy} */}
+                        <UserFullName
+                          username={viewingSO.confirmedBy || "N/A"}
+                        />
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Created At
+                      </label>
+                      <p className="font-medium text-gray-900">
+                        {formatDate(viewingSO.createdAt)}
+                      </p>
                     </div>
                   </div>
 
@@ -970,7 +1030,7 @@ export default function PickListPageConfiAll() {
                       }}
                       className="px-4 py-2 rounded-lg flex items-center gap-2 text-white bg-purple-600 hover:bg-purple-700 transition-colors"
                     >
-                      <PackagePlus  className="w-4 h-4" />
+                      <PackagePlus className="w-4 h-4" />
                       Create Package
                     </button>
                   </div>
@@ -978,8 +1038,12 @@ export default function PickListPageConfiAll() {
                   {/* Remarks if any */}
                   {viewingSO.remarks && (
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <label className="text-xs text-gray-500 uppercase font-medium">Remarks</label>
-                      <p className="text-sm text-gray-700">{viewingSO.remarks}</p>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Remarks
+                      </label>
+                      <p className="text-sm text-gray-700">
+                        {viewingSO.remarks}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1021,28 +1085,53 @@ export default function PickListPageConfiAll() {
                     <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick Task Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickTaskNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Pick Task Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.pickTaskNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.pickListNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Pick List Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.pickListNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.soNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            SO Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.soNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Item</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.itemCode} - {selectedPickList?.itemName}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Item
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.itemCode} -{" "}
+                            {selectedPickList?.itemName}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Required Quantity</label>
-                          <p className="font-medium text-gray-900">{selectedPickList?.requiredQuantity}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Required Quantity
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPickList?.requiredQuantity}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Location</label>
-                          <p className="font-medium text-gray-900 text-sm">{selectedPickList?.locationBarcode || "N/A"}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Location
+                          </label>
+                          <p className="font-medium text-gray-900 text-sm">
+                            {selectedPickList?.locationBarcode || "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1115,7 +1204,12 @@ export default function PickListPageConfiAll() {
                             min="0"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Auto-calculated: {Math.max(0, (selectedPickList?.requiredQuantity || 0) - confirmationData.pickedQuantity)}
+                            Auto-calculated:{" "}
+                            {Math.max(
+                              0,
+                              (selectedPickList?.requiredQuantity || 0) -
+                                confirmationData.pickedQuantity,
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1199,7 +1293,9 @@ export default function PickListPageConfiAll() {
                       Create Package
                     </h2>
                     <p className="text-sm text-gray-500">
-                      SO: {selectedPackageItem.soNumber} | {selectedPackageItem.itemCode}
+                      SO: {selectedPackageItem.soNumber} |{" "}
+                      {selectedPackageItem.itemCode} | Confirmation:{" "}
+                      {packageData.confirmationNumber}
                     </p>
                   </div>
                   <button
@@ -1216,20 +1312,37 @@ export default function PickListPageConfiAll() {
                     <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">SO Number</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.soNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            SO Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPackageItem.soNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Pick List Number</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.pickListNumber}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Pick List Number
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPackageItem.pickListNumber}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Item</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.itemCode} - {selectedPackageItem.itemName}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Item
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPackageItem.itemCode} -{" "}
+                            {selectedPackageItem.itemName}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">Available Quantity</label>
-                          <p className="font-medium text-gray-900">{selectedPackageItem.pickedQuantity}</p>
+                          <label className="text-xs text-gray-500 uppercase font-medium">
+                            Available Quantity
+                          </label>
+                          <p className="font-medium text-gray-900">
+                            {selectedPackageItem.pickedQuantity}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1237,9 +1350,21 @@ export default function PickListPageConfiAll() {
                     {/* Form Fields */}
                     <div className="space-y-4">
                       {/* Hidden/readonly fields */}
-                      <input type="hidden" name="soNumber" value={packageData.soNumber} />
-                      <input type="hidden" name="pickListNumber" value={packageData.pickListNumber} />
-                      <input type="hidden" name="itemCode" value={packageData.itemCode} />
+                      <input
+                        type="hidden"
+                        name="soNumber"
+                        value={packageData.soNumber}
+                      />
+                      <input
+                        type="hidden"
+                        name="pickListNumber"
+                        value={packageData.pickListNumber}
+                      />
+                      <input
+                        type="hidden"
+                        name="itemCode"
+                        value={packageData.itemCode}
+                      />
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -1338,7 +1463,9 @@ export default function PickListPageConfiAll() {
                         </label>
                         <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <label className="text-xs text-gray-500">Length</label>
+                            <label className="text-xs text-gray-500">
+                              Length
+                            </label>
                             <input
                               type="number"
                               name="length"
@@ -1351,7 +1478,9 @@ export default function PickListPageConfiAll() {
                             />
                           </div>
                           <div>
-                            <label className="text-xs text-gray-500">Width</label>
+                            <label className="text-xs text-gray-500">
+                              Width
+                            </label>
                             <input
                               type="number"
                               name="width"
@@ -1364,7 +1493,9 @@ export default function PickListPageConfiAll() {
                             />
                           </div>
                           <div>
-                            <label className="text-xs text-gray-500">Height</label>
+                            <label className="text-xs text-gray-500">
+                              Height
+                            </label>
                             <input
                               type="number"
                               name="height"
