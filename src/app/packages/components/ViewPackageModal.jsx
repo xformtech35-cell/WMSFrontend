@@ -196,7 +196,7 @@ const ViewPackageModal = ({
                   Packed By
                 </label>
                 <p className="font-medium text-gray-900">
-                  {viewingPackage.packedBy}
+                  {/* {viewingPackage.packedBy} */}
                                             <UserFullName username={viewingPackage.packedBy || "N/A"} />
 
                 </p>

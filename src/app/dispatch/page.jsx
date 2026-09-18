@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import UserSelect from "@/components/UserSelect";
+import UserFullName from "@/components/UserFullName";
 
 export default function DispatchPage() {
   // List State
@@ -920,7 +921,8 @@ export default function DispatchPage() {
                         Dispatched By
                       </label>
                       <p className="font-medium text-gray-900">
-                        {viewingDispatch.dispatchedBy || "N/A"}
+                        {/* {viewingDispatch.dispatchedBy || "N/A"} */}
+                        <UserFullName username={viewingDispatch.dispatchedBy || "N/A"} />
                       </p>
                     </div>
                   </div>

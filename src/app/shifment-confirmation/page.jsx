@@ -36,6 +36,7 @@ import {
 import apiRequest from "@/components/apiRequest";
 import api from "@/lib/api";
 import { useDateFormat } from "@/context/DateFormatContext";
+import UserFullName from "@/components/UserFullName";
 
 export default function ShipmentConfirmation() {
   // List State
@@ -635,7 +636,6 @@ export default function ShipmentConfirmation() {
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
-                       
                         </div>
                       </td>
                     </tr>
@@ -680,9 +680,7 @@ export default function ShipmentConfirmation() {
               className="fixed inset-0 bg-black/50 z-40"
               onClick={handleDeliveryClose}
             />
-            <div
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            >
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
@@ -1067,7 +1065,10 @@ export default function ShipmentConfirmation() {
                         Confirmed By
                       </label>
                       <p className="font-medium text-gray-900">
-                        {viewingShipment.confirmedBy || "N/A"}
+                        {/* {viewingShipment.confirmedBy || "N/A"} */}
+                        <UserFullName
+                          username={viewingShipment.confirmedBy || "N/A"}
+                        />
                       </p>
                     </div>
                   </div>
