@@ -1084,19 +1084,26 @@ const Sidebar = ({ mobileOpen, onCloseMobile }) => {
             isCollapsed && "justify-center px-2",
           )}
         >
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500/40 to-indigo-500/40 ring-1.5 ring-sidebar-border text-[11px] font-bold text-sidebar-primary/80 hover:ring-sidebar-primary/40 transition-all duration-200">
-            {displayName.slice(0, 2).toUpperCase()}
-          </div>
-          {!isCollapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold text-sidebar-foreground">
-                {displayName}
-              </p>
-              <p className="truncate text-[12px] text-sidebar-foreground/40 mt-0.5">
-                {displayRole}
-              </p>
+          <Link
+            href="/profile"
+            onClick={onCloseMobile}
+            className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity cursor-pointer"
+            title="View Profile"
+          >
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500/40 to-indigo-500/40 ring-1.5 ring-sidebar-border text-[11px] font-bold text-sidebar-primary/80 hover:ring-sidebar-primary/40 transition-all duration-200">
+              {displayName.slice(0, 2).toUpperCase()}
             </div>
-          )}
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-semibold text-sidebar-foreground">
+                  {displayName}
+                </p>
+                <p className="truncate text-[12px] text-sidebar-foreground/40 mt-0.5">
+                  {displayRole}
+                </p>
+              </div>
+            )}
+          </Link>
           {!isCollapsed && (
             <Tooltip>
               <TooltipTrigger asChild>

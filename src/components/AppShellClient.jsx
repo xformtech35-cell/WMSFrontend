@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { cn } from "@/lib/utils";
-import { Bell, Loader2, Menu, X } from "lucide-react";
+import { Bell, Loader2, Menu, X, User } from "lucide-react";
 import api from "@/lib/api";
 import { useWebSocketSubscription } from "@/lib/hooks/useWebSocketSubscription";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = ["/login", "/guide", "/forgot-password"];
 
 const ROUTE_TITLES = {
   "/dashboard": "Dashboard",
+  "/profile": "My Profile",
   "/purchase-requests": "Purchase Requests",
   "/inbound": "Inbound",
   "/outbound": "Outbound",
