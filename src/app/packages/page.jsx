@@ -135,16 +135,7 @@ const updatePackageStatusAPI = async (packageNumber, status) => {
   );
 };
 
-const decodeBase64Text = (base64String) => {
-  if (!base64String) return "";
 
-  try {
-    return atob(base64String);
-  } catch (error) {
-    console.error("Failed to decode label:", error);
-    return "";
-  }
-};
 
 // Create package
 const createPackageAPI = async (data) => {
