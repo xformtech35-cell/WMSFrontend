@@ -1014,8 +1014,8 @@ export default function SalesOrderForm({
       return;
     }
 
-    if (item.reservedQuantity < 0) {
-      setErrorMessage("Reserved quantity cannot be negative");
+    if (item.reservedQuantity <= 0) {
+      setErrorMessage("Reserved quantity cannot be zero or negative");
       return;
     }
 
@@ -1164,8 +1164,8 @@ export default function SalesOrderForm({
       if (item.orderedQuantity <= 0) {
         throw new Error("Ordered quantity must be greater than 0");
       }
-      if (item.reservedQuantity < 0) {
-        throw new Error("Reserved quantity cannot be negative");
+      if (item.reservedQuantity <= 0) {
+        throw new Error("Reserved quantity cannot be zero or negative");
       }
       if (item.reservedQuantity > item.orderedQuantity) {
         throw new Error(

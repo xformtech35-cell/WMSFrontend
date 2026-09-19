@@ -1050,7 +1050,7 @@ export default function PickListPage() {
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                       <Package className="w-5 h-5 text-indigo-600" />
-                      Create Pick Task
+                      Complete Pick Task
                     </h2>
                     <p className="text-sm text-gray-500">
                       {selectedPickList?.pickListNumber || "New Pick Task"}
