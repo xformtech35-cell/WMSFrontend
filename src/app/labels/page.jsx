@@ -657,12 +657,34 @@ const handleDispatchSuccess = (data) => {
                       <td className="px-4 py-3 text-sm">{pkg.soNumber}</td>
                       <td className="px-4 py-3 text-sm">{pkg.customerName}</td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {pkg.itemCode}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {pkg.itemName}
-                        </div>
+                        {pkg.pickConfirmation?.items?.length > 1 ? (
+                          <div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800">
+                              {pkg.pickConfirmation.items.length} Items
+                            </span>
+                            <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[150px]">
+                              {pkg.pickConfirmation.items.map(i => i.itemName || i.itemCode).join(", ")}
+                            </div>
+                          </div>
+                        ) : pkg.pickConfirmation?.items?.length === 1 ? (
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {pkg.pickConfirmation.items[0].itemCode}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {pkg.pickConfirmation.items[0].itemName}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {pkg.itemCode || "N/A"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {pkg.itemName || ""}
+                            </div>
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-4 py-3">
