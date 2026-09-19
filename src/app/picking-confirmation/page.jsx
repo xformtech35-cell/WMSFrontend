@@ -144,7 +144,7 @@ export default function PickListPageConfi() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("PENDING");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [showFormModal, setShowFormModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showPickTaskModal, setShowPickTaskModal] = useState(false);
@@ -176,6 +176,7 @@ export default function PickListPageConfi() {
     shortQuantity: 0,
     barcode: "",
     confirmedBy: "",
+    remarks: "All items picked successfully",
   });
 
   // Debounce search term
@@ -334,18 +335,63 @@ export default function PickListPageConfi() {
   const resetConfirmationForm = () => {
     setConfirmationData({
       pickTaskNumber: "",
-      itemCode: "",
-      pickedQuantity: 0,
-      shortQuantity: 0,
-      barcode: "",
       confirmedBy: "",
+      remarks: "All items picked successfully",
+      items: [],
     });
+  };
+
+  // Open Confirmation Modal
+  const handleOpenConfirmModal = (so) => {
+    setSelectedPickList(so);
+    const hasItems = so.items && Array.isArray(so.items) && so.items.length > 0;
+    const itemsList = hasItems
+      ? so.items.map((i) => ({
+          itemCode: i.itemCode || "",
+          itemName: i.itemName || "",
+          uom: i.uom || "",
+          requiredQuantity: i.requiredQuantity || 0,
+          pickedQuantity: i.pickedQuantity !== undefined ? i.pickedQuantity : (i.requiredQuantity || 0),
+          barcode: i.itemBarcode || i.sourceLocation || i.locationBarcode || "",
+          remarks: i.remarks || "Full pick",
+        }))
+      : [
+          {
+            itemCode: so.itemCode || "",
+            itemName: so.itemName || "",
+            uom: so.uom || "",
+            requiredQuantity: so.requiredQuantity || 0,
+            pickedQuantity: so.pickedQuantity !== undefined ? so.pickedQuantity : (so.requiredQuantity || 0),
+            barcode: so.itemBarcode || so.locationBarcode || "",
+            remarks: "Full pick",
+          },
+        ];
+
+    setConfirmationData({
+      pickTaskNumber: so.pickTaskNumber || "",
+      confirmedBy: so.assignedTo || so.pickerName || "",
+      remarks: "All items picked successfully",
+      items: itemsList,
+    });
+    setShowPickTaskModal(true);
   };
 
   // Handle Confirmation Form Input
   const handleConfirmationInputChange = (e) => {
     const { name, value } = e.target;
     setConfirmationData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle Per-Item Input Change
+  const handleItemConfirmationChange = (index, field, value) => {
+    setConfirmationData((prev) => {
+      const updatedItems = [...(prev.items || [])];
+      updatedItems[index] = {
+        ...updatedItems[index],
+        [field]: value,
+      };
+      return { ...prev, items: updatedItems };
+    });
   };
 
   // Handle Confirm Pick Submit
@@ -357,25 +403,31 @@ export default function PickListPageConfi() {
       setErrorMessage("Pick Task Number is required");
       return;
     }
-    if (!confirmationData.itemCode) {
-      setErrorMessage("Item Code is required");
-      return;
-    }
-    if (
-      !confirmationData.pickedQuantity ||
-      confirmationData.pickedQuantity <= 0
-    ) {
-      setErrorMessage("Picked Quantity must be greater than 0");
-      return;
-    }
     if (!confirmationData.confirmedBy) {
       setErrorMessage("Confirmed By is required");
       return;
     }
 
+    const itemsPayload =
+      confirmationData.items && confirmationData.items.length > 0
+        ? confirmationData.items.map((item) => ({
+            itemCode: item.itemCode,
+            pickedQuantity: Number(item.pickedQuantity || 0),
+            barcode: item.barcode || "",
+            remarks: item.remarks || "Full pick",
+          }))
+        : [];
+
+    const payload = {
+      pickTaskNumber: confirmationData.pickTaskNumber,
+      confirmedBy: confirmationData.confirmedBy,
+      remarks: confirmationData.remarks || "All items picked successfully",
+      items: itemsPayload,
+    };
+
     try {
       setLoading(true);
-      const response = await confirmPickAPI(confirmationData);
+      const response = await confirmPickAPI(payload);
       console.log("Pick Confirmation submitted:", response);
 
       setSuccessMessage(
@@ -574,13 +626,14 @@ export default function PickListPageConfi() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="ALL">All Status</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
                 <option value="PENDING">Pending</option>
                 <option value="CONFIRMED">Confirmed</option>
                 <option value="PICKED">Picked</option>
                 <option value="SHIPPED">Shipped</option>
                 <option value="DELIVERED">Delivered</option>
                 <option value="CANCELLED">Cancelled</option>
-                <option value="COMPLETED">Completed</option>
               </select>
             </div>
             <div className="text-sm text-gray-500">
@@ -605,13 +658,19 @@ export default function PickListPageConfi() {
                     SO Number
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item
+                    Warehouse
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Qty
+                    Item(s)
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Picker
+                    Total Qty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned To
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -624,7 +683,7 @@ export default function PickListPageConfi() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8">
+                    <td colSpan="10" className="text-center py-8">
                       <div className="flex justify-center items-center gap-2">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                         <span className="text-gray-500">Loading...</span>
@@ -633,93 +692,123 @@ export default function PickListPageConfi() {
                   </tr>
                 ) : salesOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8 text-gray-500">
+                    <td colSpan="10" className="text-center py-8 text-gray-500">
                       No pick tasks found
                     </td>
                   </tr>
                 ) : (
-                  salesOrders.map((so) => (
-                    <tr
-                      key={so.id || so.pickTaskNumber}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td
-                        className="px-4 py-3 cursor-pointer"
-                        onClick={() => handleViewClick(so)}
+                  salesOrders.map((so) => {
+                    const hasItems = so.items && Array.isArray(so.items) && so.items.length > 0;
+                    const primaryItem = hasItems ? so.items[0] : null;
+                    const itemsCount = so.totalItems !== undefined ? so.totalItems : (hasItems ? so.items.length : 1);
+                    const totalQty = so.totalQuantity !== undefined ? so.totalQuantity : (hasItems ? so.items.reduce((acc, i) => acc + (i.requiredQuantity || 0), 0) : (so.requiredQuantity || 0));
+                    const assignedUser = so.assignedTo || so.pickerName;
+
+                    return (
+                      <tr
+                        key={so.id || so.pickTaskNumber}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <span className="font-medium text-blue-600 hover:text-blue-800">
-                          {so.pickTaskNumber || "N/A"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{so.pickListNumber}</td>
-                      <td className="px-4 py-3 text-sm">{so.soNumber}</td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {so.itemCode}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {so.itemName}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                          {so.requiredQuantity} {so.uom}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {/* {so.pickerName || "N/A"} */}
-                          <UserFullName username={so.pickerName || "N/A"} />
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ID: {so.pickerId || "N/A"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(so.status)}`}
+                        <td
+                          className="px-4 py-3 cursor-pointer"
+                          onClick={() => handleViewClick(so)}
                         >
-                          {so.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => handleViewClick(so)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                            title="View Details"
+                          <span className="font-medium text-blue-600 hover:text-blue-800">
+                            {so.pickTaskNumber || "N/A"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">{so.pickListNumber || "N/A"}</td>
+                        <td className="px-4 py-3 text-sm">{so.soNumber || "N/A"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 font-medium">
+                          {so.warehouseId || "N/A"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {hasItems ? (
+                            so.items.length === 1 ? (
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {primaryItem.itemCode}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {primaryItem.itemName}
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                                  <Box className="w-3 h-3" />
+                                  {itemsCount} Items
+                                </span>
+                                <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[180px]" title={so.items.map(i => i.itemName || i.itemCode).join(", ")}>
+                                  {so.items.map(i => i.itemName || i.itemCode).join(", ")}
+                                </div>
+                              </div>
+                            )
+                          ) : (
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {so.itemCode || "N/A"}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {so.itemName || ""}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className="bg-gray-100 px-2.5 py-1 rounded text-xs font-semibold text-gray-800">
+                            {totalQty} {primaryItem?.uom || so.uom || ""}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            <UserFullName username={assignedUser || "Unassigned"} />
+                          </div>
+                          {assignedUser && (
+                            <div className="text-xs text-gray-500">
+                              @{assignedUser}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {so.priority && (
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs font-medium border ${getPriorityColor(so.priority)}`}
+                            >
+                              {so.priority}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(so.status)}`}
                           >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {(so.status === "PENDING") && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Open confirmation modal
-                              setSelectedPickList(so);
-                              setConfirmationData({
-                                
-                                pickTaskNumber: so.pickTaskNumber || "",
-                                itemCode: so.itemCode || "",
-                                pickedQuantity: so.requiredQuantity || 0,
-                                shortQuantity: 0,
-                                barcode: so.itemBarcode || "",
-                                confirmedBy: so.pickerName || "",
-                              });
-                              setShowPickTaskModal(true);
-                            }}
-                            className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                            title="Confirm Pick"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                           )}  
-                        
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {so.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleViewClick(so)}
+                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenConfirmModal(so)}
+                              className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition-colors"
+                              title="Confirm Pick"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -761,7 +850,7 @@ export default function PickListPageConfi() {
               onClick={handleViewClose}
             />
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
@@ -782,63 +871,93 @@ export default function PickListPageConfi() {
 
                 <div className="p-6">
                   {/* Status Update Actions */}
-                  <div className="mb-6">
-                    <div className="flex flex-wrap gap-2">
-                      {getStatusActions(viewingSO.status).map((action) => (
-                        <button
-                          key={action.status}
-                          type="button"
-                          onClick={() =>
-                            handleStatusUpdate(
-                              viewingSO.pickTaskNumber,
-                              action.status,
-                              action.label,
-                            )
-                          }
-                          disabled={updatingStatus}
-                          className={`px-4 py-2 rounded-lg flex items-center gap-2 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${action.color}`}
-                        >
-                          <action.icon className="w-4 h-4" />
-                          {updatingStatus ? "Processing..." : action.label}
-                        </button>
-                      ))}
+                  {getStatusActions(viewingSO.status).length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex flex-wrap gap-2">
+                        {getStatusActions(viewingSO.status).map((action) => (
+                          <button
+                            key={action.status}
+                            type="button"
+                            onClick={() =>
+                              handleStatusUpdate(
+                                viewingSO.pickTaskNumber,
+                                action.status,
+                                action.label,
+                              )
+                            }
+                            disabled={updatingStatus}
+                            className={`px-4 py-2 rounded-lg flex items-center gap-2 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${action.color}`}
+                          >
+                            <action.icon className="w-4 h-4" />
+                            {updatingStatus ? "Processing..." : action.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Basic Info Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
                         <Tag className="w-3 h-3" />
                         Pick Task Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickTaskNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.pickTaskNumber || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Pick List Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickListNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.pickListNumber || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         SO Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.soNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.soNumber || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Warehouse ID
+                      </label>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.warehouseId || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Assigned To (Picker)
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        <UserFullName username={viewingSO.assignedTo || viewingSO.pickerName || "N/A"} />
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Priority
+                      </label>
+                      <p className="mt-0.5">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium border ${getPriorityColor(viewingSO.priority)}`}
+                        >
+                          {viewingSO.priority || "NORMAL"}
+                        </span>
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Status
                       </label>
-                      <p>
+                      <p className="mt-0.5">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
                         >
                           {viewingSO.status}
                         </span>
@@ -846,67 +965,121 @@ export default function PickListPageConfi() {
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
-                        Item Code
+                        Total Items / Qty
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.itemCode}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.totalItems || viewingSO.items?.length || 0} items ({viewingSO.totalQuantity !== undefined ? viewingSO.totalQuantity : viewingSO.requiredQuantity || 0} total qty)
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
-                        Item Name
+                        Created By
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.itemName}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        UOM
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.uom}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Required Quantity
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.requiredQuantity}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Picked Quantity
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickedQuantity || 0}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Picker Name
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {/* {viewingSO.pickerName || "N/A"} */}
-                        <UserFullName username={viewingSO.pickerName || "N/A"} />
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.createdBy || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Created At
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {formatDate(viewingSO.createdAt)}
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.createdAt ? formatDate(viewingSO.createdAt) : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Updated By
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.updatedBy || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Completed Date
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.completedDate ? formatDate(viewingSO.completedDate) : "N/A"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Location Details */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                    <div className="col-span-2 md:col-span-1 gap-1">
+                  {/* Remarks if any */}
+                  {viewingSO.remarks && (
+                    <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Task Remarks
+                      </label>
+                      <p className="text-sm text-gray-700 mt-0.5">
+                        {viewingSO.remarks}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Items List Table */}
+                  {viewingSO.items && Array.isArray(viewingSO.items) && viewingSO.items.length > 0 ? (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Box className="w-4 h-4 text-blue-600" />
+                        Task Items ({viewingSO.items.length})
+                      </h3>
+                      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase font-medium">
+                            <tr>
+                              <th className="px-3 py-2.5">#</th>
+                              <th className="px-3 py-2.5">Item Code & Name</th>
+                              <th className="px-3 py-2.5">UOM</th>
+                              <th className="px-3 py-2.5 text-right">Required</th>
+                              <th className="px-3 py-2.5 text-right">To Pick</th>
+                              <th className="px-3 py-2.5 text-right">Picked</th>
+                              <th className="px-3 py-2.5 text-right">Short</th>
+                              <th className="px-3 py-2.5">Location / Barcode</th>
+                              <th className="px-3 py-2.5">Status</th>
+                              <th className="px-3 py-2.5">Scan Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {viewingSO.items.map((item, idx) => (
+                              <tr key={item.id || idx} className="hover:bg-gray-50">
+                                <td className="px-3 py-2.5 text-gray-400 font-mono text-xs">{idx + 1}</td>
+                                <td className="px-3 py-2.5">
+                                  <div className="font-semibold text-gray-900">{item.itemCode}</div>
+                                  <div className="text-xs text-gray-500">{item.itemName}</div>
+                                </td>
+                                <td className="px-3 py-2.5 text-xs text-gray-700 font-medium">{item.uom || "-"}</td>
+                                <td className="px-3 py-2.5 text-right font-medium text-gray-900">{item.requiredQuantity}</td>
+                                <td className="px-3 py-2.5 text-right font-medium text-blue-600">{item.quantityToPick}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold text-green-700">{item.pickedQuantity}</td>
+                                <td className="px-3 py-2.5 text-right font-medium text-red-600">{item.shortQuantity || 0}</td>
+                                <td className="px-3 py-2.5 text-xs">
+                                  <div className="font-mono text-gray-800 break-all">{item.sourceLocation || item.itemBarcode || item.locationBarcode || "N/A"}</div>
+                                  {item.binId && <div className="text-gray-500">Bin: {item.binId}</div>}
+                                  {item.batchNumber && <div className="text-gray-500">Batch: {item.batchNumber}</div>}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}>
+                                    {item.status}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-xs">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${item.isScanned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                                    {item.isScanned ? "Scanned" : "Not Scanned"}
+                                  </span>
+                                  {item.scanTime && (
+                                    <div className="text-gray-400 text-[11px] mt-0.5">{formatDate(item.scanTime)}</div>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Fallback Single Item Location Details */
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
                       <div>
                         <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
@@ -916,7 +1089,6 @@ export default function PickListPageConfi() {
                           {viewingSO.locationBarcode || "N/A"}
                         </p>
                       </div>
-
                       <div>
                         <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
                           <Barcode className="w-3 h-3" />
@@ -926,75 +1098,24 @@ export default function PickListPageConfi() {
                           {viewingSO.itemBarcode || "N/A"}
                         </p>
                       </div>
-                    </div>
-                    <br />
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Hash className="w-3 h-3" />
-                        Bin ID
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {viewingSO.binId || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
-                        <Layers className="w-3 h-3" />
-                        Batch Number
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {viewingSO.batchNumber || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Sales Order Line ID
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {viewingSO.salesOrderLineId || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Inventory ID
-                      </label>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {viewingSO.inventoryId || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Scan Status */}
-                  <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">
-                        Scan Status:
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${viewingSO.isScanned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
-                      >
-                        {viewingSO.isScanned ? "Scanned" : "Not Scanned"}
-                      </span>
-                    </div>
-                    {viewingSO.scanTime && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          Scan Time: {formatDate(viewingSO.scanTime)}
-                        </span>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                          <Hash className="w-3 h-3" />
+                          Bin ID
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.binId || "N/A"}
+                        </p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Remarks if any */}
-                  {viewingSO.remarks && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Remarks
-                      </label>
-                      <p className="text-sm text-gray-700">
-                        {viewingSO.remarks}
-                      </p>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
+                          <Layers className="w-3 h-3" />
+                          Batch Number
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.batchNumber || "N/A"}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1011,7 +1132,7 @@ export default function PickListPageConfi() {
               onClick={handlePickTaskClose}
             />
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
@@ -1032,14 +1153,14 @@ export default function PickListPageConfi() {
 
                 <div className="p-6">
                   <form onSubmit={handleConfirmPickSubmit}>
-                    {/* Pick Task Info */}
-                    <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="grid grid-cols-2 gap-2">
+                    {/* Pick Task Summary Header */}
+                    <div className="mb-6 p-4 bg-green-50 rounded-xl border border-green-200">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                           <label className="text-xs text-gray-500 uppercase font-medium">
                             Pick Task Number
                           </label>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-semibold text-gray-900">
                             {selectedPickList?.pickTaskNumber}
                           </p>
                         </div>
@@ -1047,147 +1168,45 @@ export default function PickListPageConfi() {
                           <label className="text-xs text-gray-500 uppercase font-medium">
                             Pick List Number
                           </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.pickListNumber}
+                          <p className="font-semibold text-gray-900">
+                            {selectedPickList?.pickListNumber || "N/A"}
                           </p>
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 uppercase font-medium">
                             SO Number
                           </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.soNumber}
+                          <p className="font-semibold text-gray-900">
+                            {selectedPickList?.soNumber || "N/A"}
                           </p>
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 uppercase font-medium">
-                            Item
+                            Warehouse
                           </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.itemCode} -{" "}
-                            {selectedPickList?.itemName}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Required Quantity
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.requiredQuantity}{" "}
-                            {selectedPickList?.uom}
-                          </p>
-                        </div>
-                        <br />
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Location
-                          </label>
-                          <p className="font-medium text-gray-900 text-sm">
-                            {selectedPickList?.locationBarcode}
+                          <p className="font-semibold text-gray-900">
+                            {selectedPickList?.warehouseId || "N/A"}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Form Fields */}
-                    <div className="space-y-4">
+                    {/* Top-Level Form Fields */}
+                    <div className="space-y-4 mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Pick Task Number *
                           </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              name="pickTaskNumber"
-                              value={confirmationData.pickTaskNumber}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Enter pick task number"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                              required
-                              readOnly
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Item Code *
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              name="itemCode"
-                              value={confirmationData.itemCode}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Enter item code"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                              required
-                              readOnly
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Picked Quantity *
-                          </label>
                           <input
-                            type="number"
-                            name="pickedQuantity"
-                            value={confirmationData.pickedQuantity}
+                            type="text"
+                            name="pickTaskNumber"
+                            value={confirmationData.pickTaskNumber}
                             onChange={handleConfirmationInputChange}
-                            placeholder="Enter picked quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            min="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-700"
                             required
+                            readOnly
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Max: {selectedPickList?.requiredQuantity || 0}
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Short Quantity
-                          </label>
-                          <input
-                            type="number"
-                            name="shortQuantity"
-                            value={confirmationData.shortQuantity}
-                            onChange={handleConfirmationInputChange}
-                            placeholder="Enter short quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            min="0"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Auto-calculated:{" "}
-                            {Math.max(
-                              0,
-                              (selectedPickList?.requiredQuantity || 0) -
-                                confirmationData.pickedQuantity,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Barcode
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              name="barcode"
-                              value={confirmationData.barcode}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Scan or enter barcode"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                          </div>
                         </div>
 
                         <div>
@@ -1207,6 +1226,116 @@ export default function PickListPageConfi() {
                             placeholder="Select confirmer user..."
                           />
                         </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Task Confirmation Remarks
+                        </label>
+                        <input
+                          type="text"
+                          name="remarks"
+                          value={confirmationData.remarks}
+                          onChange={handleConfirmationInputChange}
+                          placeholder="e.g. All items picked successfully"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Items List Section */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Box className="w-4 h-4 text-green-600" />
+                        Items to Confirm ({confirmationData.items?.length || 0})
+                      </h3>
+
+                      <div className="space-y-4">
+                        {confirmationData.items && confirmationData.items.map((item, index) => (
+                          <div
+                            key={index}
+                            className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3"
+                          >
+                            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-gray-200 pb-2">
+                              <div>
+                                <span className="font-semibold text-gray-900 text-sm">
+                                  {item.itemCode}
+                                </span>
+                                {item.itemName && (
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    ({item.itemName})
+                                  </span>
+                                )}
+                              </div>
+                              {item.requiredQuantity !== undefined && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">
+                                  Required: {item.requiredQuantity} {item.uom || ""}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Picked Quantity *
+                                </label>
+                                <input
+                                  type="number"
+                                  value={item.pickedQuantity}
+                                  onChange={(e) =>
+                                    handleItemConfirmationChange(
+                                      index,
+                                      "pickedQuantity",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Picked Qty"
+                                  min="0"
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Location / Barcode
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.barcode}
+                                  onChange={(e) =>
+                                    handleItemConfirmationChange(
+                                      index,
+                                      "barcode",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Scan or enter barcode"
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white font-mono"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Item Remarks
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.remarks}
+                                  onChange={(e) =>
+                                    handleItemConfirmationChange(
+                                      index,
+                                      "remarks",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="e.g. Full pick"
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
 

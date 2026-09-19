@@ -273,10 +273,7 @@ export default function PickListPageConfiAll() {
     }
   };
 
-  const handleFormClose = () => {
-    setShowFormModal(false);
-    setEditingSO(null);
-  };
+ 
 
   const handleViewClose = () => {
     setShowViewModal(false);
@@ -296,57 +293,7 @@ export default function PickListPageConfiAll() {
     resetPackageForm();
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this confirmation?")) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await deleteSalesOrderAPI(id);
-      setSuccessMessage("Confirmation deleted successfully");
-      setShowSuccess(true);
-      loadSalesOrders();
-    } catch (error) {
-      console.error("Delete error:", error);
-      setErrorMessage("Failed to delete confirmation.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle status update
-  const handleStatusUpdate = async (pickTaskNumber, status, actionLabel) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to mark this pick task as ${actionLabel}?`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setUpdatingStatus(true);
-      await updatePickListStatusAPI(pickTaskNumber, status);
-      setSuccessMessage(
-        `Pick task ${pickTaskNumber} marked as ${actionLabel} successfully`,
-      );
-      setShowSuccess(true);
-      loadSalesOrders();
-
-      if (showViewModal) {
-        handleViewClose();
-      }
-    } catch (error) {
-      console.error("Status update error:", error);
-      setErrorMessage(
-        error.message || `Failed to update pick task status to ${actionLabel}.`,
-      );
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
-
+  
   // Reset Pick Task Form
   const resetPickTaskForm = () => {
     setPickTaskData({
@@ -391,64 +338,14 @@ export default function PickListPageConfiAll() {
     });
   };
 
-  // Handle Confirmation Form Input
-  const handleConfirmationInputChange = (e) => {
-    const { name, value } = e.target;
-    setConfirmationData((prev) => ({ ...prev, [name]: value }));
-  };
-
+  
   // Handle Package Form Input
   const handlePackageInputChange = (e) => {
     const { name, value } = e.target;
     setPackageData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle Confirm Pick Submit
-  const handleConfirmPickSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validation
-    if (!confirmationData.pickTaskNumber) {
-      setErrorMessage("Pick Task Number is required");
-      return;
-    }
-    if (!confirmationData.itemCode) {
-      setErrorMessage("Item Code is required");
-      return;
-    }
-    if (
-      !confirmationData.pickedQuantity ||
-      confirmationData.pickedQuantity <= 0
-    ) {
-      setErrorMessage("Picked Quantity must be greater than 0");
-      return;
-    }
-    if (!confirmationData.confirmedBy) {
-      setErrorMessage("Confirmed By is required");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await confirmPickAPI(confirmationData);
-      console.log("Pick Confirmation submitted:", response);
-
-      setSuccessMessage(
-        `Pick confirmation submitted successfully for ${confirmationData.pickTaskNumber}`,
-      );
-      setShowSuccess(true);
-      loadSalesOrders();
-      handlePickTaskClose();
-    } catch (error) {
-      console.error("Pick Confirmation error:", error);
-      setErrorMessage(
-        error.message || "Failed to confirm pick. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   // Handle Create Package Submit
   const handleCreatePackageSubmit = async (e) => {
     e.preventDefault();
@@ -462,10 +359,7 @@ export default function PickListPageConfiAll() {
       setErrorMessage("Pick List Number is required");
       return;
     }
-    if (!packageData.itemCode) {
-      setErrorMessage("Item Code is required");
-      return;
-    }
+     
     if (!packageData.packedQuantity || packageData.packedQuantity <= 0) {
       setErrorMessage("Packed Quantity must be greater than 0");
       return;
@@ -542,7 +436,7 @@ export default function PickListPageConfiAll() {
       soNumber: so.soNumber || "",
       pickListNumber: so.pickListNumber || "",
       itemCode: so.itemCode || "",
-      packedQuantity: so.pickedQuantity || 0,
+      packedQuantity: so.totalPickedQuantity || 0,
       packageType: "BOX",
       weight: "",
       length: "",
@@ -725,7 +619,10 @@ export default function PickListPageConfiAll() {
                     SO Number
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item
+                    Warehouse
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Item(s)
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Qty
@@ -744,7 +641,7 @@ export default function PickListPageConfiAll() {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8">
+                    <td colSpan="9" className="text-center py-8">
                       <div className="flex justify-center items-center gap-2">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                         <span className="text-gray-500">Loading...</span>
@@ -753,89 +650,123 @@ export default function PickListPageConfiAll() {
                   </tr>
                 ) : salesOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8 text-gray-500">
+                    <td colSpan="9" className="text-center py-8 text-gray-500">
                       No pick confirmations found
                     </td>
                   </tr>
                 ) : (
-                  salesOrders.map((so) => (
-                    <tr
-                      key={so.id || so.confirmationNumber}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td
-                        className="px-4 py-3 cursor-pointer"
-                        onClick={() => handleViewClick(so)}
+                  salesOrders.map((so) => {
+                    const hasItems = so.items && Array.isArray(so.items) && so.items.length > 0;
+                    const primaryItem = hasItems ? so.items[0] : null;
+                    const itemsCount = so.totalItems !== undefined ? so.totalItems : (hasItems ? so.items.length : 1);
+                    const totalPicked = so.totalPickedQuantity !== undefined ? so.totalPickedQuantity : (hasItems ? so.items.reduce((acc, i) => acc + (i.pickedQuantity || 0), 0) : (so.pickedQuantity || 0));
+                    const totalShort = so.totalShortQuantity !== undefined ? so.totalShortQuantity : (hasItems ? so.items.reduce((acc, i) => acc + (i.shortQuantity || 0), 0) : (so.shortQuantity || 0));
+
+                    return (
+                      <tr
+                        key={so.id || so.confirmationNumber}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <span className="font-medium text-blue-600 hover:text-blue-800">
-                          {so.confirmationNumber || "N/A"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{so.pickTaskNumber}</td>
-                      <td className="px-4 py-3 text-sm">{so.soNumber}</td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {so.itemCode}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {so.itemName}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div>
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
-                            Picked: {so.pickedQuantity}
-                          </span>
-                          {so.shortQuantity > 0 && (
-                            <span className="ml-1 bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-medium">
-                              Short: {so.shortQuantity}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          Required: {so.requiredQuantity}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {/* {so.confirmedBy || "N/A"} */}
-                          <UserFullName username={so.confirmedBy || "N/A"} />
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatDate(so.confirmedDate)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(so.status)}`}
+                        <td
+                          className="px-4 py-3 cursor-pointer"
+                          onClick={() => handleViewClick(so)}
                         >
-                          {so.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => handleViewClick(so)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                            title="View Details"
+                          <span className="font-medium text-blue-600 hover:text-blue-800">
+                            {so.confirmationNumber || "N/A"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">{so.pickTaskNumber || "N/A"}</td>
+                        <td className="px-4 py-3 text-sm">{so.soNumber || "N/A"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 font-medium">
+                          {so.warehouseId || "N/A"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {hasItems ? (
+                            so.items.length === 1 ? (
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {primaryItem.itemCode}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {primaryItem.itemName}
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                                  <Box className="w-3 h-3" />
+                                  {itemsCount} Items
+                                </span>
+                                <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[180px]" title={so.items.map(i => i.itemName || i.itemCode).join(", ")}>
+                                  {so.items.map(i => i.itemName || i.itemCode).join(", ")}
+                                </div>
+                              </div>
+                            )
+                          ) : (
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {so.itemCode || "N/A"}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {so.itemName || ""}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div>
+                            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
+                              Picked: {totalPicked}
+                            </span>
+                            {totalShort > 0 && (
+                              <span className="ml-1 bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">
+                                Short: {totalShort}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            <UserFullName username={so.confirmedBy || "N/A"} />
+                          </div>
+                          {so.confirmedDate && (
+                            <div className="text-xs text-gray-500">
+                              {formatDate(so.confirmedDate)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(so.status)}`}
                           >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {so?.status === "CONFIRMED" && (
+                            {so.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <button
                               type="button"
-                              onClick={() => handleOpenPackageModal(so)}
-                              className="text-purple-600 hover:text-purple-800 transition-colors"
-                              title="Create Package"
+                              onClick={() => handleViewClick(so)}
+                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                              title="View Details"
                             >
-                              <PackagePlus className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {so?.status === "CONFIRMED" && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPackageModal(so)}
+                                className="p-1 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded transition-colors"
+                                title="Create Package"
+                              >
+                                <PackagePlus className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -877,7 +808,7 @@ export default function PickListPageConfiAll() {
               onClick={handleViewClose}
             />
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
@@ -898,114 +829,53 @@ export default function PickListPageConfiAll() {
 
                 <div className="p-6">
                   {/* Basic Info Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium flex items-center gap-1">
                         <Tag className="w-3 h-3" />
                         Confirmation Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.confirmationNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.confirmationNumber || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Pick Task Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickTaskNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.pickTaskNumber || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Pick List Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickListNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.pickListNumber || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         SO Number
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.soNumber}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.soNumber || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
-                        Status
+                        Warehouse ID
                       </label>
-                      <p>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
-                        >
-                          {viewingSO.status}
-                        </span>
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Confirmed Date
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {formatDate(viewingSO.confirmedDate)}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Item Code
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.itemCode}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Item Name
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.itemName}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Required Quantity
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.requiredQuantity}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Picked Quantity
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.pickedQuantity}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Short Quantity
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.shortQuantity || 0}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Barcode
-                      </label>
-                      <p className="font-medium text-gray-900">
-                        {viewingSO.barcode || "N/A"}
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.warehouseId || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
                         Confirmed By
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {/* {viewingSO.confirmedBy} */}
+                      <p className="font-medium text-gray-900 text-sm">
                         <UserFullName
                           username={viewingSO.confirmedBy || "N/A"}
                         />
@@ -1013,13 +883,148 @@ export default function PickListPageConfiAll() {
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 uppercase font-medium">
+                        Confirmed Date
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.confirmedDate ? formatDate(viewingSO.confirmedDate) : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Status
+                      </label>
+                      <p className="mt-0.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingSO.status)}`}
+                        >
+                          {viewingSO.status}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Total Items / Picked Qty
+                      </label>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.totalItems || viewingSO.items?.length || 0} items ({viewingSO.totalPickedQuantity !== undefined ? viewingSO.totalPickedQuantity : viewingSO.pickedQuantity || 0} total picked)
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Total Short Quantity
+                      </label>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {viewingSO.totalShortQuantity !== undefined ? viewingSO.totalShortQuantity : viewingSO.shortQuantity || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
                         Created At
                       </label>
-                      <p className="font-medium text-gray-900">
-                        {formatDate(viewingSO.createdAt)}
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.createdAt ? formatDate(viewingSO.createdAt) : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Updated At
+                      </label>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {viewingSO.updatedAt ? formatDate(viewingSO.updatedAt) : "N/A"}
                       </p>
                     </div>
                   </div>
+
+                  {/* Remarks if any */}
+                  {viewingSO.remarks && (
+                    <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <label className="text-xs text-gray-500 uppercase font-medium">
+                        Confirmation Remarks
+                      </label>
+                      <p className="text-sm text-gray-700 mt-0.5">
+                        {viewingSO.remarks}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Items List Table */}
+                  {viewingSO.items && Array.isArray(viewingSO.items) && viewingSO.items.length > 0 ? (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Box className="w-4 h-4 text-blue-600" />
+                        Confirmed Items ({viewingSO.items.length})
+                      </h3>
+                      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase font-medium">
+                            <tr>
+                              <th className="px-3 py-2.5">#</th>
+                              <th className="px-3 py-2.5">Item Code & Name</th>
+                              <th className="px-3 py-2.5">UOM</th>
+                              <th className="px-3 py-2.5 text-right">Required</th>
+                              <th className="px-3 py-2.5 text-right">Picked</th>
+                              <th className="px-3 py-2.5 text-right">Short</th>
+                              <th className="px-3 py-2.5">Barcode / Location</th>
+                              <th className="px-3 py-2.5">Status</th>
+                              <th className="px-3 py-2.5">Remarks</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {viewingSO.items.map((item, idx) => (
+                              <tr key={item.id || idx} className="hover:bg-gray-50">
+                                <td className="px-3 py-2.5 text-gray-400 font-mono text-xs">{idx + 1}</td>
+                                <td className="px-3 py-2.5">
+                                  <div className="font-semibold text-gray-900">{item.itemCode}</div>
+                                  <div className="text-xs text-gray-500">{item.itemName}</div>
+                                </td>
+                                <td className="px-3 py-2.5 text-xs text-gray-700 font-medium">{item.uom || "-"}</td>
+                                <td className="px-3 py-2.5 text-right font-medium text-gray-900">{item.requiredQuantity}</td>
+                                <td className="px-3 py-2.5 text-right font-semibold text-green-700">{item.pickedQuantity}</td>
+                                <td className="px-3 py-2.5 text-right font-medium text-red-600">{item.shortQuantity || 0}</td>
+                                <td className="px-3 py-2.5 text-xs font-mono text-gray-800 break-all">
+                                  {item.barcode || "N/A"}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getItemStatusColor(item.status)}`}>
+                                    {item.status}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-xs text-gray-600">{item.remarks || "-"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Fallback Single Item Detail */
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium">
+                          Item Code
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.itemCode || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium">
+                          Item Name
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.itemName || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase font-medium">
+                          Barcode
+                        </label>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {viewingSO.barcode || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Package Action Button in View Modal */}
                   <div className="mt-4 flex justify-end">
@@ -1034,249 +1039,13 @@ export default function PickListPageConfiAll() {
                       Create Package
                     </button>
                   </div>
-
-                  {/* Remarks if any */}
-                  {viewingSO.remarks && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <label className="text-xs text-gray-500 uppercase font-medium">
-                        Remarks
-                      </label>
-                      <p className="text-sm text-gray-700">
-                        {viewingSO.remarks}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
           </>
         )}
 
-        {/* Confirmation Modal */}
-        {showPickTaskModal && selectedPickList && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={handlePickTaskClose}
-            />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                      <Check className="w-5 h-5 text-green-600" />
-                      Confirm Pick
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      {selectedPickList?.pickTaskNumber || "Confirm Pick"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handlePickTaskClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <XCircle className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  <form onSubmit={handleConfirmPickSubmit}>
-                    {/* Pick Task Info */}
-                    <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Pick Task Number
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.pickTaskNumber}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Pick List Number
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.pickListNumber}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            SO Number
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.soNumber}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Item
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.itemCode} -{" "}
-                            {selectedPickList?.itemName}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Required Quantity
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPickList?.requiredQuantity}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Location
-                          </label>
-                          <p className="font-medium text-gray-900 text-sm">
-                            {selectedPickList?.locationBarcode || "N/A"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Form Fields */}
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Pick Task Number *
-                          </label>
-                          <input
-                            type="text"
-                            name="pickTaskNumber"
-                            value={confirmationData.pickTaskNumber}
-                            onChange={handleConfirmationInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                            required
-                            readOnly
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Item Code *
-                          </label>
-                          <input
-                            type="text"
-                            name="itemCode"
-                            value={confirmationData.itemCode}
-                            onChange={handleConfirmationInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50"
-                            required
-                            readOnly
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Picked Quantity *
-                          </label>
-                          <input
-                            type="number"
-                            name="pickedQuantity"
-                            value={confirmationData.pickedQuantity}
-                            onChange={handleConfirmationInputChange}
-                            placeholder="Enter picked quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            min="0"
-                            required
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Max: {selectedPickList?.requiredQuantity || 0}
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Short Quantity
-                          </label>
-                          <input
-                            type="number"
-                            name="shortQuantity"
-                            value={confirmationData.shortQuantity}
-                            onChange={handleConfirmationInputChange}
-                            placeholder="Enter short quantity"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            min="0"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Auto-calculated:{" "}
-                            {Math.max(
-                              0,
-                              (selectedPickList?.requiredQuantity || 0) -
-                                confirmationData.pickedQuantity,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Barcode
-                          </label>
-                          <div className="relative">
-                            <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              name="barcode"
-                              value={confirmationData.barcode}
-                              onChange={handleConfirmationInputChange}
-                              placeholder="Scan or enter barcode"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirmed By *
-                          </label>
-                          <UserSelect
-                            name="confirmedBy"
-                            value={confirmationData.confirmedBy}
-                            onChange={(user, e) => {
-                              setConfirmationData((prev) => ({
-                                ...prev,
-                                confirmedBy: e.target.value,
-                              }));
-                            }}
-                            valueKey="username"
-                            placeholder="Select confirmer user..."
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                      <button
-                        type="button"
-                        onClick={handlePickTaskClose}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-6 py-2 rounded-lg flex items-center gap-2 text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Save className="w-4 h-4" />
-                        {loading ? "Confirming..." : "Confirm Pick"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
+       
         {/* Package Creation Modal */}
         {showPackageModal && selectedPackageItem && (
           <>
@@ -1327,23 +1096,8 @@ export default function PickListPageConfiAll() {
                             {selectedPackageItem.pickListNumber}
                           </p>
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Item
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPackageItem.itemCode} -{" "}
-                            {selectedPackageItem.itemName}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase font-medium">
-                            Available Quantity
-                          </label>
-                          <p className="font-medium text-gray-900">
-                            {selectedPackageItem.pickedQuantity}
-                          </p>
-                        </div>
+                       
+                      
                       </div>
                     </div>
 
@@ -1360,11 +1114,7 @@ export default function PickListPageConfiAll() {
                         name="pickListNumber"
                         value={packageData.pickListNumber}
                       />
-                      <input
-                        type="hidden"
-                        name="itemCode"
-                        value={packageData.itemCode}
-                      />
+                      
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
